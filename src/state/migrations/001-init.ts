@@ -1,0 +1,47 @@
+import type { Database } from "bun:sqlite";
+
+export function createMigration001Init(_defaultUsageJson: string): (db: Database) => void {
+	return (db) => {
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS sessions (
+				id TEXT PRIMARY KEY,
+				title TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				updated_at TEXT NOT NULL,
+				history_json TEXT NOT NULL DEFAULT '[]',
+				usage_json TEXT NOT NULL DEFAULT '{}'
+			);
+		`);
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS grounding_maps (
+				id TEXT PRIMARY KEY,
+				session_id TEXT NOT NULL,
+				message_id INTEGER NOT NULL,
+				created_at TEXT NOT NULL,
+				items_json TEXT NOT NULL,
+				FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+			);
+		`);
+		db.exec(`
+			CREATE INDEX IF NOT EXISTS idx_grounding_maps_session_created
+			ON grounding_maps(session_id, created_at DESC);
+		`);
+		db.exec(`
+			CREATE INDEX IF NOT EXISTS idx_grounding_maps_session_message
+			ON grounding_maps(session_id, message_id);
+		`);
+		db.exec(`
+			CREATE TABLE IF NOT EXISTS todo_lists (
+				id TEXT PRIMARY KEY,
+				session_id TEXT NOT NULL,
+				created_at TEXT NOT NULL,
+				items_json TEXT NOT NULL,
+				FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+			);
+		`);
+		db.exec(`
+			CREATE INDEX IF NOT EXISTS idx_todo_lists_session_created
+			ON todo_lists(session_id, created_at DESC);
+		`);
+	};
+}
