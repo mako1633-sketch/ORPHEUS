@@ -296,6 +296,7 @@ export type ToolToggleId =
 	| "signal"
 	| "systemStatus"
 	| "persistentContext"
+	| "executiveAssistant"
 	| "projectContext"
 	| "codingWorkbench"
 	| "notes"
@@ -320,6 +321,7 @@ export const DEFAULT_TOOL_TOGGLES: ToolToggles = {
 	signal: true,
 	systemStatus: true,
 	persistentContext: true,
+	executiveAssistant: true,
 	projectContext: true,
 	codingWorkbench: true,
 	notes: true,

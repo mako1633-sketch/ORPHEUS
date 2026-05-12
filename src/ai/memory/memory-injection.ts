@@ -8,6 +8,7 @@ import { debug } from "../../utils/debug-logger";
 import { getRuntimeContext } from "../../state/runtime-context";
 import { detectAssistantResponseLeak, isAssistantResponseGuardNotice } from "../assistant-response-guard";
 import { loadCodingTaskState } from "../coding-task-state";
+import { buildExecutiveBriefing } from "../executive-state";
 import { formatPersistentContextForPrompt, loadPersistentContext } from "../persistent-context";
 import { getHonchoManager, isHonchoAvailable } from "./honcho-manager";
 import { getMemoryManager, isMemoryAvailable } from "./memory-manager";
@@ -58,6 +59,26 @@ The previous coding task may still be in progress. Use this only when relevant:
 
 ${lines.join("\n")}
 </active-coding-task>`;
+}
+
+async function formatExecutiveBriefingForPrompt(): Promise<string> {
+	const briefing = await buildExecutiveBriefing();
+	const totalOpen = Object.values(briefing.counts).reduce((sum, count) => sum + count, 0);
+	if (totalOpen === 0) return "";
+
+	const attention = [
+		briefing.overdue.length ? `Overdue: ${briefing.overdue.map((item) => item.title).join("; ")}` : "",
+		briefing.upcoming.length ? `Due soon: ${briefing.upcoming.map((item) => item.title).join("; ")}` : "",
+		briefing.counts.waiting_on ? `Waiting on: ${briefing.counts.waiting_on}` : "",
+		briefing.counts.risk ? `Risks: ${briefing.counts.risk}` : "",
+		briefing.counts.decision ? `Open decisions: ${briefing.counts.decision}` : "",
+	].filter(Boolean);
+
+	return `<executive-briefing>
+Local ORPHEUS executive context is available. Use it when relevant:
+
+${attention.join("\n") || `Open items: ${totalOpen}`}
+</executive-briefing>`;
 }
 
 /** Retrieve relevant memories for a user message */
@@ -115,6 +136,11 @@ export async function buildMemoryInjection(
 	const codingTaskState = await formatCodingTaskStateForPrompt();
 	if (codingTaskState && !isContaminatedMemoryText(codingTaskState)) {
 		sections.push(codingTaskState);
+	}
+
+	const executiveBriefing = await formatExecutiveBriefingForPrompt();
+	if (executiveBriefing && !isContaminatedMemoryText(executiveBriefing)) {
+		sections.push(executiveBriefing);
 	}
 
 	const context = await getMemoryContextForMessage(userMessage, limit);

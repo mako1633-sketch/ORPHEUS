@@ -8,7 +8,9 @@ import {
 	loadPersistentContext,
 } from "../src/ai/persistent-context";
 import { loadCodingTaskState, updateCodingTaskState } from "../src/ai/coding-task-state";
+import { addExecutiveItem, buildExecutiveBriefing, updateExecutiveItem } from "../src/ai/executive-state";
 import { codingWorkbench } from "../src/ai/tools/coding-workbench";
+import { executiveAssistant } from "../src/ai/tools/executive-assistant";
 import { createNote, listNotes } from "../src/ai/tools/notes";
 import { summarizeProjectContext } from "../src/ai/tools/project-context";
 
@@ -165,5 +167,60 @@ describe("assistant-style local tools", () => {
 		expect(result.success).toBe(true);
 		expect(result.signals).toContain("module-resolution");
 		expect(result.likelyCause).toContain("dependency");
+	});
+
+	it("tracks executive follow-ups and builds a briefing", async () => {
+		const followUp = await addExecutiveItem({
+			kind: "follow_up",
+			title: "Send ORPHEUS GitHub status note",
+			owner: "Matt",
+			dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+			context: "Confirm local and GitHub repos are in sync.",
+		});
+		await addExecutiveItem({
+			kind: "risk",
+			title: "Provider context can overflow on long sessions",
+			context: "Watch for HTTP 400 prompt-too-long failures.",
+		});
+
+		const updated = await updateExecutiveItem({ id: followUp.item.id, status: "blocked" });
+		expect(updated.found).toBe(true);
+		expect(updated.item?.status).toBe("blocked");
+
+		const briefing = await buildExecutiveBriefing();
+		expect(briefing.counts.follow_up).toBe(1);
+		expect(briefing.counts.risk).toBe(1);
+		expect(briefing.upcoming.some((item) => item.title.includes("GitHub status"))).toBe(true);
+	});
+
+	it("exposes executive assistant tool actions", async () => {
+		const captured = await (
+			executiveAssistant as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					item?: { id: string; title: string };
+				}>;
+			}
+		).execute({
+			action: "capture",
+			kind: "decision",
+			title: "Use local-first executive state",
+			context: "Avoid pretending to have calendar/email access.",
+		});
+
+		expect(captured.success).toBe(true);
+		expect(captured.item?.title).toBe("Use local-first executive state");
+
+		const briefing = await (
+			executiveAssistant as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					briefing?: { counts: { decision: number } };
+				}>;
+			}
+		).execute({ action: "briefing" });
+
+		expect(briefing.success).toBe(true);
+		expect(briefing.briefing?.counts.decision).toBe(1);
 	});
 });

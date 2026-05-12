@@ -2,6 +2,7 @@ import type { ToolSet } from "ai";
 
 import { codingWorkbench } from "./coding-workbench";
 import { daemonStatus } from "./daemon-status";
+import { executiveAssistant } from "./executive-assistant";
 import { fetchUrls } from "./fetch-urls";
 import { groundingManager } from "./grounding-manager";
 import { notes } from "./notes";
@@ -65,6 +66,7 @@ const TOOL_REGISTRY: ToolEntry[] = [
 	{ id: "signal", toggleKey: "signal", tool: signal, gate: gateSignal },
 	{ id: "systemStatus", toggleKey: "systemStatus", tool: systemStatus },
 	{ id: "persistentContext", toggleKey: "persistentContext", tool: persistentContext },
+	{ id: "executiveAssistant", toggleKey: "executiveAssistant", tool: executiveAssistant },
 	{ id: "projectContext", toggleKey: "projectContext", tool: projectContext },
 	{ id: "codingWorkbench", toggleKey: "codingWorkbench", tool: codingWorkbench },
 	{ id: "notes", toggleKey: "notes", tool: notes },
@@ -157,6 +159,7 @@ function normalizeToggles(toggles?: ToolToggles): ToolToggles {
 		signal: toggles?.signal ?? true,
 		systemStatus: toggles?.systemStatus ?? true,
 		persistentContext: toggles?.persistentContext ?? true,
+		executiveAssistant: toggles?.executiveAssistant ?? true,
 		projectContext: toggles?.projectContext ?? true,
 		codingWorkbench: toggles?.codingWorkbench ?? true,
 		notes: toggles?.notes ?? true,
@@ -267,6 +270,7 @@ export function getToolLabels(): Record<ToolId, string> {
 		signal: "signal",
 		systemStatus: "systemStatus",
 		persistentContext: "persistentContext",
+		executiveAssistant: "executiveAssistant",
 		projectContext: "projectContext",
 		codingWorkbench: "codingWorkbench",
 		notes: "notes",
@@ -292,6 +296,7 @@ export function getDefaultToolOrder(): ToolId[] {
 		"signal",
 		"systemStatus",
 		"persistentContext",
+		"executiveAssistant",
 		"projectContext",
 		"codingWorkbench",
 		"notes",
@@ -317,6 +322,7 @@ export function createToolAvailabilitySnapshot(availability: ToolAvailabilityMap
 		signal: availability.signal?.enabled ?? false,
 		systemStatus: availability.systemStatus?.enabled ?? false,
 		persistentContext: availability.persistentContext?.enabled ?? false,
+		executiveAssistant: availability.executiveAssistant?.enabled ?? false,
 		projectContext: availability.projectContext?.enabled ?? false,
 		codingWorkbench: availability.codingWorkbench?.enabled ?? false,
 		notes: availability.notes?.enabled ?? false,

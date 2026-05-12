@@ -20,6 +20,7 @@ export interface ToolAvailability {
 	signal: boolean;
 	todoManager: boolean;
 	groundingManager: boolean;
+	executiveAssistant: boolean;
 	projectContext: boolean;
 	codingWorkbench: boolean;
 	subagent: boolean;
@@ -82,6 +83,7 @@ function normalizeToolAvailability(toolAvailability?: Partial<ToolAvailability>)
 		signal: toolAvailability?.signal ?? true,
 		todoManager: toolAvailability?.todoManager ?? true,
 		groundingManager: toolAvailability?.groundingManager ?? true,
+		executiveAssistant: toolAvailability?.executiveAssistant ?? true,
 		projectContext: toolAvailability?.projectContext ?? true,
 		codingWorkbench: toolAvailability?.codingWorkbench ?? true,
 		subagent: toolAvailability?.subagent ?? true,
@@ -334,6 +336,21 @@ Fetch multiple URLs in one call:
   - Prefer package scripts from projectContext when choosing validation commands.
   - Treat gitStatus as a warning about existing user work. Do not revert unfamiliar changes.
 `,
+	executiveAssistant: `
+  ### 'executiveAssistant' (JARVIS-style executive workbench)
+  Use this to maintain durable executive context: priorities, follow-ups, decisions, waiting-on items, risks, and notes.
+
+  **Use when**
+  - The user asks you to remember a commitment, decision, follow-up, priority, risk, or "waiting on" item.
+  - The user asks for a briefing, dashboard, "what needs my attention", or JARVIS-style executive support.
+  - A conversation creates a clear action item that should survive between sessions.
+
+  **Executive assistant behavior**
+  - Capture commitments with owner, due date, source, and context when available.
+  - For briefings, lead with attention items: overdue, blocked, due soon, waiting-on, decisions, and risks.
+  - Do not invent calendar/email access. If no connector/tool provides that data, say the briefing is based on local ORPHEUS state and chat context.
+  - Keep executive outputs concise, decision-oriented, and action-ready.
+`,
 	codingWorkbench: `
   ### 'codingWorkbench' (coding agent workbench)
   Use this for serious programming tasks after projectContext gives the first overview.
@@ -373,6 +390,7 @@ function buildToolDefinitions(availability: ToolAvailability): string {
 	if (availability.windowsSecurity) blocks.push(TOOL_SECTIONS.windowsSecurity);
 	if (availability.windowsHardening) blocks.push(TOOL_SECTIONS.windowsHardening);
 	if (availability.daemonStatus) blocks.push(TOOL_SECTIONS.daemonStatus);
+	if (availability.executiveAssistant) blocks.push(TOOL_SECTIONS.executiveAssistant);
 	if (availability.projectContext) blocks.push(TOOL_SECTIONS.projectContext);
 	if (availability.codingWorkbench) blocks.push(TOOL_SECTIONS.codingWorkbench);
 	if (availability.readFile) blocks.push(TOOL_SECTIONS.readFile);
