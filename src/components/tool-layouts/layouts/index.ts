@@ -10,5 +10,6 @@ import "./grounding";
 import "./signal";
 import "./system-status";
 import "./persistent-context";
+import "./project-context";
 import "./notes";
 import "./screenshot";

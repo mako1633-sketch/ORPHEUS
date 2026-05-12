@@ -52,6 +52,8 @@ function getToolLabel(id: ToolToggleId): string {
 			return "systemStatus";
 		case "persistentContext":
 			return "persistentContext";
+		case "projectContext":
+			return "projectContext";
 		case "notes":
 			return "notes";
 		case "screenshot":

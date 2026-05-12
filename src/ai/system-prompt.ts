@@ -20,6 +20,7 @@ export interface ToolAvailability {
 	signal: boolean;
 	todoManager: boolean;
 	groundingManager: boolean;
+	projectContext: boolean;
 	subagent: boolean;
 }
 
@@ -80,6 +81,7 @@ function normalizeToolAvailability(toolAvailability?: Partial<ToolAvailability>)
 		signal: toolAvailability?.signal ?? true,
 		todoManager: toolAvailability?.todoManager ?? true,
 		groundingManager: toolAvailability?.groundingManager ?? true,
+		projectContext: toolAvailability?.projectContext ?? true,
 		subagent: toolAvailability?.subagent ?? true,
 	};
 }
@@ -320,6 +322,16 @@ Fetch multiple URLs in one call:
   - For files in the workspace, give the full path: "cat /full/path/to/file" or tell the user to navigate there first
   - For security reports, capability summaries, vulnerability assessments, incident notes, or other security-sensitive outputs, do NOT write files automatically. Summarize in chat first and write a file only if the user explicitly asks or approves.
 `,
+	projectContext: `
+  ### 'projectContext' (codebase overview)
+  Use this early for programming, debugging, setup, or repo-change tasks when you need to understand a local project.
+  It returns a safe summary: package scripts, dependency names, important config files, git status, and a shallow tree while skipping heavy directories.
+
+  Coding workflow:
+  - Start with projectContext for unfamiliar repos, then use readFile for the specific files you need.
+  - Prefer package scripts from projectContext when choosing validation commands.
+  - Treat gitStatus as a warning about existing user work. Do not revert unfamiliar changes.
+`,
 
 	subagent: `
   ### 'subagent'
@@ -341,6 +353,7 @@ function buildToolDefinitions(availability: ToolAvailability): string {
 	if (availability.windowsSecurity) blocks.push(TOOL_SECTIONS.windowsSecurity);
 	if (availability.windowsHardening) blocks.push(TOOL_SECTIONS.windowsHardening);
 	if (availability.daemonStatus) blocks.push(TOOL_SECTIONS.daemonStatus);
+	if (availability.projectContext) blocks.push(TOOL_SECTIONS.projectContext);
 	if (availability.readFile) blocks.push(TOOL_SECTIONS.readFile);
 	if (availability.writeFile) blocks.push(TOOL_SECTIONS.writeFile);
 	if (availability.subagent) blocks.push(TOOL_SECTIONS.subagent);
@@ -389,6 +402,7 @@ When the user asks for programming, debugging, setup, repo changes, or command-l
 
 **Default workflow**
 - Inspect the project before giving implementation advice. Prefer reading nearby files, package scripts, tests, configs, and existing patterns.
+- Use the projectContext tool as the first pass for unfamiliar local repositories, then read only the specific files needed for the task.
 - For non-trivial changes, make the edit instead of only describing it when file tools are available and the user has not asked for advice only.
 - Keep edits tightly scoped to the request. Do not rewrite unrelated code or churn formatting outside touched areas.
 - Preserve user work. If the git tree is dirty or files contain unfamiliar changes, work with them and do not revert them unless explicitly asked.
@@ -398,6 +412,7 @@ When the user asks for programming, debugging, setup, repo changes, or command-l
 
 **Investigation habits**
 - Use fast search/listing tools before broad reads.
+- Form a concrete edit-and-validation loop: inspect, identify the smallest change, edit, run targeted validation, then broaden only if risk warrants it.
 - Read error messages closely and trace them to the smallest likely source before patching.
 - For dependency, API, or framework behavior that may be current-version-sensitive, use web tools or local package docs when available.
 - For frontend or UI changes, consider responsive states, empty/loading/error states, keyboard access, and whether text can fit in its container.

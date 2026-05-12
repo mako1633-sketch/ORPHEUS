@@ -5,6 +5,7 @@ import { groundingManager } from "./grounding-manager";
 import { daemonStatus } from "./daemon-status";
 import { notes } from "./notes";
 import { persistentContext } from "./persistent-context";
+import { projectContext } from "./project-context";
 import { readFile } from "./read-file";
 import { renderUrl } from "./render-url";
 import { runBash } from "./run-bash";
@@ -62,6 +63,7 @@ const TOOL_REGISTRY: ToolEntry[] = [
 	{ id: "signal", toggleKey: "signal", tool: signal, gate: gateSignal },
 	{ id: "systemStatus", toggleKey: "systemStatus", tool: systemStatus },
 	{ id: "persistentContext", toggleKey: "persistentContext", tool: persistentContext },
+	{ id: "projectContext", toggleKey: "projectContext", tool: projectContext },
 	{ id: "notes", toggleKey: "notes", tool: notes },
 	{ id: "screenshot", toggleKey: "screenshot", tool: screenshot, gate: gateScreenshot },
 	{ id: "todoManager", toggleKey: "todoManager", tool: todoManager },
@@ -143,6 +145,7 @@ function normalizeToggles(toggles?: ToolToggles): ToolToggles {
 		signal: toggles?.signal ?? true,
 		systemStatus: toggles?.systemStatus ?? true,
 		persistentContext: toggles?.persistentContext ?? true,
+		projectContext: toggles?.projectContext ?? true,
 		notes: toggles?.notes ?? true,
 		screenshot: toggles?.screenshot ?? true,
 		todoManager: toggles?.todoManager ?? true,
@@ -250,6 +253,7 @@ export function getToolLabels(): Record<ToolId, string> {
 		signal: "signal",
 		systemStatus: "systemStatus",
 		persistentContext: "persistentContext",
+		projectContext: "projectContext",
 		notes: "notes",
 		screenshot: "screenshot",
 		todoManager: "todoManager",
@@ -272,6 +276,7 @@ export function getDefaultToolOrder(): ToolId[] {
 		"signal",
 		"systemStatus",
 		"persistentContext",
+		"projectContext",
 		"notes",
 		"screenshot",
 		"todoManager",
@@ -294,6 +299,7 @@ export function createToolAvailabilitySnapshot(availability: ToolAvailabilityMap
 		signal: availability.signal?.enabled ?? false,
 		systemStatus: availability.systemStatus?.enabled ?? false,
 		persistentContext: availability.persistentContext?.enabled ?? false,
+		projectContext: availability.projectContext?.enabled ?? false,
 		notes: availability.notes?.enabled ?? false,
 		screenshot: availability.screenshot?.enabled ?? false,
 		todoManager: availability.todoManager?.enabled ?? false,

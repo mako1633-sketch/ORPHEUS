@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
@@ -8,6 +8,7 @@ import {
 	loadPersistentContext,
 } from "../src/ai/persistent-context";
 import { createNote, listNotes } from "../src/ai/tools/notes";
+import { summarizeProjectContext } from "../src/ai/tools/project-context";
 
 let tempConfigDir: string;
 let previousConfigDir: string | undefined;
@@ -57,5 +58,38 @@ describe("assistant-style local tools", () => {
 		expect(promptContext).toContain("<persistent-context>");
 		expect(promptContext).toContain("persists across ORPHEUS sessions");
 		expect(promptContext).toContain("Ollama");
+	});
+
+	it("summarizes a local project for coding tasks", async () => {
+		const projectDir = await mkdtemp(path.join(os.tmpdir(), "orpheus-project-context-"));
+		try {
+			await mkdir(path.join(projectDir, "src"));
+			await writeFile(
+				path.join(projectDir, "package.json"),
+				JSON.stringify({
+					name: "sample-app",
+					scripts: { test: "bun test", check: "bun run typecheck" },
+					dependencies: { react: "^19.0.0" },
+					devDependencies: { typescript: "^5.0.0" },
+				})
+			);
+			await writeFile(path.join(projectDir, "bun.lock"), "");
+			await writeFile(path.join(projectDir, "tsconfig.json"), "{}");
+			await writeFile(path.join(projectDir, "src", "index.ts"), "export const ok = true;\n");
+
+			const summary = await summarizeProjectContext({ root: projectDir, maxFiles: 40 });
+
+			expect(summary.success).toBe(true);
+			if (!summary.success) throw new Error("project summary failed");
+			expect(summary.packageManager).toBe("bun");
+			expect(summary.package?.name).toBe("sample-app");
+			expect(summary.package?.scripts?.test).toBe("bun test");
+			expect(summary.importantFiles).toContain("package.json");
+			expect(summary.importantFiles).toContain("tsconfig.json");
+			expect(summary.files).toContain("src/");
+			expect(summary.files).toContain("src/index.ts");
+		} finally {
+			await rm(projectDir, { recursive: true, force: true });
+		}
 	});
 });
