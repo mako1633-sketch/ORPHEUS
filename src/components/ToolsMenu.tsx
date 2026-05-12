@@ -64,6 +64,8 @@ function getToolLabel(id: ToolToggleId): string {
 			return "groundingManager";
 		case "subagent":
 			return "subagent";
+		case "orpheusCli":
+			return "orpheusCli";
 		default:
 			return id;
 	}

@@ -46,6 +46,8 @@ export interface UseAppContextBuilderParams {
 		setShowToolsMenu: React.Dispatch<React.SetStateAction<boolean>>;
 		showMemoryMenu: boolean;
 		setShowMemoryMenu: React.Dispatch<React.SetStateAction<boolean>>;
+		showOrpheusMenu: boolean;
+		setShowOrpheusMenu: React.Dispatch<React.SetStateAction<boolean>>;
 	};
 
 	device: {
@@ -137,9 +139,15 @@ export function useAppContextBuilder(params: UseAppContextBuilderParams): AppCon
 		onboardingCallbacks,
 	} = params;
 
+	const { showOrpheusMenu, setShowOrpheusMenu } = menus;
+
 	return useMemo(
 		(): AppContextValue => ({
-			menus,
+			menus: {
+				...menus,
+				showOrpheusMenu,
+				setShowOrpheusMenu,
+			},
 			device,
 			settings,
 			model,
@@ -155,6 +163,8 @@ export function useAppContextBuilder(params: UseAppContextBuilderParams): AppCon
 		}),
 		[
 			menus,
+			showOrpheusMenu,
+			setShowOrpheusMenu,
 			device,
 			settings,
 			model,

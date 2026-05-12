@@ -1,9 +1,10 @@
 import type { ToolSet } from "ai";
 
+import { daemonStatus } from "./daemon-status";
 import { fetchUrls } from "./fetch-urls";
 import { groundingManager } from "./grounding-manager";
-import { daemonStatus } from "./daemon-status";
 import { notes } from "./notes";
+import { orpheusCli, resolveOrpheusCliPath } from "./orpheus-cli";
 import { persistentContext } from "./persistent-context";
 import { projectContext } from "./project-context";
 import { readFile } from "./read-file";
@@ -21,8 +22,8 @@ import { writeFile } from "./write-file";
 
 import { getProviderCapabilities } from "../providers/capabilities";
 import { EXA_API_KEY_INVALID_MESSAGE, isCurrentExaApiKeyInvalid } from "../exa-client";
-import type { ToolToggleId, ToolToggles } from "../../types";
 import { detectLocalPlaywrightChromium } from "../../utils/js-rendering";
+import type { ToolToggleId, ToolToggles } from "../../types";
 
 export type ToolId = ToolToggleId;
 
@@ -69,6 +70,7 @@ const TOOL_REGISTRY: ToolEntry[] = [
 	{ id: "todoManager", toggleKey: "todoManager", tool: todoManager },
 	{ id: "groundingManager", toggleKey: "groundingManager", tool: groundingManager },
 	{ id: "subagent", toggleKey: "subagent", tool: subagent, gate: gateSubagent },
+	{ id: "orpheusCli", toggleKey: "orpheusCli", tool: orpheusCli, gate: gateOrpheusCli },
 ];
 
 function gateExa(): Promise<ToolGateResult> {
@@ -131,6 +133,14 @@ function gateSubagent(): Promise<ToolGateResult> {
 	});
 }
 
+function gateOrpheusCli(): Promise<ToolGateResult> {
+	const exists = Boolean(resolveOrpheusCliPath());
+	return Promise.resolve({
+		envAvailable: exists,
+		disabledReason: exists ? undefined : "ORPHEUS CLI bin not found.",
+	});
+}
+
 function normalizeToggles(toggles?: ToolToggles): ToolToggles {
 	return {
 		readFile: toggles?.readFile ?? true,
@@ -151,6 +161,7 @@ function normalizeToggles(toggles?: ToolToggles): ToolToggles {
 		todoManager: toggles?.todoManager ?? true,
 		groundingManager: toggles?.groundingManager ?? true,
 		subagent: toggles?.subagent ?? true,
+		orpheusCli: toggles?.orpheusCli ?? true,
 	};
 }
 
@@ -259,6 +270,7 @@ export function getToolLabels(): Record<ToolId, string> {
 		todoManager: "todoManager",
 		groundingManager: "groundingManager",
 		subagent: "subagent",
+		orpheusCli: "orpheusCli",
 	};
 }
 
@@ -282,6 +294,7 @@ export function getDefaultToolOrder(): ToolId[] {
 		"todoManager",
 		"groundingManager",
 		"subagent",
+		"orpheusCli",
 	];
 }
 
@@ -305,5 +318,6 @@ export function createToolAvailabilitySnapshot(availability: ToolAvailabilityMap
 		todoManager: availability.todoManager?.enabled ?? false,
 		groundingManager: availability.groundingManager?.enabled ?? false,
 		subagent: availability.subagent?.enabled ?? false,
+		orpheusCli: availability.orpheusCli?.enabled ?? false,
 	};
 }

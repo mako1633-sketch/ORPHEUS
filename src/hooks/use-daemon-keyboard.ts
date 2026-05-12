@@ -28,6 +28,7 @@ export interface KeyboardHandlerActions {
 	setShowUrlMenu: (show: boolean) => void;
 	setShowToolsMenu: (show: boolean) => void;
 	setShowMemoryMenu: (show: boolean) => void;
+	setShowOrpheusMenu: (show: boolean) => void;
 	setTypingInput: (input: string | ((prev: string) => string)) => void;
 	setCurrentTranscription: (text: string) => void;
 	setCurrentResponse: (text: string) => void;
@@ -65,6 +66,7 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 		actions.setShowUrlMenu(false);
 		actions.setShowToolsMenu(false);
 		actions.setShowMemoryMenu(false);
+		actions.setShowOrpheusMenu(false);
 	}, [actions]);
 
 	const handleKeyPress = useCallback(
@@ -85,7 +87,7 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 				if (startupAction) {
 					if (currentModelProvider === "openrouter" && !process.env.OPENROUTER_API_KEY) {
 						actions.setApiKeyMissingError(
-							"OPENROUTER_API_KEY not found Â· Set via environment variable or enter in onboarding"
+							"OPENROUTER_API_KEY not found · Set via environment variable or enter in onboarding"
 						);
 						key.preventDefault();
 						return;
@@ -285,6 +287,22 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			) {
 				closeAllMenus();
 				actions.setShowMemoryMenu(true);
+				key.preventDefault();
+				return;
+			}
+
+			// Cmd+Shift+O / Ctrl+Shift+O to open the ORPHEUS quick-action menu
+			if (
+				key.eventType === "press" &&
+				key.shift &&
+				key.sequence === "O" &&
+				((key.meta && process.platform === "darwin") || (key.ctrl && process.platform !== "darwin")) &&
+				(currentState === DaemonState.IDLE ||
+					currentState === DaemonState.SPEAKING ||
+					currentState === DaemonState.RESPONDING)
+			) {
+				closeAllMenus();
+				actions.setShowOrpheusMenu(true);
 				key.preventDefault();
 				return;
 			}

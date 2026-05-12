@@ -5,6 +5,7 @@ import { HotkeysPane } from "../../components/HotkeysPane";
 import { MemoryMenu } from "../../components/MemoryMenu";
 import { ModelMenu } from "../../components/ModelMenu";
 import { OnboardingOverlay } from "../../components/OnboardingOverlay";
+import { OrpheusMenu, type OrpheusMenuItem } from "../../components/OrpheusMenu";
 import { ProviderMenu } from "../../components/ProviderMenu";
 import { SessionMenu } from "../../components/SessionMenu";
 import { SettingsMenu } from "../../components/SettingsMenu";
@@ -12,6 +13,7 @@ import { ToolsMenu } from "../../components/ToolsMenu";
 import { UrlMenu } from "../../components/UrlMenu";
 import { useUrlMenuItems } from "../../hooks/use-url-menu-items";
 import { useAppContext } from "../../state/app-context";
+import { getDaemonManager } from "../../state/daemon-state";
 import type { ContentBlock, ConversationMessage } from "../../types";
 
 interface AppOverlaysProps {
@@ -36,6 +38,30 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 		groundingCallbacks,
 		onboardingCallbacks,
 	} = ctx;
+
+	const handleOrpheusAction = (item: OrpheusMenuItem) => {
+		const prompts: Record<string, string> = {
+			startup:
+				"Run the ORPHEUS startup protocol: check local health, git state, configuration, provider route, and summarize any issues with fixes.",
+			security: "Run an ORPHEUS security scan for this local project and summarize actionable findings.",
+			project:
+				"Inspect the current ORPHEUS project setup and explain what is wired correctly or incorrectly.",
+			task: "List active ORPHEUS tasks and identify any stale or incomplete work.",
+			suggest: "Suggest the next best ORPHEUS maintenance or coding action based on the current repo state.",
+			diff: "Review the current ORPHEUS git diff and call out risks, incomplete wiring, and missing tests.",
+			shell: "Review ORPHEUS shell and CLI startup behavior for macOS compatibility issues.",
+			status:
+				"Show an ORPHEUS status dashboard with app health, tools, model provider, memory, and repo state.",
+			scan: "Scan available ORPHEUS capabilities and local developer tools.",
+			"scan-files":
+				"Scan the ORPHEUS project files for anomalies, missing imports, stale artifacts, and incomplete wiring.",
+			remediate:
+				"Plan safe auto-remediation for the current ORPHEUS repo issues, asking before destructive changes.",
+		};
+		const prompt = prompts[item.id] ?? item.description ?? item.label;
+		menus.setShowOrpheusMenu(false);
+		void getDaemonManager().submitText(prompt);
+	};
 
 	return (
 		<>
@@ -137,6 +163,10 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 			)}
 
 			{menus.showMemoryMenu && <MemoryMenu onClose={() => menus.setShowMemoryMenu(false)} />}
+
+			{menus.showOrpheusMenu && (
+				<OrpheusMenu onClose={() => menus.setShowOrpheusMenu(false)} onSelect={handleOrpheusAction} />
+			)}
 
 			{onboarding.onboardingActive && (
 				<OnboardingOverlay

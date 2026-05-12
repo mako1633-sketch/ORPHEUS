@@ -53,6 +53,7 @@ export function HotkeysPane({ onClose }: HotkeysPaneProps) {
 				{ key: "P", label: "Providers" },
 				{ key: "L", label: "Sessions" },
 				{ key: "T", label: "Tools" },
+				{ key: "CMD+SHIFT+O", label: "ORPHEUS quick actions" },
 				{ key: "S", label: "Settings" },
 			],
 		},

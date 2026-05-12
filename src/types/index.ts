@@ -301,7 +301,8 @@ export type ToolToggleId =
 	| "screenshot"
 	| "todoManager"
 	| "groundingManager"
-	| "subagent";
+	| "subagent"
+	| "orpheusCli";
 
 export type ToolToggles = Record<ToolToggleId, boolean>;
 
@@ -324,6 +325,7 @@ export const DEFAULT_TOOL_TOGGLES: ToolToggles = {
 	todoManager: true,
 	groundingManager: true,
 	subagent: true,
+	orpheusCli: true,
 };
 
 /**
