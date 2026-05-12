@@ -21,6 +21,7 @@ export interface ToolAvailability {
 	todoManager: boolean;
 	groundingManager: boolean;
 	projectContext: boolean;
+	codingWorkbench: boolean;
 	subagent: boolean;
 }
 
@@ -82,6 +83,7 @@ function normalizeToolAvailability(toolAvailability?: Partial<ToolAvailability>)
 		todoManager: toolAvailability?.todoManager ?? true,
 		groundingManager: toolAvailability?.groundingManager ?? true,
 		projectContext: toolAvailability?.projectContext ?? true,
+		codingWorkbench: toolAvailability?.codingWorkbench ?? true,
 		subagent: toolAvailability?.subagent ?? true,
 	};
 }
@@ -332,6 +334,24 @@ Fetch multiple URLs in one call:
   - Prefer package scripts from projectContext when choosing validation commands.
   - Treat gitStatus as a warning about existing user work. Do not revert unfamiliar changes.
 `,
+	codingWorkbench: `
+  ### 'codingWorkbench' (coding agent workbench)
+  Use this for serious programming tasks after projectContext gives the first overview.
+  It provides repo status, git diff reads, package script discovery, validation script execution, unified patch application, failure explanation, and a persistent coding task ledger.
+
+  **Default coding loop**
+  - Start or update taskState with the user goal, files inspected/changed, checks run, failures, and next step.
+  - Use repoStatus before edits to see dirty files and avoid overwriting user work.
+  - Use gitDiff before and after edits to understand the exact change.
+  - Use packageScripts to select validation commands from the repo's own scripts.
+  - Use runScript for focused validation after edits. If it fails, call explainFailure or use the failure field, inspect the referenced files, then iterate.
+  - Use applyPatch for small unified patches when it is safer than rewriting whole files. Run checkOnly first for larger patches.
+
+  **Safety**
+  - Never hide failed checks. Persist failures in taskState so the next session can resume.
+  - Do not run non-validation scripts or apply patches without user approval when approval is required.
+  - When completing a task, mark taskState completed with changed files and checks run.
+`,
 
 	subagent: `
   ### 'subagent'
@@ -354,6 +374,7 @@ function buildToolDefinitions(availability: ToolAvailability): string {
 	if (availability.windowsHardening) blocks.push(TOOL_SECTIONS.windowsHardening);
 	if (availability.daemonStatus) blocks.push(TOOL_SECTIONS.daemonStatus);
 	if (availability.projectContext) blocks.push(TOOL_SECTIONS.projectContext);
+	if (availability.codingWorkbench) blocks.push(TOOL_SECTIONS.codingWorkbench);
 	if (availability.readFile) blocks.push(TOOL_SECTIONS.readFile);
 	if (availability.writeFile) blocks.push(TOOL_SECTIONS.writeFile);
 	if (availability.subagent) blocks.push(TOOL_SECTIONS.subagent);

@@ -297,6 +297,7 @@ export type ToolToggleId =
 	| "systemStatus"
 	| "persistentContext"
 	| "projectContext"
+	| "codingWorkbench"
 	| "notes"
 	| "screenshot"
 	| "todoManager"
@@ -320,6 +321,7 @@ export const DEFAULT_TOOL_TOGGLES: ToolToggles = {
 	systemStatus: true,
 	persistentContext: true,
 	projectContext: true,
+	codingWorkbench: true,
 	notes: true,
 	screenshot: true,
 	todoManager: true,

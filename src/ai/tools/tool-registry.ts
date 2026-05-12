@@ -1,5 +1,6 @@
 import type { ToolSet } from "ai";
 
+import { codingWorkbench } from "./coding-workbench";
 import { daemonStatus } from "./daemon-status";
 import { fetchUrls } from "./fetch-urls";
 import { groundingManager } from "./grounding-manager";
@@ -65,6 +66,7 @@ const TOOL_REGISTRY: ToolEntry[] = [
 	{ id: "systemStatus", toggleKey: "systemStatus", tool: systemStatus },
 	{ id: "persistentContext", toggleKey: "persistentContext", tool: persistentContext },
 	{ id: "projectContext", toggleKey: "projectContext", tool: projectContext },
+	{ id: "codingWorkbench", toggleKey: "codingWorkbench", tool: codingWorkbench },
 	{ id: "notes", toggleKey: "notes", tool: notes },
 	{ id: "screenshot", toggleKey: "screenshot", tool: screenshot, gate: gateScreenshot },
 	{ id: "todoManager", toggleKey: "todoManager", tool: todoManager },
@@ -156,6 +158,7 @@ function normalizeToggles(toggles?: ToolToggles): ToolToggles {
 		systemStatus: toggles?.systemStatus ?? true,
 		persistentContext: toggles?.persistentContext ?? true,
 		projectContext: toggles?.projectContext ?? true,
+		codingWorkbench: toggles?.codingWorkbench ?? true,
 		notes: toggles?.notes ?? true,
 		screenshot: toggles?.screenshot ?? true,
 		todoManager: toggles?.todoManager ?? true,
@@ -265,6 +268,7 @@ export function getToolLabels(): Record<ToolId, string> {
 		systemStatus: "systemStatus",
 		persistentContext: "persistentContext",
 		projectContext: "projectContext",
+		codingWorkbench: "codingWorkbench",
 		notes: "notes",
 		screenshot: "screenshot",
 		todoManager: "todoManager",
@@ -289,6 +293,7 @@ export function getDefaultToolOrder(): ToolId[] {
 		"systemStatus",
 		"persistentContext",
 		"projectContext",
+		"codingWorkbench",
 		"notes",
 		"screenshot",
 		"todoManager",
@@ -313,6 +318,7 @@ export function createToolAvailabilitySnapshot(availability: ToolAvailabilityMap
 		systemStatus: availability.systemStatus?.enabled ?? false,
 		persistentContext: availability.persistentContext?.enabled ?? false,
 		projectContext: availability.projectContext?.enabled ?? false,
+		codingWorkbench: availability.codingWorkbench?.enabled ?? false,
 		notes: availability.notes?.enabled ?? false,
 		screenshot: availability.screenshot?.enabled ?? false,
 		todoManager: availability.todoManager?.enabled ?? false,

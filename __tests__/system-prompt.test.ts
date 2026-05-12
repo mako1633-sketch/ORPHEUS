@@ -11,6 +11,8 @@ describe("system prompt", () => {
 		expect(prompt).toContain("# Coding Agent Behavior");
 		expect(prompt).toContain("Inspect the project before giving implementation advice");
 		expect(prompt).toContain("Use the projectContext tool as the first pass");
+		expect(prompt).toContain("codingWorkbench");
+		expect(prompt).toContain("persistent coding task ledger");
 		expect(prompt).toContain("Form a concrete edit-and-validation loop");
 		expect(prompt).toContain("After code changes, run the smallest meaningful validation first");
 	});

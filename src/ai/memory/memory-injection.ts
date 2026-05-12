@@ -7,6 +7,7 @@ import type { MemoryContext, MemoryEntry } from "../../types";
 import { debug } from "../../utils/debug-logger";
 import { getRuntimeContext } from "../../state/runtime-context";
 import { detectAssistantResponseLeak, isAssistantResponseGuardNotice } from "../assistant-response-guard";
+import { loadCodingTaskState } from "../coding-task-state";
 import { formatPersistentContextForPrompt, loadPersistentContext } from "../persistent-context";
 import { getHonchoManager, isHonchoAvailable } from "./honcho-manager";
 import { getMemoryManager, isMemoryAvailable } from "./memory-manager";
@@ -36,6 +37,27 @@ ${formatted}
 
 Use this context to provide more personalized and informed responses.
 </relevant-memories>`;
+}
+
+async function formatCodingTaskStateForPrompt(): Promise<string> {
+	const state = await loadCodingTaskState();
+	if (!state || state.status === "completed") return "";
+
+	const lines = [
+		`Goal: ${state.goal}`,
+		`Status: ${state.status}`,
+		state.filesInspected.length ? `Files inspected: ${state.filesInspected.join(", ")}` : "",
+		state.filesChanged.length ? `Files changed: ${state.filesChanged.join(", ")}` : "",
+		state.checksRun.length ? `Checks run: ${state.checksRun.join(", ")}` : "",
+		state.failures.length ? `Failures: ${state.failures.join(" | ")}` : "",
+		state.nextStep ? `Next step: ${state.nextStep}` : "",
+	].filter(Boolean);
+
+	return `<active-coding-task>
+The previous coding task may still be in progress. Use this only when relevant:
+
+${lines.join("\n")}
+</active-coding-task>`;
 }
 
 /** Retrieve relevant memories for a user message */
@@ -88,6 +110,11 @@ export async function buildMemoryInjection(
 	const persistentContext = formatPersistentContextForPrompt(await loadPersistentContext());
 	if (persistentContext && !isContaminatedMemoryText(persistentContext)) {
 		sections.push(persistentContext);
+	}
+
+	const codingTaskState = await formatCodingTaskStateForPrompt();
+	if (codingTaskState && !isContaminatedMemoryText(codingTaskState)) {
+		sections.push(codingTaskState);
 	}
 
 	const context = await getMemoryContextForMessage(userMessage, limit);

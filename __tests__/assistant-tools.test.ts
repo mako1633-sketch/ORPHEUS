@@ -7,6 +7,8 @@ import {
 	formatPersistentContextForPrompt,
 	loadPersistentContext,
 } from "../src/ai/persistent-context";
+import { loadCodingTaskState, updateCodingTaskState } from "../src/ai/coding-task-state";
+import { codingWorkbench } from "../src/ai/tools/coding-workbench";
 import { createNote, listNotes } from "../src/ai/tools/notes";
 import { summarizeProjectContext } from "../src/ai/tools/project-context";
 
@@ -91,5 +93,77 @@ describe("assistant-style local tools", () => {
 		} finally {
 			await rm(projectDir, { recursive: true, force: true });
 		}
+	});
+
+	it("persists coding task state for interrupted repo work", async () => {
+		await updateCodingTaskState({
+			goal: "Fix CLI startup",
+			filesInspected: ["src/cli.ts"],
+			filesChanged: ["src/cli.ts"],
+			checksRun: ["bun run check"],
+			failures: ["format failed"],
+			nextStep: "Run formatter and retry check",
+		});
+
+		const state = await loadCodingTaskState();
+		expect(state?.goal).toBe("Fix CLI startup");
+		expect(state?.filesInspected).toContain("src/cli.ts");
+		expect(state?.failures).toContain("format failed");
+		expect(state?.nextStep).toBe("Run formatter and retry check");
+	});
+
+	it("discovers validation scripts through the coding workbench", async () => {
+		const projectDir = await mkdtemp(path.join(os.tmpdir(), "orpheus-coding-workbench-"));
+		try {
+			await writeFile(
+				path.join(projectDir, "package.json"),
+				JSON.stringify({
+					name: "sample-workbench",
+					scripts: {
+						check: "bun run typecheck",
+						typecheck: "tsc --noEmit",
+						test: "bun test",
+						dev: "bun run --watch src/index.ts",
+					},
+				})
+			);
+			await writeFile(path.join(projectDir, "bun.lock"), "");
+
+			const result = await (
+				codingWorkbench as unknown as {
+					execute: (input: unknown) => Promise<{
+						success: boolean;
+						packageManager?: string;
+						recommendedValidation?: string[];
+					}>;
+				}
+			).execute({ action: "packageScripts", root: projectDir });
+
+			expect(result.success).toBe(true);
+			expect(result.packageManager).toBe("bun");
+			expect(result.recommendedValidation).toEqual(["check", "typecheck", "test"]);
+		} finally {
+			await rm(projectDir, { recursive: true, force: true });
+		}
+	});
+
+	it("explains common coding command failures", async () => {
+		const result = await (
+			codingWorkbench as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					likelyCause?: string;
+					signals?: string[];
+				}>;
+			}
+		).execute({
+			action: "explainFailure",
+			command: "bun run typecheck",
+			output: "src/index.ts(1,1): error TS2307: Cannot find module './missing'",
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.signals).toContain("module-resolution");
+		expect(result.likelyCause).toContain("dependency");
 	});
 });
