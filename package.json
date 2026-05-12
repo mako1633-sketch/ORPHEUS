@@ -22,10 +22,10 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/makefinks/orpheus.git"
+		"url": "git+https://github.com/mako1633-sketch/ORPHEUS.git"
 	},
 	"bugs": {
-		"url": "https://github.com/makefinks/orpheus/issues"
+		"url": "https://github.com/mako1633-sketch/ORPHEUS/issues"
 	},
 	"module": "src/index.tsx",
 	"type": "module",

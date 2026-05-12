@@ -5,16 +5,31 @@ import { readFileSync } from "node:fs";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { formatCliHelp, parseCliArgs } from "./cli-args";
 
 const args = process.argv.slice(2);
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const packageJson = JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")) as {
+	version?: string;
+};
+const version = packageJson.version ?? "unknown";
+const cliAction = parseCliArgs(args);
 
-if (args.includes("--version") || args.includes("-v")) {
-	const packageJson = JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")) as {
-		version?: string;
-	};
-	console.log(packageJson.version ?? "unknown");
+if (cliAction.kind === "version") {
+	console.log(version);
 	process.exit(0);
+}
+
+if (cliAction.kind === "help") {
+	console.log(formatCliHelp(version));
+	process.exit(0);
+}
+
+if (cliAction.kind === "error") {
+	console.error(cliAction.message);
+	console.error("");
+	console.error(formatCliHelp(version));
+	process.exit(1);
 }
 
 const bunCandidates =
@@ -45,7 +60,7 @@ if (bunCheck.error || bunCheck.status !== 0) {
 }
 
 const entry = path.join(packageRoot, "src", "index.tsx");
-const result = spawnSync(bunCmd, [entry, ...args], { stdio: "inherit" });
+const result = spawnSync(bunCmd, [entry, ...cliAction.tuiArgs], { stdio: "inherit" });
 
 if (result.error) {
 	const error = result.error instanceof Error ? result.error : new Error(String(result.error));
