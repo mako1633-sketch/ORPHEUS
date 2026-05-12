@@ -39,6 +39,15 @@ import {
 
 export { buildInterruptedModelMessages };
 
+function buildFailedTurnText(errorMessage: string): string {
+	const message = errorMessage.trim() || "Unknown provider error";
+	return `Turn failed: ${message}`;
+}
+
+export function buildFailedTurnModelMessages(errorMessage: string): ModelMessage[] {
+	return [{ role: "assistant", content: buildFailedTurnText(errorMessage) }];
+}
+
 function getToolCategory(toolName: string): ToolCategory | "fast" | undefined {
 	if (toolName === "subagent") return "subagent";
 	if (toolName === "webSearch" || toolName === "fetchUrls" || toolName === "renderUrl") return "web";
@@ -912,9 +921,74 @@ export function createCancelledHandler(
 /**
  * Create handler for error events.
  */
-export function createErrorHandler(setters: EventHandlerSetters) {
+export function createErrorHandler(
+	refs: EventHandlerRefs,
+	setters: EventHandlerSetters,
+	deps: EventHandlerDeps
+) {
 	return (err: Error) => {
 		setters.setError(err.message);
 		setTimeout(() => setters.setError(""), 5000);
+
+		const userText = refs.currentUserInputRef.current;
+		if (!userText) return;
+
+		deps.finalizeReasoningDuration(Date.now());
+		clearAvatarToolEffects(refs.avatarRef.current);
+
+		const interruptedBlocks =
+			refs.contentBlocksRef.current.length > 0
+				? buildInterruptedContentBlocks(refs.contentBlocksRef.current)
+				: [];
+		const errorText = buildFailedTurnText(err.message);
+		const contentBlocks: ContentBlock[] = [...interruptedBlocks, { type: "text", content: errorText }];
+		const responseMessages = buildFailedTurnModelMessages(err.message);
+		const daemonMessage: ConversationMessage = {
+			id: refs.messageIdRef.current++,
+			type: "daemon",
+			content: errorText,
+			messages: responseMessages,
+			contentBlocks,
+		};
+
+		setters.setConversationHistory((prev: ConversationMessage[]) => {
+			const next = finalizePendingUserMessage(
+				prev,
+				userText,
+				daemonMessage,
+				() => refs.messageIdRef.current++
+			);
+
+			void (async () => {
+				try {
+					const targetSessionId = deps.sessionId ?? (await deps.ensureSessionId());
+					await saveSessionSnapshot(
+						{
+							conversationHistory: next,
+							sessionUsage: refs.sessionUsageRef.current,
+						},
+						targetSessionId
+					);
+				} catch (saveError) {
+					debug.error("save-session-snapshot-failed", {
+						message: saveError instanceof Error ? saveError.message : String(saveError),
+					});
+				}
+			})();
+
+			deps.syncModelHistory(next);
+
+			return next;
+		});
+
+		setters.setCurrentTranscription("");
+		deps.clearReasoningState();
+		setters.setCurrentResponse("");
+		setters.setCurrentContentBlocks([]);
+		refs.toolCallsRef.current = [];
+		refs.toolCallsByIdRef.current.clear();
+		refs.contentBlocksRef.current = [];
+		refs.streamLeakBlockedRef.current = false;
+		refs.currentUserInputRef.current = "";
 	};
 }

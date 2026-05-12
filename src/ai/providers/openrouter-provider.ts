@@ -15,6 +15,7 @@ import { coordinateToolApprovals } from "../tool-approval-coordinator";
 import { getCachedToolAvailability, getDaemonTools } from "../tools/index";
 import { createToolAvailabilitySnapshot, resolveToolAvailability } from "../tools/tool-registry";
 import { getProviderCapabilities } from "./capabilities";
+import { normalizeProviderStreamError } from "./stream-errors";
 import type { LlmProviderAdapter, ProviderStreamRequest, ProviderStreamResult } from "./types";
 
 const MAX_AGENT_STEPS = 100;
@@ -25,15 +26,6 @@ async function ensureOpenRouterApiKey(): Promise<void> {
 	if (prefs) {
 		applyApiKeysToEnv(prefs);
 	}
-}
-
-function normalizeStreamError(error: unknown): Error {
-	if (error instanceof Error) return error;
-	if (error && typeof error === "object" && "message" in error) {
-		const message = (error as { message?: unknown }).message;
-		if (typeof message === "string") return new Error(message);
-	}
-	return new Error(String(error));
 }
 
 async function createDaemonAgent(
@@ -107,7 +99,7 @@ async function streamOpenRouterResponse(
 			}
 
 			if (part.type === "error") {
-				const err = normalizeStreamError(part.error);
+				const err = normalizeProviderStreamError(part.error, "OpenRouter");
 				streamError = err;
 				debug.error("agent-stream-error", {
 					message: err.message,

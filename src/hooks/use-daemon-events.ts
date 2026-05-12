@@ -361,7 +361,7 @@ export function useDaemonEvents(params: UseDaemonEventsParams): UseDaemonEventsR
 		const handleComplete = createCompleteHandler(refs, setters, deps);
 		const handleCancelled = createCancelledHandler(refs, setters, deps);
 		const handleMemorySaved = createMemorySavedHandler();
-		const handleError = createErrorHandler(setters);
+		const handleError = createErrorHandler(refs, setters, deps);
 
 		daemonEvents.on("stateChange", handleStateChange);
 		daemonEvents.on("micLevel", handleMicLevel);

@@ -1,5 +1,8 @@
 import { describe, it, expect } from "bun:test";
-import { buildInterruptedModelMessages } from "../src/hooks/daemon-event-handlers";
+import {
+	buildFailedTurnModelMessages,
+	buildInterruptedModelMessages,
+} from "../src/hooks/daemon-event-handlers";
 import type { ContentBlock, ToolCall } from "../src/types";
 
 describe("buildInterruptedModelMessages", () => {
@@ -73,5 +76,18 @@ describe("buildInterruptedModelMessages", () => {
 
 		const lastContent = messages[2]?.content as any[];
 		expect(lastContent?.[0]).toEqual({ type: "reasoning", text: "More thoughts." });
+	});
+});
+
+describe("buildFailedTurnModelMessages", () => {
+	it("preserves provider failure context for the next turn", () => {
+		const messages = buildFailedTurnModelMessages("Ollama rejected the request: Bad Request");
+
+		expect(messages).toEqual([
+			{
+				role: "assistant",
+				content: "Turn failed: Ollama rejected the request: Bad Request",
+			},
+		]);
 	});
 });
