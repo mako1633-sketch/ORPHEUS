@@ -1,11 +1,12 @@
 import type { ModelMessage } from "../types";
 import { sanitizeAssistantMessagesForModelHistory } from "../ai/assistant-response-guard";
+import { compactModelHistoryForContext } from "../ai/context-compaction";
 
 export class ModelHistoryStore {
 	private history: ModelMessage[] = [];
 
 	get(): ModelMessage[] {
-		return [...this.history];
+		return compactModelHistoryForContext(this.history);
 	}
 
 	set(history: ModelMessage[]): void {

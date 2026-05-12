@@ -16,6 +16,7 @@ import type {
 	TokenUsage,
 } from "../types";
 import { sanitizeAssistantMessagesForModelHistory } from "../ai/assistant-response-guard";
+import { compactModelHistoryForContext } from "../ai/context-compaction";
 import { debug } from "../utils/debug-logger";
 import { getAppConfigDir } from "../utils/preferences";
 import { deleteWorkspace, ensureWorkspaceExists } from "../utils/workspace-manager";
@@ -180,7 +181,7 @@ export function buildModelHistoryFromConversation(
 			modelHistory.push(...sanitizeAssistantMessagesForModelHistory(message.messages));
 		}
 	}
-	return modelHistory;
+	return compactModelHistoryForContext(modelHistory);
 }
 
 export async function listSessions(): Promise<SessionInfo[]> {
