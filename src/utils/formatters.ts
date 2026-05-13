@@ -3,6 +3,12 @@
  */
 
 import type { TodoItem } from "../types";
+import {
+	normalizeTodoAction,
+	normalizeTodoIndex,
+	normalizeTodoItems,
+	normalizeTodoStatus,
+} from "../ai/tools/todo-normalizer";
 import { REASONING_ANIMATION } from "../ui/constants";
 
 const MAX_TOOL_INPUT_LINES = 10;
@@ -120,10 +126,10 @@ export function formatToolInputLines(input: unknown): string[] {
  * Todo input structure for the todoManager tool
  */
 export interface TodoInput {
-	action: "write" | "update" | "list";
-	todos?: Array<{ content: string; status?: string }>;
-	index?: number;
-	status?: string;
+	action: string;
+	todos?: unknown;
+	index?: unknown;
+	status?: unknown;
 	sessionId?: string;
 }
 
@@ -133,32 +139,6 @@ export interface TodoInput {
 export interface FormattedTodoItem {
 	text: string;
 	status: string;
-}
-
-function isTodoArray(value: unknown): value is Array<{ content: string; status?: string }> {
-	return (
-		Array.isArray(value) &&
-		value.every(
-			(todo) =>
-				typeof todo === "object" &&
-				todo !== null &&
-				!Array.isArray(todo) &&
-				"content" in todo &&
-				typeof todo.content === "string"
-		)
-	);
-}
-
-function parseTodoArray(value: unknown): Array<{ content: string; status?: string }> | null {
-	if (isTodoArray(value)) return value;
-	if (typeof value !== "string") return null;
-
-	try {
-		const parsed = JSON.parse(value);
-		return isTodoArray(parsed) ? parsed : null;
-	} catch {
-		return null;
-	}
 }
 
 const STATUS_ICON: Record<string, string> = {
@@ -172,7 +152,7 @@ const STATUS_ICON: Record<string, string> = {
  * Format a single todo item for display
  */
 export function formatTodoItem(todo: { content: string; status?: string }, idx: number): FormattedTodoItem {
-	const status = todo.status || "pending";
+	const status = normalizeTodoStatus(todo.status) ?? todo.status ?? "pending";
 	const icon = STATUS_ICON[status] || "[ ]";
 	return {
 		text: `${icon} ${todo.content}`,
@@ -193,31 +173,35 @@ export function formatTodoDisplayLines(
 	currentTodos: TodoItem[] = []
 ): FormattedTodoItem[] {
 	// If we have a snapshot, always use it (for historical display in conversation)
-	if (isTodoArray(snapshot) && snapshot.length > 0) {
-		return snapshot.map((todo, idx) => formatTodoItem(todo, idx));
+	const snapshotTodos = normalizeTodoItems(snapshot);
+	if (snapshotTodos && snapshotTodos.length > 0) {
+		return snapshotTodos.map((todo, idx) => formatTodoItem(todo, idx));
 	}
 
-	const parsedTodos = parseTodoArray(input.todos);
+	const action = normalizeTodoAction(input.action) ?? input.action;
+	const parsedTodos = normalizeTodoItems(input.todos);
 
-	if (input.action === "write" && input.todos !== undefined && !parsedTodos) {
+	if (action === "write" && input.todos !== undefined && !parsedTodos) {
 		return [{ text: "(invalid todos)", status: "pending" }];
 	}
 
-	if (input.action === "write" && parsedTodos) {
+	if (action === "write" && parsedTodos) {
 		return parsedTodos.map((todo, idx) => formatTodoItem(todo, idx));
 	}
 
-	if (input.action === "update" || input.action === "list") {
+	if (action === "update" || action === "list") {
 		// Use passed-in todos for live display
 		if (currentTodos.length === 0) {
 			return [{ text: "(no todos)", status: "pending" }];
 		}
 		// For update, apply the pending status change to display what it will look like
-		if (input.action === "update" && input.index !== undefined && input.status) {
-			const idx = input.index - 1;
+		const index = normalizeTodoIndex(input.index);
+		const status = normalizeTodoStatus(input.status);
+		if (action === "update" && index !== undefined && status) {
+			const idx = index - 1;
 			return currentTodos.map((todo: TodoItem, i: number) => {
 				if (i === idx) {
-					return formatTodoItem({ content: todo.content, status: input.status }, i);
+					return formatTodoItem({ content: todo.content, status }, i);
 				}
 				return formatTodoItem(todo, i);
 			});

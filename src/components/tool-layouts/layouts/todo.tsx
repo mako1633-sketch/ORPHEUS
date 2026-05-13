@@ -2,23 +2,12 @@ import { TextAttributes } from "@opentui/core";
 import type { ToolLayoutConfig, ToolHeader, ToolLayoutRenderProps } from "../types";
 import { registerToolLayout } from "../registry";
 import { COLORS } from "../../../ui/constants";
-import type { TodoItem } from "../../../types";
+import { formatTodoDisplayLines, isTodoInput, type FormattedTodoItem } from "../../../utils/formatters";
 
 type UnknownRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is UnknownRecord {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-interface TodoInput {
-	action: "write" | "update" | "list";
-	todos?: Array<{ content: string; status?: string }>;
-	index?: number;
-	status?: string;
-}
-
-function isTodoInput(input: unknown): input is TodoInput {
-	return isRecord(input) && "action" in input && typeof input.action === "string";
 }
 
 function extractTodoAction(input: unknown): string | null {
@@ -27,81 +16,6 @@ function extractTodoAction(input: unknown): string | null {
 		return input.action;
 	}
 	return null;
-}
-
-const STATUS_ICON: Record<string, string> = {
-	pending: "○",
-	in_progress: "◐",
-	completed: "●",
-	cancelled: "✕",
-};
-
-interface FormattedTodoItem {
-	text: string;
-	status: string;
-}
-
-function isTodoArray(value: unknown): value is Array<{ content: string; status?: string }> {
-	return Array.isArray(value) && value.every((todo) => isRecord(todo) && typeof todo.content === "string");
-}
-
-function parseTodoArray(value: unknown): Array<{ content: string; status?: string }> | null {
-	if (isTodoArray(value)) return value;
-	if (typeof value !== "string") return null;
-
-	try {
-		const parsed = JSON.parse(value);
-		return isTodoArray(parsed) ? parsed : null;
-	} catch {
-		return null;
-	}
-}
-
-function formatTodoItem(todo: { content: string; status?: string }, _idx: number): FormattedTodoItem {
-	const status = todo.status || "pending";
-	const icon = STATUS_ICON[status] || "[ ]";
-	return {
-		text: `${icon} ${todo.content}`,
-		status,
-	};
-}
-
-function formatTodoDisplayLines(
-	input: TodoInput,
-	snapshot?: Array<{ content: string; status: string }>,
-	currentTodos: TodoItem[] = []
-): FormattedTodoItem[] {
-	if (isTodoArray(snapshot) && snapshot.length > 0) {
-		return snapshot.map((todo, idx) => formatTodoItem(todo, idx));
-	}
-
-	const parsedTodos = parseTodoArray(input.todos);
-
-	if (input.action === "write" && input.todos !== undefined && !parsedTodos) {
-		return [{ text: "(invalid todos)", status: "pending" }];
-	}
-
-	if (input.action === "write" && parsedTodos) {
-		return parsedTodos.map((todo, idx) => formatTodoItem(todo, idx));
-	}
-
-	if (input.action === "update" || input.action === "list") {
-		if (currentTodos.length === 0) {
-			return [{ text: "(no todos)", status: "pending" }];
-		}
-		if (input.action === "update" && input.index !== undefined && input.status) {
-			const idx = input.index - 1;
-			return currentTodos.map((todo: TodoItem, i: number) => {
-				if (i === idx) {
-					return formatTodoItem({ content: todo.content, status: input.status }, i);
-				}
-				return formatTodoItem(todo, i);
-			});
-		}
-		return currentTodos.map((todo: TodoItem, idx: number) => formatTodoItem(todo, idx));
-	}
-
-	return [{ text: "(unknown action)", status: "pending" }];
 }
 
 function getTodoColor(status: string): string {

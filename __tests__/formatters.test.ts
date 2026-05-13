@@ -216,9 +216,53 @@ describe("formatTodoDisplayLines", () => {
 		expect(result[0].status).toBe("in_progress");
 	});
 
+	it("formats wrapped and aliased write todos", () => {
+		const result = formatTodoDisplayLines(
+			{
+				action: "set",
+				todos: {
+					tasks: [
+						{ task: "Trace bad request", status: "in-progress" },
+						{ title: "Add tests", status: "done" },
+					],
+				},
+			},
+			undefined,
+			[]
+		);
+
+		expect(result).toEqual([
+			{ text: "◐ Trace bad request", status: "in_progress" },
+			{ text: "● Add tests", status: "completed" },
+		]);
+	});
+
+	it("formats string todo arrays", () => {
+		const result = formatTodoDisplayLines(
+			{ action: "write", todos: ["Check schema", "Check renderer"] },
+			undefined,
+			[]
+		);
+
+		expect(result).toEqual([
+			{ text: "○ Check schema", status: "pending" },
+			{ text: "○ Check renderer", status: "pending" },
+		]);
+	});
+
 	it("applies status update for update action", () => {
 		const result = formatTodoDisplayLines(
 			{ action: "update", index: 1, status: "completed" },
+			undefined,
+			currentTodos
+		);
+		expect(result[0].text).toBe("● First task");
+		expect(result[1].text).toBe("● Second task");
+	});
+
+	it("applies status update aliases", () => {
+		const result = formatTodoDisplayLines(
+			{ action: "change", index: "1", status: "done" },
 			undefined,
 			currentTodos
 		);
