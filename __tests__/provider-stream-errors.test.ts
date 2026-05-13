@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { normalizeProviderStreamError } from "../src/ai/providers/stream-errors";
+import {
+	addTransientProviderContext,
+	isTransientProviderStreamError,
+	normalizeProviderStreamError,
+} from "../src/ai/providers/stream-errors";
 
 describe("provider stream errors", () => {
 	test("adds provider context to bare bad request errors", () => {
@@ -19,5 +23,23 @@ describe("provider stream errors", () => {
 		);
 
 		expect(error.message).toBe("HTTP 400: Bad Request: tool messages are malformed");
+	});
+
+	test("classifies transient service failures", () => {
+		expect(
+			isTransientProviderStreamError({
+				statusCode: 503,
+				statusText: "Service Unavailable",
+			})
+		).toBe(true);
+		expect(isTransientProviderStreamError(new Error("socket hang up"))).toBe(true);
+		expect(isTransientProviderStreamError(new Error("invalid authentication header"))).toBe(false);
+	});
+
+	test("adds user-actionable context to transient failures", () => {
+		const error = addTransientProviderContext(new Error("HTTP 503: Service Unavailable"), "Ollama");
+
+		expect(error.message).toContain("Transient provider/service issue from Ollama");
+		expect(error.message).toContain("The turn was preserved");
 	});
 });

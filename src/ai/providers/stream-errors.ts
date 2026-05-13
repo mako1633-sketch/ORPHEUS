@@ -58,3 +58,41 @@ export function normalizeProviderStreamError(error: unknown, providerLabel: stri
 	}
 	return normalized;
 }
+
+export function isTransientProviderStreamError(error: unknown): boolean {
+	const normalized =
+		error instanceof Error
+			? error.message
+			: error && typeof error === "object" && "message" in error
+				? String((error as { message?: unknown }).message)
+				: String(error);
+	const details = getProviderErrorDetails(error);
+	const text = `${normalized} ${details ?? ""}`.toLowerCase();
+
+	return (
+		text.includes("service unavailable") ||
+		text.includes("temporarily unavailable") ||
+		text.includes("overloaded") ||
+		text.includes("rate limit") ||
+		text.includes("timeout") ||
+		text.includes("timed out") ||
+		text.includes("econnreset") ||
+		text.includes("socket hang up") ||
+		text.includes("http 429") ||
+		text.includes("http 500") ||
+		text.includes("http 502") ||
+		text.includes("http 503") ||
+		text.includes("http 504")
+	);
+}
+
+export function addTransientProviderContext(error: Error, providerLabel: string): Error {
+	if (!isTransientProviderStreamError(error)) return error;
+	if (error.message.toLowerCase().includes("transient provider/service issue")) return error;
+
+	const wrapped = new Error(
+		`Transient provider/service issue from ${providerLabel}: ${error.message}. The turn was preserved; retry or ask ORPHEUS to continue.`
+	);
+	wrapped.stack = error.stack;
+	return wrapped;
+}

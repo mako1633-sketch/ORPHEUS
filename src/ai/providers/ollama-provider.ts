@@ -13,10 +13,20 @@ import { coordinateToolApprovals } from "../tool-approval-coordinator";
 import { getCachedToolAvailability, getDaemonTools } from "../tools/index";
 import { createToolAvailabilitySnapshot, resolveToolAvailability } from "../tools/tool-registry";
 import { getProviderCapabilities } from "./capabilities";
-import { normalizeProviderStreamError } from "./stream-errors";
+import {
+	addTransientProviderContext,
+	isTransientProviderStreamError,
+	normalizeProviderStreamError,
+} from "./stream-errors";
 import type { LlmProviderAdapter, ProviderStreamRequest, ProviderStreamResult } from "./types";
 
 const MAX_AGENT_STEPS = 100;
+const MAX_TRANSIENT_STREAM_ATTEMPTS = 2;
+const TRANSIENT_RETRY_DELAY_MS = 800;
+
+function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function createOllamaClient() {
 	return createOpenAI({
@@ -60,113 +70,147 @@ async function streamOllamaResponse(request: ProviderStreamRequest): Promise<Pro
 	const messages: ModelMessage[] = [...conversationHistory];
 	messages.push({ role: "user" as const, content: userMessage });
 
-	const agent = await createDaemonAgent(interactionMode, memoryInjection);
+	for (let attempt = 1; attempt <= MAX_TRANSIENT_STREAM_ATTEMPTS; attempt++) {
+		const agent = await createDaemonAgent(interactionMode, memoryInjection);
+		let currentMessages = messages;
+		let fullText = "";
+		let streamError: Error | null = null;
+		let allResponseMessages: ModelMessage[] = [];
+		let hasVisibleOrToolEffects = false;
 
-	let currentMessages = messages;
-	let fullText = "";
-	let streamError: Error | null = null;
-	let allResponseMessages: ModelMessage[] = [];
+		try {
+			while (true) {
+				const stream = await agent.stream({
+					messages: currentMessages,
+				});
 
-	while (true) {
-		const stream = await agent.stream({
-			messages: currentMessages,
-		});
+				const pendingApprovals: ToolApprovalRequest[] = [];
 
-		const pendingApprovals: ToolApprovalRequest[] = [];
+				for await (const part of stream.fullStream) {
+					if (abortSignal?.aborted) {
+						return null;
+					}
 
-		for await (const part of stream.fullStream) {
-			if (abortSignal?.aborted) {
+					if (part.type === "error") {
+						const err = normalizeProviderStreamError(part.error, "Ollama");
+						streamError = err;
+						debug.error("ollama-agent-stream-error", {
+							message: err.message,
+							error: part.error,
+						});
+					} else if (part.type === "abort") {
+						return null;
+					} else if (part.type === "reasoning-delta") {
+						callbacks.onReasoningToken?.(part.text);
+					} else if (part.type === "text-delta") {
+						hasVisibleOrToolEffects = true;
+						fullText += part.text;
+						callbacks.onToken?.(part.text);
+					} else if (part.type === "tool-input-start") {
+						hasVisibleOrToolEffects = true;
+						callbacks.onToolCallStart?.(part.toolName, part.id);
+					} else if (part.type === "tool-call") {
+						hasVisibleOrToolEffects = true;
+						callbacks.onToolCall?.(part.toolName, part.input, part.toolCallId);
+					} else if (part.type === "tool-result") {
+						hasVisibleOrToolEffects = true;
+						callbacks.onToolResult?.(part.toolName, part.output, part.toolCallId);
+					} else if (part.type === "tool-error") {
+						hasVisibleOrToolEffects = true;
+						const errorMessage = part.error instanceof Error ? part.error.message : String(part.error);
+						toolDebug.error("tool-error", {
+							toolName: part.toolName,
+							toolCallId: part.toolCallId,
+							input: part.input,
+							error: errorMessage,
+						});
+						callbacks.onToolResult?.(
+							part.toolName,
+							{ error: errorMessage, input: part.input },
+							part.toolCallId
+						);
+					} else if (part.type === "tool-approval-request") {
+						hasVisibleOrToolEffects = true;
+						const approvalRequest: ToolApprovalRequest = {
+							approvalId: part.approvalId,
+							toolName: part.toolCall.toolName,
+							toolCallId: part.toolCall.toolCallId,
+							input: part.toolCall.input,
+						};
+						pendingApprovals.push(approvalRequest);
+						callbacks.onToolApprovalRequest?.(approvalRequest);
+					} else if (part.type === "finish-step" && part.usage && callbacks.onStepUsage) {
+						callbacks.onStepUsage({
+							promptTokens: part.usage.inputTokens ?? 0,
+							completionTokens: part.usage.outputTokens ?? 0,
+							totalTokens: part.usage.totalTokens ?? 0,
+						});
+					}
+				}
+
+				if (streamError) {
+					throw streamError;
+				}
+
+				const rawResponseMessages = await stream.response.then((response) => response.messages);
+				const responseMessages = sanitizeMessagesForInput(rawResponseMessages);
+				allResponseMessages = [...allResponseMessages, ...responseMessages];
+				currentMessages = [...currentMessages, ...responseMessages];
+
+				if (pendingApprovals.length > 0 && callbacks.onAwaitingApprovals) {
+					const { toolMessage } = await coordinateToolApprovals({
+						pendingApprovals,
+						requestApprovals: callbacks.onAwaitingApprovals,
+					});
+
+					if (toolMessage) {
+						currentMessages = [...currentMessages, toolMessage];
+					}
+
+					continue;
+				}
+
+				break;
+			}
+
+			const finalText = extractFinalAssistantText(allResponseMessages);
+			if (!fullText && allResponseMessages.length === 0) {
+				callbacks.onError?.(
+					new Error(
+						`Ollama returned an empty response. Check that Ollama is running and model '${getResponseModel()}' is installed.`
+					)
+				);
 				return null;
 			}
 
-			if (part.type === "error") {
-				const err = normalizeProviderStreamError(part.error, "Ollama");
-				streamError = err;
-				debug.error("ollama-agent-stream-error", {
+			return {
+				fullText,
+				responseMessages: allResponseMessages,
+				finalText,
+			};
+		} catch (error) {
+			const err = normalizeProviderStreamError(error, "Ollama");
+			const shouldRetry =
+				attempt < MAX_TRANSIENT_STREAM_ATTEMPTS &&
+				!hasVisibleOrToolEffects &&
+				!abortSignal?.aborted &&
+				isTransientProviderStreamError(err);
+			if (shouldRetry) {
+				debug.warn("ollama-agent-stream-transient-retry", {
+					provider: "Ollama",
+					attempt,
 					message: err.message,
-					error: part.error,
 				});
-				callbacks.onError?.(err);
-			} else if (part.type === "abort") {
-				return null;
-			} else if (part.type === "reasoning-delta") {
-				callbacks.onReasoningToken?.(part.text);
-			} else if (part.type === "text-delta") {
-				fullText += part.text;
-				callbacks.onToken?.(part.text);
-			} else if (part.type === "tool-input-start") {
-				callbacks.onToolCallStart?.(part.toolName, part.id);
-			} else if (part.type === "tool-call") {
-				callbacks.onToolCall?.(part.toolName, part.input, part.toolCallId);
-			} else if (part.type === "tool-result") {
-				callbacks.onToolResult?.(part.toolName, part.output, part.toolCallId);
-			} else if (part.type === "tool-error") {
-				const errorMessage = part.error instanceof Error ? part.error.message : String(part.error);
-				toolDebug.error("tool-error", {
-					toolName: part.toolName,
-					toolCallId: part.toolCallId,
-					input: part.input,
-					error: errorMessage,
-				});
-				callbacks.onToolResult?.(part.toolName, { error: errorMessage, input: part.input }, part.toolCallId);
-			} else if (part.type === "tool-approval-request") {
-				const approvalRequest: ToolApprovalRequest = {
-					approvalId: part.approvalId,
-					toolName: part.toolCall.toolName,
-					toolCallId: part.toolCall.toolCallId,
-					input: part.toolCall.input,
-				};
-				pendingApprovals.push(approvalRequest);
-				callbacks.onToolApprovalRequest?.(approvalRequest);
-			} else if (part.type === "finish-step" && part.usage && callbacks.onStepUsage) {
-				callbacks.onStepUsage({
-					promptTokens: part.usage.inputTokens ?? 0,
-					completionTokens: part.usage.outputTokens ?? 0,
-					totalTokens: part.usage.totalTokens ?? 0,
-				});
+				await delay(TRANSIENT_RETRY_DELAY_MS);
+				continue;
 			}
-		}
 
-		if (streamError) {
+			callbacks.onError?.(addTransientProviderContext(err, "Ollama"));
 			return null;
 		}
-
-		const rawResponseMessages = await stream.response.then((response) => response.messages);
-		const responseMessages = sanitizeMessagesForInput(rawResponseMessages);
-		allResponseMessages = [...allResponseMessages, ...responseMessages];
-		currentMessages = [...currentMessages, ...responseMessages];
-
-		if (pendingApprovals.length > 0 && callbacks.onAwaitingApprovals) {
-			const { toolMessage } = await coordinateToolApprovals({
-				pendingApprovals,
-				requestApprovals: callbacks.onAwaitingApprovals,
-			});
-
-			if (toolMessage) {
-				currentMessages = [...currentMessages, toolMessage];
-			}
-
-			continue;
-		}
-
-		break;
 	}
 
-	const finalText = extractFinalAssistantText(allResponseMessages);
-	if (!fullText && allResponseMessages.length === 0) {
-		callbacks.onError?.(
-			new Error(
-				`Ollama returned an empty response. Check that Ollama is running and model '${getResponseModel()}' is installed.`
-			)
-		);
-		return null;
-	}
-
-	return {
-		fullText,
-		responseMessages: allResponseMessages,
-		finalText,
-	};
+	return null;
 }
 
 async function generateOllamaSessionTitle(firstMessage: string): Promise<string> {

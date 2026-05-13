@@ -15,10 +15,20 @@ import { coordinateToolApprovals } from "../tool-approval-coordinator";
 import { getCachedToolAvailability, getDaemonTools } from "../tools/index";
 import { createToolAvailabilitySnapshot, resolveToolAvailability } from "../tools/tool-registry";
 import { getProviderCapabilities } from "./capabilities";
-import { normalizeProviderStreamError } from "./stream-errors";
+import {
+	addTransientProviderContext,
+	isTransientProviderStreamError,
+	normalizeProviderStreamError,
+} from "./stream-errors";
 import type { LlmProviderAdapter, ProviderStreamRequest, ProviderStreamResult } from "./types";
 
 const MAX_AGENT_STEPS = 100;
+const MAX_TRANSIENT_STREAM_ATTEMPTS = 2;
+const TRANSIENT_RETRY_DELAY_MS = 800;
+
+function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 async function ensureOpenRouterApiKey(): Promise<void> {
 	if (process.env.OPENROUTER_API_KEY) return;
@@ -79,120 +89,152 @@ async function streamOpenRouterResponse(
 	const messages: ModelMessage[] = [...conversationHistory];
 	messages.push({ role: "user" as const, content: userMessage });
 
-	const agent = await createDaemonAgent(interactionMode, reasoningEffort, memoryInjection);
+	for (let attempt = 1; attempt <= MAX_TRANSIENT_STREAM_ATTEMPTS; attempt++) {
+		const agent = await createDaemonAgent(interactionMode, reasoningEffort, memoryInjection);
+		let currentMessages = messages;
+		let fullText = "";
+		let streamError: Error | null = null;
+		let allResponseMessages: ModelMessage[] = [];
+		let hasVisibleOrToolEffects = false;
 
-	let currentMessages = messages;
-	let fullText = "";
-	let streamError: Error | null = null;
-	let allResponseMessages: ModelMessage[] = [];
-
-	while (true) {
-		const stream = await agent.stream({
-			messages: currentMessages,
-		});
-
-		const pendingApprovals: ToolApprovalRequest[] = [];
-
-		for await (const part of stream.fullStream) {
-			if (abortSignal?.aborted) {
-				return null;
-			}
-
-			if (part.type === "error") {
-				const err = normalizeProviderStreamError(part.error, "OpenRouter");
-				streamError = err;
-				debug.error("agent-stream-error", {
-					message: err.message,
-					error: part.error,
+		try {
+			while (true) {
+				const stream = await agent.stream({
+					messages: currentMessages,
 				});
-				callbacks.onError?.(err);
-			} else if (part.type === "abort") {
-				return null;
-			} else if (part.type === "reasoning-delta") {
-				callbacks.onReasoningToken?.(part.text);
-			} else if (part.type === "text-delta") {
-				fullText += part.text;
-				callbacks.onToken?.(part.text);
-			} else if (part.type === "tool-input-start") {
-				callbacks.onToolCallStart?.(part.toolName, part.id);
-			} else if (part.type === "tool-call") {
-				callbacks.onToolCall?.(part.toolName, part.input, part.toolCallId);
-			} else if (part.type === "tool-result") {
-				callbacks.onToolResult?.(part.toolName, part.output, part.toolCallId);
-			} else if (part.type === "tool-error") {
-				const errorMessage = part.error instanceof Error ? part.error.message : String(part.error);
-				toolDebug.error("tool-error", {
-					toolName: part.toolName,
-					toolCallId: part.toolCallId,
-					input: part.input,
-					error: errorMessage,
-				});
-				callbacks.onToolResult?.(part.toolName, { error: errorMessage, input: part.input }, part.toolCallId);
-			} else if (part.type === "tool-approval-request") {
-				const approvalRequest: ToolApprovalRequest = {
-					approvalId: part.approvalId,
-					toolName: part.toolCall.toolName,
-					toolCallId: part.toolCall.toolCallId,
-					input: part.toolCall.input,
-				};
-				pendingApprovals.push(approvalRequest);
-				callbacks.onToolApprovalRequest?.(approvalRequest);
-			} else if (part.type === "finish-step") {
-				if (part.usage && callbacks.onStepUsage) {
-					const reportedCost = getOpenRouterReportedCost(part.providerMetadata);
 
-					callbacks.onStepUsage({
-						promptTokens: part.usage.inputTokens ?? 0,
-						completionTokens: part.usage.outputTokens ?? 0,
-						totalTokens: part.usage.totalTokens ?? 0,
-						reasoningTokens: part.usage.outputTokenDetails?.reasoningTokens ?? 0,
-						cachedInputTokens: part.usage.inputTokenDetails?.cacheReadTokens ?? 0,
-						cost: reportedCost,
-					});
+				const pendingApprovals: ToolApprovalRequest[] = [];
+
+				for await (const part of stream.fullStream) {
+					if (abortSignal?.aborted) {
+						return null;
+					}
+
+					if (part.type === "error") {
+						const err = normalizeProviderStreamError(part.error, "OpenRouter");
+						streamError = err;
+						debug.error("agent-stream-error", {
+							message: err.message,
+							error: part.error,
+						});
+					} else if (part.type === "abort") {
+						return null;
+					} else if (part.type === "reasoning-delta") {
+						callbacks.onReasoningToken?.(part.text);
+					} else if (part.type === "text-delta") {
+						hasVisibleOrToolEffects = true;
+						fullText += part.text;
+						callbacks.onToken?.(part.text);
+					} else if (part.type === "tool-input-start") {
+						hasVisibleOrToolEffects = true;
+						callbacks.onToolCallStart?.(part.toolName, part.id);
+					} else if (part.type === "tool-call") {
+						hasVisibleOrToolEffects = true;
+						callbacks.onToolCall?.(part.toolName, part.input, part.toolCallId);
+					} else if (part.type === "tool-result") {
+						hasVisibleOrToolEffects = true;
+						callbacks.onToolResult?.(part.toolName, part.output, part.toolCallId);
+					} else if (part.type === "tool-error") {
+						hasVisibleOrToolEffects = true;
+						const errorMessage = part.error instanceof Error ? part.error.message : String(part.error);
+						toolDebug.error("tool-error", {
+							toolName: part.toolName,
+							toolCallId: part.toolCallId,
+							input: part.input,
+							error: errorMessage,
+						});
+						callbacks.onToolResult?.(
+							part.toolName,
+							{ error: errorMessage, input: part.input },
+							part.toolCallId
+						);
+					} else if (part.type === "tool-approval-request") {
+						hasVisibleOrToolEffects = true;
+						const approvalRequest: ToolApprovalRequest = {
+							approvalId: part.approvalId,
+							toolName: part.toolCall.toolName,
+							toolCallId: part.toolCall.toolCallId,
+							input: part.toolCall.input,
+						};
+						pendingApprovals.push(approvalRequest);
+						callbacks.onToolApprovalRequest?.(approvalRequest);
+					} else if (part.type === "finish-step") {
+						if (part.usage && callbacks.onStepUsage) {
+							const reportedCost = getOpenRouterReportedCost(part.providerMetadata);
+
+							callbacks.onStepUsage({
+								promptTokens: part.usage.inputTokens ?? 0,
+								completionTokens: part.usage.outputTokens ?? 0,
+								totalTokens: part.usage.totalTokens ?? 0,
+								reasoningTokens: part.usage.outputTokenDetails?.reasoningTokens ?? 0,
+								cachedInputTokens: part.usage.inputTokenDetails?.cacheReadTokens ?? 0,
+								cost: reportedCost,
+							});
+						}
+					}
 				}
-			}
-		}
 
-		if (streamError) {
+				if (streamError) {
+					throw streamError;
+				}
+
+				const rawResponseMessages = await stream.response.then((response) => response.messages);
+				const responseMessages = sanitizeMessagesForInput(rawResponseMessages);
+				allResponseMessages = [...allResponseMessages, ...responseMessages];
+				currentMessages = [...currentMessages, ...responseMessages];
+
+				if (pendingApprovals.length > 0 && callbacks.onAwaitingApprovals) {
+					const { toolMessage } = await coordinateToolApprovals({
+						pendingApprovals,
+						requestApprovals: callbacks.onAwaitingApprovals,
+					});
+
+					if (toolMessage) {
+						currentMessages = [...currentMessages, toolMessage];
+					}
+
+					continue;
+				}
+
+				break;
+			}
+
+			const finalText = extractFinalAssistantText(allResponseMessages);
+			if (!fullText && allResponseMessages.length === 0) {
+				callbacks.onError?.(
+					new Error("Model returned empty response. Check API key and model availability.")
+				);
+				return null;
+			}
+
+			return {
+				fullText,
+				responseMessages: allResponseMessages,
+				finalText,
+			};
+		} catch (error) {
+			const err = normalizeProviderStreamError(error, "OpenRouter");
+			const shouldRetry =
+				attempt < MAX_TRANSIENT_STREAM_ATTEMPTS &&
+				!hasVisibleOrToolEffects &&
+				!abortSignal?.aborted &&
+				isTransientProviderStreamError(err);
+			if (shouldRetry) {
+				debug.warn("agent-stream-transient-retry", {
+					provider: "OpenRouter",
+					attempt,
+					message: err.message,
+				});
+				await delay(TRANSIENT_RETRY_DELAY_MS);
+				continue;
+			}
+
+			callbacks.onError?.(addTransientProviderContext(err, "OpenRouter"));
 			return null;
 		}
-
-		const rawResponseMessages = await stream.response.then((response) => response.messages);
-		const responseMessages = sanitizeMessagesForInput(rawResponseMessages);
-		allResponseMessages = [...allResponseMessages, ...responseMessages];
-		currentMessages = [...currentMessages, ...responseMessages];
-
-		if (pendingApprovals.length > 0 && callbacks.onAwaitingApprovals) {
-			const { toolMessage } = await coordinateToolApprovals({
-				pendingApprovals,
-				requestApprovals: callbacks.onAwaitingApprovals,
-			});
-
-			if (toolMessage) {
-				currentMessages = [...currentMessages, toolMessage];
-			}
-
-			continue;
-		}
-
-		break;
 	}
 
-	if (streamError) {
-		return null;
-	}
-
-	const finalText = extractFinalAssistantText(allResponseMessages);
-	if (!fullText && allResponseMessages.length === 0) {
-		callbacks.onError?.(new Error("Model returned empty response. Check API key and model availability."));
-		return null;
-	}
-
-	return {
-		fullText,
-		responseMessages: allResponseMessages,
-		finalText,
-	};
+	return null;
 }
 
 async function generateOpenRouterSessionTitle(firstMessage: string): Promise<string> {
