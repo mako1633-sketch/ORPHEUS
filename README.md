@@ -87,11 +87,20 @@ ORPHEUS can persist user-specific facts across sessions using [mem0](https://git
 
 ORPHEUS can also mirror sanitized conversation turns into [Honcho](https://docs.honcho.dev/) for richer conversational context. Honcho is optional and loaded only when configured. Install `@honcho-ai/sdk`, then set `HONCHO_API_KEY` for managed Honcho or `HONCHO_BASE_URL` for a local Honcho server. Optional settings: `HONCHO_WORKSPACE_ID`, `HONCHO_USER_PEER_ID`, `HONCHO_ASSISTANT_PEER_ID`, or `HONCHO_ENABLED=true`.
 
+When Honcho is configured, ORPHEUS reports Honcho health in its capability dashboard and mirrors sanitized conversation/task-stack updates into Honcho so long-running work can regain context across sessions.
+
 ### Coding Workbench
 ORPHEUS includes a local coding workbench for repo-aware programming tasks. It can summarize project structure, inspect git state and diffs, discover package scripts, run validation scripts, explain common build/test failures, apply patches with approval controls, and persist an active coding-task ledger so interrupted work can resume cleanly.
 
+The workbench also includes an adversarial self-review pass for meaningful code changes. It separates observed evidence from inference, records assumptions and risks, identifies likely failure modes such as stale state, permissions, context overflow, partial writes, and UI/API mismatches, and recommends validation checks before ORPHEUS marks coding work complete. File writes are read back after saving so ORPHEUS only reports verified write success.
+
+QoL coding helpers include a project doctor for setup/readiness checks, coding mode profiles for fast fixes or careful release work, GitHub publish planning with secret checks and approval gates, and failure recovery guidance that separates transient hiccups from deterministic build/test failures.
+
 ### Executive Assistant Workbench
-ORPHEUS can track durable priorities, follow-ups, decisions, waiting-on items, risks, and notes. It can produce a concise local briefing focused on overdue items, due-soon work, blocked or waiting-on tasks, open decisions, and risks. This is local ORPHEUS state unless an external connector or MCP server is configured.
+ORPHEUS can track durable priorities, follow-ups, decisions, waiting-on items, risks, notes, and a long-term task stack. It can produce a concise local briefing focused on overdue items, due-soon work, blocked or waiting-on tasks, queued ORPHEUS work, open decisions, and risks. This is local ORPHEUS state unless an external connector or MCP server is configured.
+
+### Reliability and Control Centers
+ORPHEUS includes compact operational surfaces for higher-confidence work: a capability dashboard with fix actions, a context budget recommendation, a launch briefing that combines health, active coding work, executive state, and memory status, and persistent-context controls to view, replace, clear, or export local memory.
 
 ### Quick Actions
 The terminal UI includes an ORPHEUS quick-action menu for common maintenance and status workflows. Use `Cmd+Shift+O` on macOS, or `Ctrl+Shift+O` on non-macOS platforms, to open quick actions.
@@ -110,8 +119,12 @@ The terminal UI includes an ORPHEUS quick-action menu for common maintenance and
 | Workspaces | Session-scoped on-disk workspaces for the agent to work in. |
 | Web Search | Exa-based search and fetch for grounded, up-to-date info. |
 | Grounding | Text-fragment grounding with a dedicated UI. |
-| Coding Workbench | Repo context, git status/diff inspection, package-script discovery, validation, patching, and failure recovery. |
+| Capability Dashboard | Provider, shell, search, memory, Signal, subagent, and setup health with compact fix actions. |
+| Context Budget | Context usage recommendations and compaction guidance before long sessions overflow. |
+| Coding Workbench | Repo context, project doctor, git status/diff inspection, package-script discovery, coding modes, GitHub publish planning, validation, patching, adversarial self-review, verified writes, and failure recovery. |
 | Executive Assistant | Durable priorities, follow-ups, decisions, waiting-on items, risks, notes, and local briefings. |
+| Long-Term Task Stack | Durable queued, active, blocked, done, and archived ORPHEUS tasks that survive sessions. |
+| Memory Control | View, replace, clear, and export local persistent context. |
 | Security Snapshot | Read-only Windows posture score, prioritized fixes, cyber-readiness controls, and owner questions. |
 | Local Shell Execution | PowerShell on Windows and bash on macOS/Linux, with approval scoping for potentially dangerous commands. |
 | ORPHEUS Quick Actions | Terminal quick-action menu for status, repo checks, task review, and maintenance workflows. |

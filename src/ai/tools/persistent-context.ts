@@ -1,6 +1,12 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { appendPersistentContext, loadPersistentContext, savePersistentContext } from "../persistent-context";
+import {
+	appendPersistentContext,
+	clearPersistentContext,
+	exportPersistentContext,
+	loadPersistentContext,
+	savePersistentContext,
+} from "../persistent-context";
 
 export const persistentContext = tool({
 	description:
@@ -17,15 +23,47 @@ export const persistentContext = tool({
 			action: z.literal("replace"),
 			content: z.string().describe("The complete persistent context content to store."),
 		}),
+		z.object({
+			action: z.literal("clear"),
+		}),
+		z.object({
+			action: z.literal("export"),
+		}),
 	]),
 	execute: async (input) => {
 		if (input.action === "read") {
 			const content = await loadPersistentContext();
+			const lines = content
+				.split(/\r?\n/)
+				.map((line) => line.trim())
+				.filter(Boolean);
 			return {
 				success: true,
 				action: "read",
 				content,
 				empty: content.length === 0,
+				controlCenter: {
+					lineCount: lines.length,
+					charCount: content.length,
+					preview: lines.slice(0, 12),
+					actions: ["append", "replace", "clear", "export"],
+				},
+			};
+		}
+
+		if (input.action === "clear") {
+			return {
+				success: true,
+				action: "clear",
+				...(await clearPersistentContext()),
+			};
+		}
+
+		if (input.action === "export") {
+			return {
+				success: true,
+				action: "export",
+				...(await exportPersistentContext()),
 			};
 		}
 

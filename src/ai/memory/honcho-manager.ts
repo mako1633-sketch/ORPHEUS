@@ -13,10 +13,12 @@ interface HonchoMessageLike {
 
 interface HonchoContextResult {
 	representation?: unknown;
+	peerRepresentation?: unknown;
 	peer_card?: unknown;
 	peerCard?: unknown;
-	to_openai?: (options?: unknown) => HonchoMessageLike[];
-	toOpenAI?: (options?: unknown) => HonchoMessageLike[];
+	summary?: unknown;
+	to_openai?: (assistant?: unknown) => HonchoMessageLike[];
+	toOpenAI?: (assistant?: unknown) => HonchoMessageLike[];
 }
 
 interface HonchoPeerLike {
@@ -38,8 +40,8 @@ interface HonchoSessionLike {
 }
 
 interface HonchoClientLike {
-	peer: (id: string) => HonchoPeerLike;
-	session: (id: string) => HonchoSessionLike;
+	peer: (id: string) => HonchoPeerLike | Promise<HonchoPeerLike>;
+	session: (id: string) => HonchoSessionLike | Promise<HonchoSessionLike>;
 }
 
 type HonchoConstructor = new (options?: Record<string, unknown>) => HonchoClientLike;
@@ -71,6 +73,13 @@ function stringifyContextValue(value: unknown): string {
 	}
 	if (typeof value === "string") return value.trim();
 	if (value && typeof value === "object") {
+		if ("content" in value && typeof value.content === "string") {
+			return value.content.trim();
+		}
+		const stringified = value.toString();
+		if (stringified && stringified !== "[object Object]") {
+			return stringified.trim();
+		}
 		try {
 			return JSON.stringify(value);
 		} catch {
@@ -92,23 +101,44 @@ function textFromOpenAiMessages(messages: HonchoMessageLike[]): string {
 		.join("\n");
 }
 
-function formatContextResult(context: HonchoContextResult | null | undefined): string {
+function getOpenAiMessages(
+	context: HonchoContextResult,
+	assistantPeer?: HonchoPeerLike
+): HonchoMessageLike[] {
+	try {
+		const messages =
+			typeof context.toOpenAI === "function"
+				? context.toOpenAI(assistantPeer)
+				: typeof context.to_openai === "function"
+					? context.to_openai(assistantPeer)
+					: [];
+		return Array.isArray(messages) ? messages : [];
+	} catch (error) {
+		debug.warn("honcho-context-format", {
+			message: "Honcho context could not be converted to OpenAI messages",
+			error: error instanceof Error ? error.message : String(error),
+		});
+		return [];
+	}
+}
+
+function formatContextResult(
+	context: HonchoContextResult | null | undefined,
+	assistantPeer?: HonchoPeerLike
+): string {
 	if (!context) return "";
 
-	const openAiMessages =
-		typeof context.toOpenAI === "function"
-			? context.toOpenAI()
-			: typeof context.to_openai === "function"
-				? context.to_openai()
-				: undefined;
+	const openAiMessages = getOpenAiMessages(context, assistantPeer);
 	const openAiText = Array.isArray(openAiMessages) ? textFromOpenAiMessages(openAiMessages) : "";
 
-	const representation = stringifyContextValue(context.representation);
+	const representation = stringifyContextValue(context.representation ?? context.peerRepresentation);
 	const peerCard = stringifyContextValue(context.peerCard ?? context.peer_card);
+	const summary = stringifyContextValue(context.summary);
 
 	return [
 		peerCard ? `Peer card:\n${peerCard}` : "",
 		representation ? `Representation:\n${representation}` : "",
+		summary ? `Summary:\n${summary}` : "",
 		openAiText,
 	]
 		.filter(Boolean)
@@ -169,14 +199,40 @@ export class HonchoManager {
 		return this._isAvailable;
 	}
 
+	getStatus(): {
+		configured: boolean;
+		initialized: boolean;
+		available: boolean;
+		workspaceId: string;
+		baseUrl?: string;
+		userPeerId: string;
+		assistantPeerId: string;
+	} {
+		return {
+			configured: isHonchoAvailable(),
+			initialized: Boolean(this.client),
+			available: this._isAvailable,
+			workspaceId: readEnv("HONCHO_WORKSPACE_ID") ?? DEFAULT_WORKSPACE_ID,
+			baseUrl: readEnv("HONCHO_BASE_URL"),
+			userPeerId: readEnv("HONCHO_USER_PEER_ID") ?? DEFAULT_USER_PEER_ID,
+			assistantPeerId: readEnv("HONCHO_ASSISTANT_PEER_ID") ?? DEFAULT_ASSISTANT_PEER_ID,
+		};
+	}
+
 	async initialize(): Promise<boolean> {
 		if (this.initPromise) {
 			await this.initPromise;
+			if (!this._isAvailable) {
+				this.initPromise = null;
+			}
 			return this._isAvailable;
 		}
 
 		this.initPromise = this.doInitialize();
 		await this.initPromise;
+		if (!this._isAvailable) {
+			this.initPromise = null;
+		}
 		return this._isAvailable;
 	}
 
@@ -197,8 +253,10 @@ export class HonchoManager {
 			if (baseUrl) options.baseURL = baseUrl;
 
 			this.client = new Honcho(options);
-			this.userPeer = this.client.peer(readEnv("HONCHO_USER_PEER_ID") ?? DEFAULT_USER_PEER_ID);
-			this.assistantPeer = this.client.peer(readEnv("HONCHO_ASSISTANT_PEER_ID") ?? DEFAULT_ASSISTANT_PEER_ID);
+			this.userPeer = await this.client.peer(readEnv("HONCHO_USER_PEER_ID") ?? DEFAULT_USER_PEER_ID);
+			this.assistantPeer = await this.client.peer(
+				readEnv("HONCHO_ASSISTANT_PEER_ID") ?? DEFAULT_ASSISTANT_PEER_ID
+			);
 			this._isAvailable = true;
 			debug.info("honcho-init", {
 				message: "Honcho initialized",
@@ -206,6 +264,10 @@ export class HonchoManager {
 				baseUrl: baseUrl ?? null,
 			});
 		} catch (error) {
+			this.client = null;
+			this.userPeer = null;
+			this.assistantPeer = null;
+			this.peersAddedBySession.clear();
 			this._isAvailable = false;
 			debug.error("honcho-init", {
 				message: "Honcho initialization failed",
@@ -214,9 +276,9 @@ export class HonchoManager {
 		}
 	}
 
-	private getSession(sessionId: string | null | undefined): HonchoSessionLike | null {
+	private async getSession(sessionId: string | null | undefined): Promise<HonchoSessionLike | null> {
 		if (!this.client) return null;
-		return this.client.session(getSessionId(sessionId));
+		return await this.client.session(getSessionId(sessionId));
 	}
 
 	private async ensureSessionPeers(session: HonchoSessionLike): Promise<void> {
@@ -250,7 +312,7 @@ export class HonchoManager {
 			return;
 		}
 
-		const session = this.getSession(params.sessionId);
+		const session = await this.getSession(params.sessionId);
 		if (!session) return;
 
 		try {
@@ -279,7 +341,7 @@ export class HonchoManager {
 
 	async buildContext(params: { sessionId?: string | null; query: string; tokens?: number }): Promise<string> {
 		if (!(await this.initialize())) return "";
-		const session = this.getSession(params.sessionId);
+		const session = await this.getSession(params.sessionId);
 		if (!session || !this.userPeer || !this.assistantPeer) return "";
 
 		try {
@@ -290,7 +352,7 @@ export class HonchoManager {
 					: typeof session.get_context === "function"
 						? await session.get_context({ tokens: params.tokens ?? 1500 })
 						: null;
-			const sessionContext = formatContextResult(context);
+			const sessionContext = formatContextResult(context, this.assistantPeer);
 
 			const peerContext =
 				typeof this.userPeer.context === "function"
@@ -304,7 +366,7 @@ export class HonchoManager {
 								search_query: params.query,
 							})
 						: null;
-			const peerContextText = formatContextResult(peerContext);
+			const peerContextText = formatContextResult(peerContext, this.assistantPeer);
 
 			const chatContext =
 				!sessionContext && !peerContextText && typeof this.userPeer.chat === "function"

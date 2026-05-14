@@ -14,6 +14,7 @@ export interface AvatarLayerProps {
 	applyAvatarForState: (state: DaemonState) => void;
 	width: number;
 	height: number;
+	viewportHeight?: number;
 	zIndex?: number;
 	showBanner?: boolean;
 	animateBanner?: boolean;
@@ -27,6 +28,7 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 		applyAvatarForState,
 		width,
 		height,
+		viewportHeight = height,
 		zIndex = 0,
 		showBanner = false,
 		animateBanner = false,
@@ -43,6 +45,7 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 	const showHomeGif = showBanner;
 	const gifWidth = Math.max(56, Math.min(96, Math.floor(width * 0.56)));
 	const gifHeight = Math.max(16, Math.min(30, Math.floor(gifWidth / DAEMON_GIF_ASPECT / 2), height));
+	const gifTop = Math.max(0, Math.floor((viewportHeight - gifHeight) / 2));
 
 	// Keep a stable callback ref so we don't detach/reattach on daemonState changes.
 	const daemonStateRef = useRef(daemonState);
@@ -110,10 +113,10 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 			{showHomeGif ? (
 				<box
 					position="absolute"
-					top={0}
+					top={gifTop}
 					left={0}
 					width="100%"
-					height="100%"
+					height={gifHeight}
 					alignItems="center"
 					justifyContent="center"
 					zIndex={1}

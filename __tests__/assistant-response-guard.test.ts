@@ -198,6 +198,54 @@ Here is the JSON for this tool:
 		expect(result.fullText).toContain("Least privilege");
 	});
 
+	it("blocks unsupported coding completion claims without evidence", () => {
+		const result = guardAssistantResponse({
+			fullText: "Done, I fixed it.",
+			responseMessages: [{ role: "assistant", content: "Done, I fixed it." }],
+			userText: "Please fix the CLI startup bug.",
+		});
+
+		expect(result.replaced).toBe(true);
+		expect(result.reason).toBe("unsupported-coding-claim");
+		expect(result.fullText).toContain("without evidence");
+		expect(result.fullText).toContain("verify the change");
+	});
+
+	it("allows concise coding completion claims with validation evidence", () => {
+		const text = "Fixed. Validation: bun run check passed.";
+		const result = guardAssistantResponse({
+			fullText: text,
+			responseMessages: [{ role: "assistant", content: text }],
+			userText: "Please fix the CLI startup bug.",
+		});
+
+		expect(result.replaced).toBe(false);
+		expect(result.fullText).toBe(text);
+	});
+
+	it("allows coding completion claims when tool evidence exists", () => {
+		const result = guardAssistantResponse({
+			fullText: "Done, I fixed it.",
+			responseMessages: [
+				{
+					role: "assistant",
+					content: [
+						{ type: "text", text: "Done, I fixed it." },
+						{
+							type: "tool-call",
+							toolCallId: "call_1",
+							toolName: "codingWorkbench",
+							input: { action: "runScript", script: "check" },
+						},
+					],
+				},
+			] as any,
+			userText: "Please fix the CLI startup bug.",
+		});
+
+		expect(result.replaced).toBe(false);
+	});
+
 	it("does not flag normal security reports that mention signals", () => {
 		const report = buildWindowsSecurityReport([], [], { title: "ORPHEUS Security Snapshot" });
 

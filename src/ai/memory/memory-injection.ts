@@ -10,6 +10,7 @@ import { detectAssistantResponseLeak, isAssistantResponseGuardNotice } from "../
 import { loadCodingTaskState } from "../coding-task-state";
 import { buildExecutiveBriefing } from "../executive-state";
 import { formatPersistentContextForPrompt, loadPersistentContext } from "../persistent-context";
+import { loadTaskStack } from "../task-stack-state";
 import { getHonchoManager, isHonchoAvailable } from "./honcho-manager";
 import { getMemoryManager, isMemoryAvailable } from "./memory-manager";
 
@@ -81,6 +82,24 @@ ${attention.join("\n") || `Open items: ${totalOpen}`}
 </executive-briefing>`;
 }
 
+async function formatTaskStackForPrompt(): Promise<string> {
+	const stack = await loadTaskStack();
+	const open = stack.items.filter(
+		(item) => item.status === "active" || item.status === "queued" || item.status === "blocked"
+	);
+	if (open.length === 0) return "";
+
+	const lines = open.slice(0, 12).map((item) => {
+		return `- [${item.status}] [${item.priority}] ${item.title}${item.nextStep ? ` — next: ${item.nextStep}` : ""}`;
+	});
+
+	return `<orpheus-task-stack>
+Durable ORPHEUS task stack across sessions:
+
+${lines.join("\n")}
+</orpheus-task-stack>`;
+}
+
 /** Retrieve relevant memories for a user message */
 export async function getMemoryContextForMessage(
 	userMessage: string,
@@ -141,6 +160,11 @@ export async function buildMemoryInjection(
 	const executiveBriefing = await formatExecutiveBriefingForPrompt();
 	if (executiveBriefing && !isContaminatedMemoryText(executiveBriefing)) {
 		sections.push(executiveBriefing);
+	}
+
+	const taskStack = await formatTaskStackForPrompt();
+	if (taskStack && !isContaminatedMemoryText(taskStack)) {
+		sections.push(taskStack);
 	}
 
 	const context = await getMemoryContextForMessage(userMessage, limit);

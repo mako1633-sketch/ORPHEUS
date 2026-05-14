@@ -5,7 +5,7 @@ export interface AssistantResponseGuardResult {
 	finalText?: string;
 	responseMessages: ModelMessage[];
 	replaced: boolean;
-	reason?: "tool-json" | "internal-instructions";
+	reason?: "tool-json" | "internal-instructions" | "unsupported-coding-claim";
 }
 
 const TOOL_PROTOCOL_KEY_PATTERN =
@@ -37,6 +37,14 @@ const INTERNAL_INSTRUCTION_PATTERNS = [
 	/\bReview the user request and identify the task at hand\b/i,
 ];
 
+const CODING_REQUEST_PATTERN =
+	/\b(code|coding|program|programming|debug|bug|fix|patch|implement|repo|repository|typescript|javascript|python|build|test|lint|typecheck|cli|api|ui|component)\b/i;
+const CODING_COMPLETION_CLAIM_PATTERN =
+	/\b(done|implemented|fixed|patched|updated|changed|wired|landed|completed|rebuilt|refactored)\b/i;
+const CODING_EVIDENCE_PATTERN =
+	/\b(test(?:ed|s)?|typecheck|lint|format(?:ted|:check)?|check(?:ed)?|verified|validated|readback|passed|failed|could not run|not run|diff|files changed|build(?:s|t)?|compiled|no fixes applied)\b/i;
+const CODING_TOOL_NAMES = new Set(["codingWorkbench", "writeFile", "runBash", "readFile", "projectContext"]);
+
 function textFromMessage(message: ModelMessage): string {
 	if (typeof message.content === "string") return message.content;
 	if (!Array.isArray(message.content)) return "";
@@ -48,6 +56,35 @@ function textFromMessage(message: ModelMessage): string {
 			return "";
 		})
 		.join("");
+}
+
+function messageHasCodingToolEvidence(message: ModelMessage): boolean {
+	if (!Array.isArray(message.content)) return false;
+	return message.content.some((part) => {
+		if (!part || typeof part !== "object") return false;
+		if (!("type" in part)) return false;
+		const record = part as Record<string, unknown>;
+		const toolName = record.toolName;
+		return typeof toolName === "string" && CODING_TOOL_NAMES.has(toolName);
+	});
+}
+
+function hasCodingToolEvidence(messages: ModelMessage[]): boolean {
+	return messages.some(messageHasCodingToolEvidence);
+}
+
+function shouldGuardUnsupportedCodingClaim(params: {
+	text: string;
+	userText: string;
+	responseMessages: ModelMessage[];
+}): boolean {
+	const text = params.text.trim();
+	if (!text) return false;
+	if (!CODING_REQUEST_PATTERN.test(params.userText)) return false;
+	if (!CODING_COMPLETION_CLAIM_PATTERN.test(text)) return false;
+	if (CODING_EVIDENCE_PATTERN.test(text)) return false;
+	if (hasCodingToolEvidence(params.responseMessages)) return false;
+	return true;
 }
 
 function hasToolProtocolShape(value: unknown): boolean {
@@ -219,6 +256,13 @@ export function buildAssistantResponseLeakReplacement(
 		);
 	}
 
+	if (reason === "unsupported-coding-claim") {
+		return (
+			"I should not call that done without evidence. I need to verify the change with a concrete check, " +
+			"or clearly say what could not be validated."
+		);
+	}
+
 	return (
 		"I hit a routing glitch and blocked an internal draft before it reached the system. " +
 		"No action was completed from that response. Continuing plainly from your actual request."
@@ -268,7 +312,16 @@ export function guardAssistantResponse(params: {
 	responseMessages: ModelMessage[];
 	userText: string;
 }): AssistantResponseGuardResult {
-	const reason = detectAssistantResponseLeak(params.finalText ?? params.fullText);
+	const text = params.finalText ?? params.fullText;
+	const reason =
+		detectAssistantResponseLeak(text) ??
+		(shouldGuardUnsupportedCodingClaim({
+			text,
+			userText: params.userText,
+			responseMessages: params.responseMessages,
+		})
+			? "unsupported-coding-claim"
+			: null);
 	if (!reason) {
 		return {
 			fullText: params.fullText,

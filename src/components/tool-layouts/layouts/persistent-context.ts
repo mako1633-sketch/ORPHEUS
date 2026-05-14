@@ -42,9 +42,13 @@ export const persistentContextLayout: ToolLayoutConfig = {
 				.filter(Boolean)
 				.slice(0, 5);
 		}
+		if (result.action === "clear") {
+			return [`clear: ${result.cleared === true ? "persistent context removed" : "no change"}`];
+		}
 		return [
 			`${String(result.action ?? "update")}: saved`,
 			`path: ${String(result.path ?? "--")}`,
+			result.empty === true ? "empty export" : "",
 			result.truncated === true ? "truncated to newest local context" : "",
 		].filter(Boolean);
 	},

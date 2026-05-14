@@ -13,10 +13,22 @@ describe("system prompt", () => {
 		expect(prompt).toContain("Use the projectContext tool as the first pass");
 		expect(prompt).toContain("executiveAssistant");
 		expect(prompt).toContain("JARVIS-style executive workbench");
+		expect(prompt).toContain("long-term task stack");
+		expect(prompt).toContain("stackPush, stackList, stackUpdate, and stackPop");
+		expect(prompt).toContain("todoManager for the current turn's working checklist");
 		expect(prompt).toContain("codingWorkbench");
 		expect(prompt).toContain("persistent coding task ledger");
 		expect(prompt).toContain("Form a concrete edit-and-validation loop");
 		expect(prompt).toContain("After code changes, run the smallest meaningful validation first");
+		expect(prompt).toContain("Treat every coding task as a closed loop");
+		expect(prompt).toContain("Before finishing meaningful code work, run an adversarial self-review");
+		expect(prompt).toContain("empty inputs, stale state, auth/permission boundaries");
+		expect(prompt).toContain("Do not claim a file write, command, migration, or fix succeeded");
+		expect(prompt).toContain("Keep the self-critique mostly silent");
+		expect(prompt).toContain("Use selfReview before finishing meaningful code work");
+		expect(prompt).toContain("Use projectDoctor for one-command repo setup/readiness checks");
+		expect(prompt).toContain("Use githubPublishPlan before initializing");
+		expect(prompt).toContain("Use failureRecovery after failed checks or service hiccups");
 	});
 
 	it("includes concise coding guidance in voice mode", () => {
@@ -28,6 +40,8 @@ describe("system prompt", () => {
 		expect(prompt).toContain("CODING HELP:");
 		expect(prompt).toContain("inspect files and project scripts before recommending changes");
 		expect(prompt).toContain("Run targeted validation after changes when practical");
+		expect(prompt).toContain("separate evidence from inference");
+		expect(prompt).toContain("compact status, project doctor, context budget, and failure recovery");
 	});
 
 	it("includes Windows security-first behavior in text mode", () => {
@@ -131,7 +145,9 @@ describe("system prompt", () => {
 
 		expect(prompt).toContain("daemonStatus");
 		expect(prompt).toContain("ORPHEUS doctor/status check");
-		expect(prompt).toContain("provider keys, web search, Signal, PowerShell");
+		expect(prompt).toContain("provider keys, web search, Signal, shell");
+		expect(prompt).toContain("dashboard: compact green/yellow/red capability dashboard");
+		expect(prompt).toContain("launchBriefing");
 		expect(prompt).toContain("without revealing secret values");
 	});
 

@@ -105,10 +105,17 @@ export const writeFile = tool({
 				fs.writeFileSync(resolvedPath, content, "utf8");
 			}
 
+			const after = fs.readFileSync(resolvedPath, "utf8");
+			const verified = append ? after.endsWith(content) : after === content;
+
 			return {
-				success: true,
+				success: verified,
 				path: resolvedPath,
 				bytesWritten: Buffer.byteLength(content, "utf8"),
+				verified,
+				error: verified
+					? undefined
+					: "Write completed but readback verification did not match requested content.",
 			};
 		} catch (error: unknown) {
 			const err = error instanceof Error ? error : new Error(String(error));

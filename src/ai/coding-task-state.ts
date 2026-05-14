@@ -16,6 +16,9 @@ export interface CodingTaskState {
 	filesChanged: string[];
 	checksRun: string[];
 	failures: string[];
+	evidence: string[];
+	assumptions: string[];
+	risks: string[];
 	nextStep?: string;
 }
 
@@ -46,6 +49,9 @@ export async function loadCodingTaskState(): Promise<CodingTaskState | null> {
 			filesChanged: cleanList(parsed.filesChanged),
 			checksRun: cleanList(parsed.checksRun),
 			failures: cleanList(parsed.failures),
+			evidence: cleanList(parsed.evidence),
+			assumptions: cleanList(parsed.assumptions),
+			risks: cleanList(parsed.risks),
 			nextStep: parsed.nextStep ? cleanText(parsed.nextStep) : undefined,
 		};
 	} catch {
@@ -60,6 +66,9 @@ export async function saveCodingTaskState(input: {
 	filesChanged?: string[];
 	checksRun?: string[];
 	failures?: string[];
+	evidence?: string[];
+	assumptions?: string[];
+	risks?: string[];
 	nextStep?: string;
 }): Promise<{ path: string; state: CodingTaskState }> {
 	const state: CodingTaskState = {
@@ -70,6 +79,9 @@ export async function saveCodingTaskState(input: {
 		filesChanged: cleanList(input.filesChanged),
 		checksRun: cleanList(input.checksRun),
 		failures: cleanList(input.failures),
+		evidence: cleanList(input.evidence),
+		assumptions: cleanList(input.assumptions),
+		risks: cleanList(input.risks),
 		nextStep: input.nextStep ? cleanText(input.nextStep) : undefined,
 	};
 
@@ -92,6 +104,9 @@ export async function updateCodingTaskState(input: Partial<Omit<CodingTaskState,
 		filesChanged: cleanList([...(existing?.filesChanged ?? []), ...(input.filesChanged ?? [])]),
 		checksRun: cleanList([...(existing?.checksRun ?? []), ...(input.checksRun ?? [])]),
 		failures: cleanList([...(existing?.failures ?? []), ...(input.failures ?? [])]),
+		evidence: cleanList([...(existing?.evidence ?? []), ...(input.evidence ?? [])]),
+		assumptions: cleanList([...(existing?.assumptions ?? []), ...(input.assumptions ?? [])]),
+		risks: cleanList([...(existing?.risks ?? []), ...(input.risks ?? [])]),
 		nextStep: input.nextStep ?? existing?.nextStep,
 	});
 }

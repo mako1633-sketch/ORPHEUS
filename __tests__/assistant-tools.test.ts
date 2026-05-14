@@ -9,18 +9,39 @@ import {
 } from "../src/ai/persistent-context";
 import { loadCodingTaskState, updateCodingTaskState } from "../src/ai/coding-task-state";
 import { addExecutiveItem, buildExecutiveBriefing, updateExecutiveItem } from "../src/ai/executive-state";
+import { loadTaskStack } from "../src/ai/task-stack-state";
 import { codingWorkbench } from "../src/ai/tools/coding-workbench";
+import { daemonStatus } from "../src/ai/tools/daemon-status";
 import { executiveAssistant } from "../src/ai/tools/executive-assistant";
 import { createNote, listNotes } from "../src/ai/tools/notes";
+import { persistentContext as persistentContextTool } from "../src/ai/tools/persistent-context";
 import { summarizeProjectContext } from "../src/ai/tools/project-context";
+import { writeFile as writeFileTool } from "../src/ai/tools/write-file";
 
 let tempConfigDir: string;
 let previousConfigDir: string | undefined;
+let previousHonchoEnabled: string | undefined;
+let previousHonchoApiKey: string | undefined;
+let previousHonchoBaseUrl: string | undefined;
+
+function restoreEnvValue(name: string, value: string | undefined): void {
+	if (value === undefined) {
+		delete process.env[name];
+	} else {
+		process.env[name] = value;
+	}
+}
 
 beforeEach(async () => {
 	previousConfigDir = process.env.ORPHEUS_CONFIG_DIR;
+	previousHonchoEnabled = process.env.HONCHO_ENABLED;
+	previousHonchoApiKey = process.env.HONCHO_API_KEY;
+	previousHonchoBaseUrl = process.env.HONCHO_BASE_URL;
 	tempConfigDir = await mkdtemp(path.join(os.tmpdir(), "orpheus-tools-"));
 	process.env.ORPHEUS_CONFIG_DIR = tempConfigDir;
+	process.env.HONCHO_ENABLED = undefined;
+	process.env.HONCHO_API_KEY = undefined;
+	process.env.HONCHO_BASE_URL = undefined;
 });
 
 afterEach(async () => {
@@ -29,6 +50,9 @@ afterEach(async () => {
 	} else {
 		process.env.ORPHEUS_CONFIG_DIR = previousConfigDir;
 	}
+	restoreEnvValue("HONCHO_ENABLED", previousHonchoEnabled);
+	restoreEnvValue("HONCHO_API_KEY", previousHonchoApiKey);
+	restoreEnvValue("HONCHO_BASE_URL", previousHonchoBaseUrl);
 	await rm(tempConfigDir, { recursive: true, force: true });
 });
 
@@ -62,6 +86,40 @@ describe("assistant-style local tools", () => {
 		expect(promptContext).toContain("<persistent-context>");
 		expect(promptContext).toContain("persists across ORPHEUS sessions");
 		expect(promptContext).toContain("Ollama");
+	});
+
+	it("exposes persistent context control-center actions", async () => {
+		await appendPersistentContext("Pin ORPHEUS quality dashboard preferences.");
+		const read = await (
+			persistentContextTool as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					controlCenter?: { preview: string[]; actions: string[] };
+				}>;
+			}
+		).execute({ action: "read" });
+
+		expect(read.success).toBe(true);
+		expect(read.controlCenter?.actions).toContain("export");
+		expect(read.controlCenter?.preview.join("\n")).toContain("quality dashboard");
+
+		const exported = await (
+			persistentContextTool as unknown as {
+				execute: (input: unknown) => Promise<{ success: boolean; path?: string; empty?: boolean }>;
+			}
+		).execute({ action: "export" });
+		expect(exported.success).toBe(true);
+		expect(exported.empty).toBe(false);
+		expect(exported.path).toContain("persistent-context-export");
+
+		const cleared = await (
+			persistentContextTool as unknown as {
+				execute: (input: unknown) => Promise<{ success: boolean; cleared?: boolean }>;
+			}
+		).execute({ action: "clear" });
+		expect(cleared.success).toBe(true);
+		expect(cleared.cleared).toBe(true);
+		expect(await loadPersistentContext()).toBe("");
 	});
 
 	it("summarizes a local project for coding tasks", async () => {
@@ -104,6 +162,9 @@ describe("assistant-style local tools", () => {
 			filesChanged: ["src/cli.ts"],
 			checksRun: ["bun run check"],
 			failures: ["format failed"],
+			evidence: ["Observed CLI startup exits before first prompt"],
+			assumptions: ["The installed shell is zsh"],
+			risks: ["Startup fixes can regress macOS path handling"],
 			nextStep: "Run formatter and retry check",
 		});
 
@@ -111,6 +172,9 @@ describe("assistant-style local tools", () => {
 		expect(state?.goal).toBe("Fix CLI startup");
 		expect(state?.filesInspected).toContain("src/cli.ts");
 		expect(state?.failures).toContain("format failed");
+		expect(state?.evidence).toContain("Observed CLI startup exits before first prompt");
+		expect(state?.assumptions).toContain("The installed shell is zsh");
+		expect(state?.risks).toContain("Startup fixes can regress macOS path handling");
 		expect(state?.nextStep).toBe("Run formatter and retry check");
 	});
 
@@ -169,6 +233,183 @@ describe("assistant-style local tools", () => {
 		expect(result.likelyCause).toContain("dependency");
 	});
 
+	it("builds an adversarial coding self-review", async () => {
+		const result = await (
+			codingWorkbench as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					evidence?: string[];
+					inferences?: string[];
+					risks?: string[];
+					recommendedChecks?: string[];
+					completionGate?: string[];
+				}>;
+			}
+		).execute({
+			action: "selfReview",
+			goal: "Make write-file receipts truthful",
+			changedFiles: ["src/ai/tools/write-file.ts", "__tests__/assistant-tools.test.ts"],
+			diff: "fs.writeFileSync(resolvedPath, content); const after = fs.readFileSync(resolvedPath)",
+			checksRun: ["bun test __tests__/assistant-tools.test.ts"],
+			validationScripts: ["typecheck", "test"],
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.evidence?.join("\n")).toContain("Make write-file receipts truthful");
+		expect(result.inferences?.join("\n")).toContain("Risk tags inferred");
+		expect(result.risks?.join("\n")).toContain("Filesystem side effects");
+		expect(result.recommendedChecks).toContain("typecheck");
+		expect(result.completionGate?.join("\n")).toContain("readback");
+	});
+
+	it("runs project doctor and coding mode QoL actions", async () => {
+		const projectDir = await mkdtemp(path.join(os.tmpdir(), "orpheus-project-doctor-"));
+		try {
+			await writeFile(
+				path.join(projectDir, "package.json"),
+				JSON.stringify({
+					name: "doctor-app",
+					scripts: { check: "bun run typecheck", test: "bun test" },
+				})
+			);
+			await writeFile(path.join(projectDir, "bun.lock"), "");
+			await writeFile(path.join(projectDir, "README.md"), "# Doctor App\n");
+
+			const doctor = await (
+				codingWorkbench as unknown as {
+					execute: (input: unknown) => Promise<{
+						success: boolean;
+						checks?: Array<{ id: string; status: string }>;
+						recommendedNextActions?: string[];
+					}>;
+				}
+			).execute({ action: "projectDoctor", root: projectDir });
+			expect(doctor.success).toBe(true);
+			expect(doctor.checks?.find((check) => check.id === "validation")?.status).toBe("ok");
+
+			const profile = await (
+				codingWorkbench as unknown as {
+					execute: (input: unknown) => Promise<{
+						success: boolean;
+						profile?: string;
+						validationBias?: string[];
+					}>;
+				}
+			).execute({ action: "modeProfile", profile: "releasePrep" });
+			expect(profile.success).toBe(true);
+			expect(profile.validationBias).toContain("build");
+		} finally {
+			await rm(projectDir, { recursive: true, force: true });
+		}
+	});
+
+	it("builds GitHub publish and failure recovery plans", async () => {
+		const publish = await (
+			codingWorkbench as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					steps?: string[];
+					secretChecks?: string[];
+					requiresApproval?: string[];
+				}>;
+			}
+		).execute({ action: "githubPublishPlan", root: process.cwd(), repoName: "ORPHEUS" });
+		expect(publish.success).toBe(true);
+		expect(publish.secretChecks?.join("\n")).toContain(".env");
+		expect(publish.requiresApproval).toContain("Pushing to GitHub");
+
+		const recovery = await (
+			codingWorkbench as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					failure?: { signals: string[] };
+					retryPolicy?: string[];
+				}>;
+			}
+		).execute({
+			action: "failureRecovery",
+			command: "bun run typecheck",
+			output: "error TS2307: Cannot find module './missing'",
+		});
+		expect(recovery.success).toBe(true);
+		expect(recovery.failure?.signals).toContain("module-resolution");
+		expect(recovery.retryPolicy?.join("\n")).toContain("Do not retry deterministic");
+	});
+
+	it("returns dashboard, context budget, and launch briefing status", async () => {
+		await updateCodingTaskState({
+			goal: "Improve ORPHEUS QoL",
+			status: "in_progress",
+			nextStep: "Run full validation",
+		});
+		await addExecutiveItem({
+			kind: "risk",
+			title: "Context window can overflow on long coding sessions",
+		});
+
+		const dashboard = await (
+			daemonStatus as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					dashboard?: { label: string; rows: unknown[]; fixActions: string[] };
+				}>;
+			}
+		).execute({ scope: "dashboard" });
+		expect(dashboard.success).toBe(true);
+		expect(dashboard.dashboard?.label).toContain("HEALTH");
+		expect(dashboard.dashboard?.rows.length).toBeGreaterThan(0);
+
+		const budget = await (
+			daemonStatus as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					contextBudget?: { status: string; percentUsed?: number; recommendation: string };
+				}>;
+			}
+		).execute({ scope: "contextBudget", promptTokens: 90, contextLength: 100 });
+		expect(budget.success).toBe(true);
+		expect(budget.contextBudget?.status).toBe("compact");
+
+		const briefing = await (
+			daemonStatus as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					briefing?: { activeCodingTask?: { goal: string } | null; executive: { openCount: number } };
+				}>;
+			}
+		).execute({ scope: "launchBriefing" });
+		expect(briefing.success).toBe(true);
+		expect(briefing.briefing?.activeCodingTask?.goal).toBe("Improve ORPHEUS QoL");
+		expect(briefing.briefing?.executive.openCount).toBeGreaterThan(0);
+	});
+
+	it("verifies writeFile writes by reading the file back", async () => {
+		const projectDir = await mkdtemp(path.join(os.tmpdir(), "orpheus-write-file-"));
+		try {
+			const target = path.join(projectDir, "notes", "receipt.txt");
+			const result = await (
+				writeFileTool as unknown as {
+					execute: (input: unknown) => Promise<{
+						success: boolean;
+						path?: string;
+						verified?: boolean;
+						bytesWritten?: number;
+					}>;
+				}
+			).execute({
+				path: target,
+				content: "verified write\n",
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.verified).toBe(true);
+			expect(result.bytesWritten).toBe(Buffer.byteLength("verified write\n", "utf8"));
+			expect(await readFile(target, "utf8")).toBe("verified write\n");
+		} finally {
+			await rm(projectDir, { recursive: true, force: true });
+		}
+	});
+
 	it("tracks executive follow-ups and builds a briefing", async () => {
 		const followUp = await addExecutiveItem({
 			kind: "follow_up",
@@ -222,5 +463,45 @@ describe("assistant-style local tools", () => {
 
 		expect(briefing.success).toBe(true);
 		expect(briefing.briefing?.counts.decision).toBe(1);
+	});
+
+	it("stacks durable ORPHEUS tasks across sessions", async () => {
+		const pushed = await (
+			executiveAssistant as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					item?: { id: string; title: string; status: string; priority: string };
+				}>;
+			}
+		).execute({
+			action: "stackPush",
+			title: "Wire Honcho status into ORPHEUS dashboard",
+			priority: "high",
+			nextStep: "Add status item and tests",
+			source: "chat",
+		});
+
+		expect(pushed.success).toBe(true);
+		expect(pushed.item?.status).toBe("queued");
+		expect(pushed.item?.priority).toBe("high");
+
+		const listed = await (
+			executiveAssistant as unknown as {
+				execute: (input: unknown) => Promise<{ success: boolean; items?: Array<{ title: string }> }>;
+			}
+		).execute({ action: "stackList" });
+		expect(listed.items?.[0]?.title).toContain("Honcho status");
+
+		const popped = await (
+			executiveAssistant as unknown as {
+				execute: (input: unknown) => Promise<{ success: boolean; item?: { status: string } }>;
+			}
+		).execute({ action: "stackPop" });
+		expect(popped.success).toBe(true);
+		expect(popped.item?.status).toBe("active");
+
+		const state = await loadTaskStack();
+		expect(state.items[0]?.title).toContain("Honcho status");
+		expect(state.items[0]?.status).toBe("active");
 	});
 });

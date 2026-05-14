@@ -87,6 +87,53 @@ describe("HonchoManager", () => {
 		expect(context).toContain("operator remembers stable context");
 	});
 
+	it("awaits async peer and session creation from the Honcho SDK", async () => {
+		process.env.HONCHO_ENABLED = "true";
+		process.env.HONCHO_USER_PEER_ID = "operator";
+
+		const addedMessages: unknown[][] = [];
+		setHonchoFactoryForTesting(async () => {
+			return class FakeHoncho {
+				async peer(id: string) {
+					return {
+						id,
+						message: (content: string) => ({ peer: id, content }),
+						context: async () => ({
+							representation: `${id} async context`,
+						}),
+					};
+				}
+
+				async session(id: string) {
+					return {
+						id,
+						addPeers: async () => {},
+						addMessages: async (messages: unknown[]) => {
+							addedMessages.push(messages);
+						},
+						context: async () => ({
+							toOpenAI: (assistant: { id: string }) => [
+								{ role: "system", content: `assistant ${assistant.id} context for ${id}` },
+							],
+						}),
+					};
+				}
+			};
+		});
+
+		const manager = getHonchoManager();
+		await manager.addTurn({
+			sessionId: "async",
+			userText: "Remember async SDK wiring",
+			assistantText: "Async Honcho wiring is active.",
+		});
+		const context = await manager.buildContext({ sessionId: "async", query: "wiring" });
+
+		expect(addedMessages.length).toBe(1);
+		expect(context).toContain("assistant orpheus context for orpheus-async");
+		expect(context).toContain("operator async context");
+	});
+
 	it("passes HONCHO_BASE_URL using the SDK's baseURL option", async () => {
 		process.env.HONCHO_ENABLED = "true";
 		process.env.HONCHO_API_KEY = "honcho-test-key";
@@ -121,6 +168,40 @@ describe("HonchoManager", () => {
 		expect(capturedOptions?.apiKey).toBe("honcho-test-key");
 		expect(capturedOptions?.baseURL).toBe("http://127.0.0.1:8000");
 		expect(capturedOptions).not.toHaveProperty("baseUrl");
+	});
+
+	it("clears failed initialization state so Honcho can retry cleanly", async () => {
+		process.env.HONCHO_ENABLED = "true";
+
+		let attempts = 0;
+		setHonchoFactoryForTesting(async () => {
+			return class FakeHoncho {
+				async peer(id: string) {
+					attempts += 1;
+					if (attempts === 1) {
+						throw new Error("temporary Honcho outage");
+					}
+					return {
+						id,
+						message: (content: string) => ({ peer: id, content }),
+					};
+				}
+
+				async session(id: string) {
+					return {
+						id,
+						addPeers: async () => {},
+						addMessages: async () => {},
+					};
+				}
+			};
+		});
+
+		const manager = getHonchoManager();
+		expect(await manager.initialize()).toBe(false);
+		expect(manager.getStatus().initialized).toBe(false);
+		expect(await manager.initialize()).toBe(true);
+		expect(manager.getStatus().initialized).toBe(true);
 	});
 
 	it("does not write leaked assistant tool plans into Honcho", async () => {

@@ -52,6 +52,32 @@ export async function appendPersistentContext(content: string): Promise<{
 	return savePersistentContext(next);
 }
 
+export async function clearPersistentContext(): Promise<{ path: string; cleared: boolean }> {
+	const contextPath = getPersistentContextPath();
+	await fs.rm(contextPath, { force: true });
+	return { path: contextPath, cleared: true };
+}
+
+export async function exportPersistentContext(): Promise<{
+	path: string;
+	bytesWritten: number;
+	empty: boolean;
+}> {
+	const content = await loadPersistentContext();
+	const exportPath = path.join(
+		getAppConfigDir(),
+		`persistent-context-export-${new Date().toISOString().replace(/[:.]/g, "-")}.md`
+	);
+	const payload = content ? `${content}\n` : "";
+	await fs.mkdir(path.dirname(exportPath), { recursive: true });
+	await fs.writeFile(exportPath, payload, "utf8");
+	return {
+		path: exportPath,
+		bytesWritten: Buffer.byteLength(payload, "utf8"),
+		empty: payload.length === 0,
+	};
+}
+
 export function formatPersistentContextForPrompt(context: string): string {
 	const trimmed = context.trim();
 	if (!trimmed) return "";

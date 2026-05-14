@@ -52,6 +52,16 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 			shell: "Review ORPHEUS shell and CLI startup behavior for macOS compatibility issues.",
 			status:
 				"Show an ORPHEUS status dashboard with app health, tools, model provider, memory, and repo state.",
+			briefing:
+				"Show the ORPHEUS launch briefing: health, active coding task, executive items, memory state, and next suggested action.",
+			"context-budget":
+				"Check ORPHEUS context budget risk and tell me whether we should compact or persist task state before continuing.",
+			"project-doctor":
+				"Run the ORPHEUS project doctor for this repo: scripts, dependencies, git state, docs, validation, startup risks, and concrete fixes.",
+			"github-publish":
+				"Prepare a GitHub publish plan for this ORPHEUS repo with secret checks, README checks, commit/push approval gates, and verification steps.",
+			"memory-control":
+				"Open the ORPHEUS memory control center: show persistent context summary, editable actions, export option, and any stale memory risks.",
 			scan: "Scan available ORPHEUS capabilities and local developer tools.",
 			"scan-files":
 				"Scan the ORPHEUS project files for anomalies, missing imports, stale artifacts, and incomplete wiring.",

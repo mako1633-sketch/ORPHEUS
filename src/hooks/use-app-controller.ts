@@ -31,6 +31,7 @@ export interface AppControllerResult {
 		applyAvatarForState: ReturnType<typeof useDaemonRuntimeController>["applyAvatarForState"];
 		width: number;
 		height: number;
+		viewportHeight: number;
 		zIndex: number;
 		showBanner: boolean;
 		animateBanner: boolean;
@@ -577,6 +578,7 @@ export function useAppController({
 			applyAvatarForState: daemon.applyAvatarForState,
 			width: avatarWidth,
 			height: avatarHeight,
+			viewportHeight: terminalSize.height,
 			zIndex: isListening && daemon.hasInteracted ? 2 : 0,
 			// Show banner only when idle, not interacted, and terminal is large enough
 			showBanner:
