@@ -26,6 +26,7 @@ export const AVAILABLE_OLLAMA_MODELS: ModelOption[] = [
 // Default model IDs
 export const DEFAULT_OPENROUTER_MODEL_ID = "z-ai/glm-4.7";
 export const DEFAULT_COPILOT_MODEL_ID = "claude-sonnet-4.5";
+export const DEFAULT_CODEX_COPILOT_MODEL_ID = "o4-mini";
 export const DEFAULT_OLLAMA_MODEL_ID = "llama3.1:8b";
 export const DEFAULT_MODEL_ID = DEFAULT_OPENROUTER_MODEL_ID;
 export const DEFAULT_MODEL_PROVIDER: LlmProvider = "openrouter";
@@ -108,6 +109,132 @@ export function setResponseModelForProvider(provider: LlmProvider, modelId: stri
 			currentOpenRouterProviderTag = undefined;
 		}
 	}
+}
+
+/**
+ * Get the Codex coding model ID for Copilot.
+ * Respects `CODEX_CODING_MODEL` env var, falls back to `DEFAULT_CODEX_COPILOT_MODEL_ID`.
+ */
+export function getCopilotCodingModel(): string {
+	const envModel = process.env.CODEX_CODING_MODEL?.trim();
+	if (envModel && envModel.length > 0) {
+		return envModel;
+	}
+	return DEFAULT_CODEX_COPILOT_MODEL_ID;
+}
+
+/**
+ * Check whether a user message looks like a coding task.
+ * Used by the Copilot provider to auto-select the Codex model.
+ */
+const CODING_KEYWORDS = new Set([
+	"code",
+	"coding",
+	"program",
+	"programming",
+	"script",
+	"function",
+	"class",
+	"interface",
+	"type",
+	"refactor",
+	"debug",
+	"bug",
+	"fix",
+	"implement",
+	"write",
+	"edit",
+	"modify",
+	"update",
+	"add",
+	"create",
+	"delete",
+	"remove",
+	"test",
+	"tests",
+	"testing",
+	"jest",
+	"vitest",
+	"build",
+	"compile",
+	"transpile",
+	"lint",
+	"format",
+	"prettier",
+	"eslint",
+	"typescript",
+	"javascript",
+	"python",
+	"rust",
+	"go",
+	"java",
+	"csharp",
+	"c++",
+	"cpp",
+	"sql",
+	"query",
+	"schema",
+	"migration",
+	"api",
+	"endpoint",
+	"route",
+	"handler",
+	"middleware",
+	"component",
+	"hook",
+	"useState",
+	"useEffect",
+	"props",
+	"jsx",
+	"tsx",
+	"css",
+	"html",
+	"json",
+	"yaml",
+	"toml",
+	"docker",
+	"dockerfile",
+	"ci",
+	"cd",
+	"github actions",
+	"workflow",
+	"git",
+	"commit",
+	"merge",
+	"rebase",
+	"branch",
+	"pull request",
+	"pr",
+	"review",
+	"diff",
+	"patch",
+	"deploy",
+	"release",
+	"package",
+	"npm",
+	"yarn",
+	"pnpm",
+	"bun",
+	"cargo",
+	"gradle",
+	"maven",
+	"pip",
+	"poetry",
+	"conda",
+	"venv",
+]);
+
+export function isCodingTask(userMessage: string): boolean {
+	const normalized = userMessage.toLowerCase();
+	// Count keyword matches
+	let matches = 0;
+	for (const keyword of CODING_KEYWORDS) {
+		if (normalized.includes(keyword)) {
+			matches++;
+			if (matches >= 2) return true;
+		}
+	}
+	return false;
 }
 
 /**

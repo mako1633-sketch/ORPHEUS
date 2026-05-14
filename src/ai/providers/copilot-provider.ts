@@ -6,7 +6,7 @@ import type { ReasoningEffort, StreamCallbacks } from "../../types";
 import { debug, toolDebug } from "../../utils/debug-logger";
 import { getWorkspacePath } from "../../utils/workspace-manager";
 import { convertToolSetToCopilotTools, getOrCreateCopilotSession } from "../copilot-client";
-import { getResponseModel } from "../model-config";
+import { getResponseModel, getCopilotCodingModel, isCodingTask } from "../model-config";
 import { buildDaemonSystemPrompt } from "../system-prompt";
 import { getCachedToolAvailability, getDaemonTools } from "../tools/index";
 import { createToolAvailabilitySnapshot, resolveToolAvailability } from "../tools/tool-registry";
@@ -184,6 +184,34 @@ function buildCopilotPrompt(
 	return sections.join("\n\n");
 }
 
+/**
+ * Select the best Copilot model for the given user message.
+ * Falls back to the currently selected Copilot model if the message
+ * does not look like a coding task or if the current model is already
+ * a Codex variant.
+ */
+function selectCopilotModel(userMessage: string): string {
+	const currentModel = getResponseModel();
+	const currentNormalized = currentModel.trim().toLowerCase();
+
+	// Already using a Codex model — respect the user's choice.
+	if (currentNormalized.includes("codex")) {
+		return currentModel;
+	}
+
+	if (isCodingTask(userMessage)) {
+		const codexModel = getCopilotCodingModel();
+		debug.info("copilot-model-auto-selected", {
+			selected: codexModel,
+			previous: currentModel,
+			reason: "coding-task-detected",
+		});
+		return codexModel;
+	}
+
+	return currentModel;
+}
+
 async function streamCopilotSession(params: {
 	userMessage: string;
 	callbacks: StreamCallbacks;
@@ -218,8 +246,10 @@ async function streamCopilotSession(params: {
 		memoryInjection,
 	});
 
+	const selectedModel = selectCopilotModel(userMessage);
+
 	const baseSessionConfig = {
-		model: getResponseModel(),
+		model: selectedModel,
 		reasoningEffort,
 		tools: copilotTools,
 		availableTools: daemonToolNames,
