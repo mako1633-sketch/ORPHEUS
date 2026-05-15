@@ -6,6 +6,7 @@ import { dependencyAudit } from "./dependency-audit";
 import { diagnostics } from "./diagnostics-tool";
 import { executiveAssistant } from "./executive-assistant";
 import { fetchUrls } from "./fetch-urls";
+import { githubTriage } from "./github-triage";
 import { groundingManager } from "./grounding-manager";
 import { notes } from "./notes";
 import { orpheusCli, resolveOrpheusCliPath } from "./orpheus-cli";
@@ -81,6 +82,7 @@ const TOOL_REGISTRY: ToolEntry[] = [
 	{ id: "dependencyAudit", toggleKey: "dependencyAudit", tool: dependencyAudit },
 	{ id: "webSearchFallback", toggleKey: "webSearchFallback", tool: webSearchWithFallback },
 	{ id: "diagnostics", toggleKey: "diagnostics", tool: diagnostics },
+	{ id: "githubTriage", toggleKey: "githubTriage", tool: githubTriage, gate: gateGithubApi },
 ];
 
 function gateExa(): Promise<ToolGateResult> {
@@ -151,6 +153,14 @@ function gateOrpheusCli(): Promise<ToolGateResult> {
 	});
 }
 
+function gateGithubApi(): Promise<ToolGateResult> {
+	const hasToken = Boolean(process.env.GITHUB_TOKEN || process.env.GH_TOKEN);
+	return Promise.resolve({
+		envAvailable: hasToken,
+		disabledReason: hasToken ? undefined : "GITHUB_TOKEN or GH_TOKEN not configured",
+	});
+}
+
 function normalizeToggles(toggles?: ToolToggles): ToolToggles {
 	return {
 		readFile: toggles?.readFile ?? true,
@@ -177,6 +187,7 @@ function normalizeToggles(toggles?: ToolToggles): ToolToggles {
 		dependencyAudit: toggles?.dependencyAudit ?? true,
 		webSearchFallback: toggles?.webSearchFallback ?? true,
 		diagnostics: toggles?.diagnostics ?? true,
+		githubTriage: toggles?.githubTriage ?? true,
 	};
 }
 
@@ -291,6 +302,7 @@ export function getToolLabels(): Record<ToolId, string> {
 		dependencyAudit: "dependencyAudit",
 		webSearchFallback: "webSearchFallback",
 		diagnostics: "diagnostics",
+		githubTriage: "githubTriage",
 	};
 }
 
@@ -320,6 +332,7 @@ export function getDefaultToolOrder(): ToolId[] {
 		"dependencyAudit",
 		"webSearchFallback",
 		"diagnostics",
+		"githubTriage",
 	];
 }
 
@@ -349,5 +362,6 @@ export function createToolAvailabilitySnapshot(availability: ToolAvailabilityMap
 		dependencyAudit: availability.dependencyAudit?.enabled ?? false,
 		webSearchFallback: availability.webSearchFallback?.enabled ?? false,
 		diagnostics: availability.diagnostics?.enabled ?? false,
+		githubTriage: availability.githubTriage?.enabled ?? false,
 	};
 }

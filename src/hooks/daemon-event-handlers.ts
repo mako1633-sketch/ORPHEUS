@@ -36,6 +36,7 @@ import {
 	normalizeInterruptedToolBlockResult,
 	normalizeInterruptedToolResultOutput,
 } from "./daemon-event-handlers/interrupted-turn";
+import { recordTurn } from "../utils/auto-summarizer";
 
 export { buildInterruptedModelMessages };
 

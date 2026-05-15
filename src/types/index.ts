@@ -307,7 +307,8 @@ export type ToolToggleId =
 	| "orpheusCli"
 	| "dependencyAudit"
 	| "webSearchFallback"
-	| "diagnostics";
+	| "diagnostics"
+	| "githubTriage";
 
 export type ToolToggles = Record<ToolToggleId, boolean>;
 
@@ -336,6 +337,7 @@ export const DEFAULT_TOOL_TOGGLES: ToolToggles = {
 	dependencyAudit: true,
 	webSearchFallback: true,
 	diagnostics: true,
+	githubTriage: true,
 };
 
 /**

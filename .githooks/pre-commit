@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# DAEMON pre-commit hook: lint and format
+# ORPHEUS pre-commit hook: lint, format, and diff review
 
 echo "Running pre-commit checks..."
 
@@ -11,6 +11,10 @@ if [ -z "$STAGED_FILES" ]; then
 	exit 0
 fi
 
+echo "Running diff review..."
+bun run diff-review
+DIFF_EXIT=$?
+
 echo "Checking format..."
 bun run format:check $STAGED_FILES
 FORMAT_EXIT=$?
@@ -19,7 +23,7 @@ echo "Running linter..."
 bun run lint $STAGED_FILES
 LINT_EXIT=$?
 
-if [ $FORMAT_EXIT -ne 0 ] || [ $LINT_EXIT -ne 0 ]; then
+if [ $FORMAT_EXIT -ne 0 ] || [ $LINT_EXIT -ne 0 ] || [ $DIFF_EXIT -ne 0 ]; then
 	echo ""
 	echo "❌ Pre-commit checks failed!"
 	echo ""
@@ -28,6 +32,8 @@ if [ $FORMAT_EXIT -ne 0 ] || [ $LINT_EXIT -ne 0 ]; then
 	echo ""
 	echo "To fix lint issues, run:"
 	echo "  bun run lint:fix"
+	echo ""
+	echo "Diff review must pass (no errors) before commit."
 	echo ""
 	exit 1
 fi
