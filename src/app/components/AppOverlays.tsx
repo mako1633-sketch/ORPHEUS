@@ -179,18 +179,113 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 				<CommandPalette
 					onClose={() => menus.setShowCommandPalette(false)}
 					items={[
-						{ id: "device", label: "Devices", shortcut: "D", action: () => { menus.setShowCommandPalette(false); menus.setShowDeviceMenu(true); } },
-						{ id: "settings", label: "Settings", shortcut: "S", action: () => { menus.setShowCommandPalette(false); menus.setShowSettingsMenu(true); } },
-						{ id: "model", label: "Models", shortcut: "M", action: () => { menus.setShowCommandPalette(false); menus.setShowModelMenu(true); } },
-						{ id: "provider", label: "Providers", shortcut: "P", action: () => { menus.setShowCommandPalette(false); menus.setShowProviderMenu(true); } },
-						{ id: "session", label: "Sessions", shortcut: "L", action: () => { menus.setShowCommandPalette(false); menus.setShowSessionMenu(true); } },
-						{ id: "memory", label: "Memories", shortcut: "B", action: () => { menus.setShowCommandPalette(false); menus.setShowMemoryMenu(true); } },
-						{ id: "tools", label: "Tools", shortcut: "T", action: () => { menus.setShowCommandPalette(false); menus.setShowToolsMenu(true); } },
-						{ id: "url", label: "URL Menu", shortcut: "U", action: () => { menus.setShowCommandPalette(false); menus.setShowUrlMenu(true); } },
-						{ id: "grounding", label: "Grounding", shortcut: "G", action: () => { menus.setShowCommandPalette(false); menus.setShowGroundingMenu(true); } },
-						{ id: "hotkeys", label: "Hotkeys", shortcut: "?", action: () => { menus.setShowCommandPalette(false); menus.setShowHotkeysPane(true); } },
-						{ id: "newSession", label: "New Session", shortcut: "N", action: () => { menus.setShowCommandPalette(false);  } },
-						{ id: "orpheus", label: "ORPHEUS Quick Actions", shortcut: "Cmd+Shift+O", action: () => { menus.setShowCommandPalette(false); menus.setShowOrpheusMenu(true); } },
+						{
+							id: "device",
+							label: "Devices",
+							shortcut: "D",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowDeviceMenu(true);
+							},
+						},
+						{
+							id: "settings",
+							label: "Settings",
+							shortcut: "S",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowSettingsMenu(true);
+							},
+						},
+						{
+							id: "model",
+							label: "Models",
+							shortcut: "M",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowModelMenu(true);
+							},
+						},
+						{
+							id: "provider",
+							label: "Providers",
+							shortcut: "P",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowProviderMenu(true);
+							},
+						},
+						{
+							id: "session",
+							label: "Sessions",
+							shortcut: "L",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowSessionMenu(true);
+							},
+						},
+						{
+							id: "memory",
+							label: "Memories",
+							shortcut: "B",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowMemoryMenu(true);
+							},
+						},
+						{
+							id: "tools",
+							label: "Tools",
+							shortcut: "T",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowToolsMenu(true);
+							},
+						},
+						{
+							id: "url",
+							label: "URL Menu",
+							shortcut: "U",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowUrlMenu(true);
+							},
+						},
+						{
+							id: "grounding",
+							label: "Grounding",
+							shortcut: "G",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowGroundingMenu(true);
+							},
+						},
+						{
+							id: "hotkeys",
+							label: "Hotkeys",
+							shortcut: "?",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowHotkeysPane(true);
+							},
+						},
+						{
+							id: "newSession",
+							label: "New Session",
+							shortcut: "N",
+							action: () => {
+								menus.setShowCommandPalette(false);
+							},
+						},
+						{
+							id: "orpheus",
+							label: "ORPHEUS Quick Actions",
+							shortcut: "Cmd+Shift+O",
+							action: () => {
+								menus.setShowCommandPalette(false);
+								menus.setShowOrpheusMenu(true);
+							},
+						},
 					]}
 				/>
 			)}

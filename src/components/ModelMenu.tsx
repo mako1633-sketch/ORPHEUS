@@ -121,7 +121,15 @@ export function ModelMenu({
 		if (isCopilotProvider) return copilotModels;
 		if (isOllamaProvider) return ollamaModels;
 		return [...sortedCurated, ...savedModels, ...filteredAllModels];
-	}, [copilotModels, filteredAllModels, isCopilotProvider, isOllamaProvider, ollamaModels, savedModels, sortedCurated]);
+	}, [
+		copilotModels,
+		filteredAllModels,
+		isCopilotProvider,
+		isOllamaProvider,
+		ollamaModels,
+		savedModels,
+		sortedCurated,
+	]);
 
 	const totalItems = menuItems.length;
 
@@ -206,8 +214,7 @@ export function ModelMenu({
 	}, [allSelectedIndex, isAllSectionSelected, scrollModels.length]);
 
 	const updatedAtLabel = formatUpdatedAt(allModelsUpdatedAt);
-	const needsSearchHint =
-		!isSingleListProvider && searchQuery.trim().length < MIN_ALL_MODEL_QUERY_LENGTH;
+	const needsSearchHint = !isSingleListProvider && searchQuery.trim().length < MIN_ALL_MODEL_QUERY_LENGTH;
 
 	const renderModelRow = (model: ModelOption, isSelected: boolean, isCurrent: boolean) => {
 		const pricing = model.pricing;

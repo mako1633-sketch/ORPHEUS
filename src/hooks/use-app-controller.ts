@@ -439,10 +439,12 @@ export function useAppController({
 		isListeningDim,
 	} = displayState;
 
-	const latestTurnTotal = (daemon.sessionUsage.latestTurnPromptTokens ?? 0) + (daemon.sessionUsage.latestTurnCompletionTokens ?? 0);
-	const contextPercent = daemon.modelMetadata?.contextLength && latestTurnTotal > 0
-		? (latestTurnTotal / daemon.modelMetadata.contextLength) * 100
-		: null;
+	const latestTurnTotal =
+		(daemon.sessionUsage.latestTurnPromptTokens ?? 0) + (daemon.sessionUsage.latestTurnCompletionTokens ?? 0);
+	const contextPercent =
+		daemon.modelMetadata?.contextLength && latestTurnTotal > 0
+			? (latestTurnTotal / daemon.modelMetadata.contextLength) * 100
+			: null;
 	const statusBarHeight = daemon.hasInteracted ? (apiKeyMissingError ? 5 : 3) : 0;
 
 	useEffect(() => {

@@ -32,6 +32,11 @@ export class DaemonAvatarRenderable extends FrameBufferRenderable {
 	private pendingAudioLevel: { value: number; immediate: boolean } | null = null;
 	private pendingSpawnAction: "reset" | "skip" | null = null;
 
+	// Frame-rate throttling to reduce CPU/GPU load at idle
+	private frameThrottleMs = 33; // default ~30 fps cap
+	private nextFrameAt = 0;
+	private frameTimer: ReturnType<typeof setTimeout> | null = null;
+
 	private getDesiredAspectRatio(width: number, height: number): number {
 		if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return 1;
 
@@ -160,11 +165,75 @@ export class DaemonAvatarRenderable extends FrameBufferRenderable {
 		this._ctx.requestRender();
 	}
 
+	/** Choose throttle based on how much visual motion is actually happening. */
+	private recalculateThrottle(): void {
+		if (!this.rig) {
+			this.frameThrottleMs = 33; // ~30 fps when unknown
+			return;
+		}
+		const s = (this.rig as unknown as Record<string, unknown>).state as
+			| {
+					intensity?: { current?: number; target?: number; spinBoost?: number };
+					spawn?: { progress?: number; complete?: boolean };
+					tool?: { flashTimer?: number; settleTimer?: number };
+					typing?: { active?: boolean; pulse?: number };
+			  }
+			| undefined;
+
+		if (!s) {
+			this.frameThrottleMs = 33;
+			return;
+		}
+
+		const intensity = s.intensity?.current ?? 0;
+		const spinBoost = s.intensity?.spinBoost ?? 0;
+		const spawnProgress = s.spawn?.progress ?? 1;
+		const spawnComplete = s.spawn?.complete ?? true;
+		const flashTimer = s.tool?.flashTimer ?? 0;
+		const settleTimer = s.tool?.settleTimer ?? 0;
+		const typingActive = s.typing?.active ?? false;
+		const typingPulse = s.typing?.pulse ?? 0;
+
+		const isActive =
+			intensity > 0.15 ||
+			spinBoost > 0.5 ||
+			!spawnComplete ||
+			spawnProgress < 1 ||
+			flashTimer > 0 ||
+			settleTimer > 0 ||
+			typingActive ||
+			typingPulse > 0.05;
+
+		if (isActive) {
+			this.frameThrottleMs = 16; // ~60 fps during activity
+		} else {
+			this.frameThrottleMs = 100; // ~10 fps at idle — enough for eye drift + micro-glitch
+		}
+	}
+
+	private scheduleNextFrame(): void {
+		if (this.frameTimer) {
+			clearTimeout(this.frameTimer);
+			this.frameTimer = null;
+		}
+		const now = performance.now();
+		const delay = Math.max(0, this.nextFrameAt - now);
+		if (delay <= 1) {
+			this._ctx.requestRender();
+		} else {
+			this.frameTimer = setTimeout(() => {
+				this.frameTimer = null;
+				this._ctx.requestRender();
+			}, delay);
+		}
+	}
+
 	private kickRenderFrame(): void {
 		if (!this.three || !this.rig || !this.renderBuffer || this.destroyedSelf) return;
 		if (this.renderInFlight) return;
 
 		this.updateCameraSettings();
+		this.recalculateThrottle();
 
 		const renderBuffer = this.renderBuffer;
 
@@ -197,7 +266,10 @@ export class DaemonAvatarRenderable extends FrameBufferRenderable {
 				this.frameBuffer.drawFrameBuffer(0, 0, renderBuffer);
 
 				this.renderInFlight = false;
-				this._ctx.requestRender();
+
+				// Throttle: only schedule the next frame after the minimum interval.
+				this.nextFrameAt = performance.now() + this.frameThrottleMs;
+				this.scheduleNextFrame();
 			})
 			.catch((err: unknown) => {
 				this.renderInFlight = false;
@@ -250,6 +322,10 @@ export class DaemonAvatarRenderable extends FrameBufferRenderable {
 
 	protected override destroySelf(): void {
 		this.destroyedSelf = true;
+		if (this.frameTimer) {
+			clearTimeout(this.frameTimer);
+			this.frameTimer = null;
+		}
 		this.rig?.dispose();
 		this.rig = null;
 		this.three?.destroy();

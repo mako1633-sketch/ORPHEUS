@@ -288,9 +288,9 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 										RUN {startupActionRange} OR TYPE {startupActionRange} :: SHIFT+TAB MANUAL INPUT :: SPACE
 										VOX :: ? HELP
 									</span>
-									</text>
-								</box>
-							)}
+								</text>
+							</box>
+						)}
 
 						<box marginTop={2} width="100%" justifyContent="center">
 							{daemonState === DaemonState.TYPING ? (
@@ -357,10 +357,7 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 			)}
 
 			{hasInteracted && (
-				<ContextCompactionPrompt
-					contextPercent={contextPercent ?? null}
-					daemonState={daemonState}
-				/>
+				<ContextCompactionPrompt contextPercent={contextPercent ?? null} daemonState={daemonState} />
 			)}
 
 			{hasInteracted && (
@@ -480,7 +477,7 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 											/>
 										</box>
 									);
-									})}
+								})}
 							</box>
 						)}
 

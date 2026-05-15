@@ -124,9 +124,7 @@ export function CommandPalette({ items, onClose }: CommandPaletteProps) {
 					</text>
 					<text>
 						<span fg={COLORS.MENU_TEXT}>{query}</span>
-						{query.length === 0 && (
-							<span fg={COLORS.REASONING_DIM}>Type to filter...</span>
-						)}
+						{query.length === 0 && <span fg={COLORS.REASONING_DIM}>Type to filter...</span>}
 					</text>
 				</box>
 				<box marginBottom={1}>

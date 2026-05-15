@@ -85,11 +85,7 @@ function CollapsibleSection({
 }) {
 	return (
 		<box flexDirection="column">
-			<box
-				flexDirection="row"
-				paddingLeft={2}
-				marginTop={1}
-			>
+			<box flexDirection="row" paddingLeft={2} marginTop={1}>
 				<text>
 					<span fg={COLORS.REASONING_DIM}>
 						{"▼ "}
@@ -103,10 +99,6 @@ function CollapsibleSection({
 }
 
 export function ToolCallView({ call, result, showOutput = true }: ToolCallViewProps) {
-	
-	
-	
-
 	const layout = getToolLayout(call.name) ?? defaultToolLayout;
 	const mcpMeta = useMemo(() => getMcpManager().getToolMeta(call.name), [call.name]);
 	const isAwaitingApproval = call.status === "awaiting_approval";
@@ -187,7 +179,7 @@ export function ToolCallView({ call, result, showOutput = true }: ToolCallViewPr
 			{customBody}
 
 			{!customBody && body && (
-				<CollapsibleSection label="INPUT" >
+				<CollapsibleSection label="INPUT">
 					<ToolBodyView body={body} />
 				</CollapsibleSection>
 			)}
@@ -203,13 +195,13 @@ export function ToolCallView({ call, result, showOutput = true }: ToolCallViewPr
 			)}
 
 			{hasResultPreview && (
-				<CollapsibleSection label="OUTPUT" >
+				<CollapsibleSection label="OUTPUT">
 					<ResultPreviewView lines={resultPreviewLines ?? []} />
 				</CollapsibleSection>
 			)}
 
 			{isFailed && call.error && (
-				<CollapsibleSection label="ERROR" >
+				<CollapsibleSection label="ERROR">
 					<ErrorPreviewView error={call.error} />
 				</CollapsibleSection>
 			)}

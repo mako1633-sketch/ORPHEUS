@@ -11,10 +11,7 @@ export interface ContextCompactionPromptProps {
 	daemonState: DaemonState;
 }
 
-export function ContextCompactionPrompt({
-	contextPercent,
-	daemonState,
-}: ContextCompactionPromptProps) {
+export function ContextCompactionPrompt({ contextPercent, daemonState }: ContextCompactionPromptProps) {
 	const percent = contextPercent ?? 0;
 	const isCritical = percent >= 85;
 	const canAct = daemonState === DaemonState.IDLE || daemonState === DaemonState.SPEAKING;
