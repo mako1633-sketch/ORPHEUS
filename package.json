@@ -78,28 +78,29 @@
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",
 		"@types/bun": "latest",
-		"@types/react": "^19.2.7",
-		"playwright": "^1.57.0"
+		"@types/react": "^19.2.14",
+		"playwright": "^1.60.0"
 	},
 	"peerDependencies": {
-		"typescript": "^5.9.2"
+		"typescript": "^5.9.3"
 	},
 	"dependencies": {
-		"@ai-sdk/mcp": "^1.0.14",
-		"@ai-sdk/openai": "^3.0.0",
+		"@ai-sdk/mcp": "^1.0.42",
+		"@ai-sdk/openai": "^3.0.64",
 		"@github/copilot-sdk": "0.1.23",
 		"@honcho-ai/sdk": "^2.1.1",
-		"@openrouter/ai-sdk-provider": "^2.1.0",
+		"@openrouter/ai-sdk-provider": "^2.9.0",
 		"@opentui-ui/toast": "^0.0.3",
 		"@opentui/core": "0.1.92",
 		"@opentui/react": "0.1.92",
-		"ai": "^6.0.0",
-		"exa-js": "^2.0.12",
-		"mem0ai": "^2.2.1",
-		"openai": "^6.16.0",
+		"ai": "^6.0.183",
+		"exa-js": "^2.13.0",
+		"mem0ai": "^2.4.6",
+		"openai": "^6.37.0",
 		"opentui-spinner": "^0.0.6",
-		"react": "^19.2.3",
-		"zod-to-json-schema": "^3.25.1"
+		"protobufjs": "^8.3.0",
+		"react": "^19.2.6",
+		"zod-to-json-schema": "^3.25.2"
 	},
 	"optionalDependencies": {
 		"@opentui/core-darwin-arm64": "0.1.92",
