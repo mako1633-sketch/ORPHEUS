@@ -1,9 +1,11 @@
 import { sanitizeAssistantMessagesForModelHistory } from "../ai/assistant-response-guard";
+import { applyProactiveSummary, createTurnCounter, type TurnCounter } from "../ai/proactive-summary";
 import { compactModelHistoryForContext } from "../ai/context-compaction";
 import type { ModelMessage } from "../types";
 
 export class ModelHistoryStore {
 	private history: ModelMessage[] = [];
+	private turnCounter: TurnCounter = createTurnCounter();
 
 	get(): ModelMessage[] {
 		return compactModelHistoryForContext(this.history);
@@ -15,6 +17,7 @@ export class ModelHistoryStore {
 
 	clear(): void {
 		this.history = [];
+		this.turnCounter = createTurnCounter();
 	}
 
 	appendTurn(userText: string, responseMessages: ModelMessage[]): void {
@@ -22,6 +25,16 @@ export class ModelHistoryStore {
 			{ role: "user", content: userText },
 			...sanitizeAssistantMessagesForModelHistory(responseMessages)
 		);
+		this.turnCounter.count += 1;
+		this.maybeSummarize();
+	}
+
+	/** Apply proactive summary if at the summary interval. */
+	private maybeSummarize(): void {
+		const summarized = applyProactiveSummary(this.history, this.turnCounter);
+		if (summarized > 0) {
+			this.turnCounter.summarized += summarized;
+		}
 	}
 
 	/**
@@ -31,8 +44,6 @@ export class ModelHistoryStore {
 	undoLastTurn(): number {
 		if (this.history.length === 0) return 0;
 
-		// Find the last user message and remove everything from there onwards.
-		// This handles multi-message assistant responses (tool calls, etc.).
 		let lastUserIndex = -1;
 		for (let i = this.history.length - 1; i >= 0; i--) {
 			if (this.history[i]?.role === "user") {

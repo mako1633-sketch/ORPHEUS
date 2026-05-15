@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+# ORPHEUS pre-push hook: run the full CI validation gate locally before pushing
+echo "Running CI gate before push..."
+bun run pretend-ci
+if [ $? -ne 0 ]; then
+	echo ""
+	echo "❌ CI gate failed. Fix issues before pushing, or use --no-verify to bypass."
+	echo ""
+	exit 1
+fi
+
+echo "✅ CI gate passed. Pushing..."
+exit 0

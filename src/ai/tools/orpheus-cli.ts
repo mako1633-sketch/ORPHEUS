@@ -20,7 +20,7 @@ const commandSchema = z.enum([
 	"status",
 ]);
 
-const ARG_PATTERN = /^[\w ./:=@+-]*$/;
+const ARG_PATTERN = /[\w ./:=@+-]*$/;
 
 function quoteShellArg(value: string): string {
 	return `'${value.replaceAll("'", "'\\''")}'`;

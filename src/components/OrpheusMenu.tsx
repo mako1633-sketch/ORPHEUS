@@ -16,6 +16,8 @@ const DEFAULT_ITEMS: OrpheusMenuItem[] = [
 	{ id: "task", label: "Task List", description: "List active tasks" },
 	{ id: "suggest", label: "Suggest Next", description: "Proactive next-action suggestions" },
 	{ id: "diff", label: "Diff Review", description: "Review staged/unstaged changes" },
+	{ id: "ci", label: "Pre-Push CI Gate", description: "Run local CI checks before pushing" },
+	{ id: "github-triage", label: "GitHub Triage", description: "Self-triage CI failures via GitHub API" },
 	{ id: "shell", label: "Shell Optimizer", description: "Optimize shell aliases and patterns" },
 	{ id: "status", label: "Status Dashboard", description: "Full ORPHEUS status overview" },
 	{ id: "briefing", label: "Launch Briefing", description: "Health, active work, memory, and risks" },
