@@ -12,6 +12,16 @@ const ORPHEUS_CONFIG = getAppConfigDir();
 const HOME_DIR = os.homedir();
 const DEFAULT_ORPHEUS_ROOT = path.resolve(process.cwd());
 const DEFAULT_ORPHEUS_SRC = path.join(DEFAULT_ORPHEUS_ROOT, "src");
+const REPORT_DEEP_MODE = process.env.ORPHEUS_REPORT_DEEP === "1";
+const REPORT_SCAN_ROOTS = [
+	DEFAULT_ORPHEUS_ROOT,
+	path.join(HOME_DIR, "Documents"),
+	path.join(HOME_DIR, "Desktop"),
+].filter((root, index, roots) => existsSync(root) && roots.indexOf(root) === index);
+const REPORT_MAX_SCAN_MS = REPORT_DEEP_MODE ? 6000 : 1200;
+const REPORT_MAX_SCAN_ENTRIES = REPORT_DEEP_MODE ? 6000 : 1200;
+const REPORT_MAX_REPOS = REPORT_DEEP_MODE ? 20 : 8;
+const REPORT_COMMAND_TIMEOUT_MS = REPORT_DEEP_MODE ? 5000 : 1200;
 
 /* Types */
 export interface ReportData {
@@ -89,13 +99,23 @@ function extractArray(data: unknown, key?: string): any[] {
 
 function walkDirectories(
 	root: string,
-	options: { maxDepth: number; include?: (target: string) => boolean }
+	options: {
+		maxDepth: number;
+		include?: (target: string) => boolean;
+		maxEntries?: number;
+		maxMs?: number;
+	}
 ): string[] {
 	const results: string[] = [];
 	const seen = new Set<string>();
+	const startedAt = Date.now();
+	let entriesVisited = 0;
 
 	function visit(target: string, depth: number): void {
 		if (depth > options.maxDepth) return;
+		if (options.maxMs && Date.now() - startedAt > options.maxMs) return;
+		if (options.maxEntries && entriesVisited >= options.maxEntries) return;
+		entriesVisited++;
 		let realTarget = target;
 		try {
 			realTarget = path.resolve(target);
@@ -119,7 +139,16 @@ function walkDirectories(
 		}
 
 		for (const entry of entries) {
-			if (entry === "node_modules" || entry === ".cache" || entry === "dist") continue;
+			if (
+				entry === "node_modules" ||
+				entry === ".cache" ||
+				entry === "dist" ||
+				entry === "Library" ||
+				entry === "Applications" ||
+				entry === "System"
+			) {
+				continue;
+			}
 			visit(path.join(realTarget, entry), depth + 1);
 		}
 	}
@@ -163,6 +192,10 @@ function walkFiles(root: string, options: { maxDepth: number; extensions?: strin
 
 	visit(root, 0);
 	return files;
+}
+
+function uniqueStrings(values: string[]): string[] {
+	return [...new Set(values)];
 }
 
 function getDesktopDir(): string {
@@ -216,15 +249,15 @@ async function aggregateVelocity() {
 	let codeChurn = 0;
 	try {
 		const { stdout: c7 } = await execFileAsync("git", ["rev-list", "--count", "HEAD", "--since=7.days"], {
-			timeout: 5000,
+			timeout: REPORT_COMMAND_TIMEOUT_MS,
 		});
 		gitCommits7d = Number.parseInt(c7.trim(), 10) || 0;
 		const { stdout: c30 } = await execFileAsync("git", ["rev-list", "--count", "HEAD", "--since=30.days"], {
-			timeout: 5000,
+			timeout: REPORT_COMMAND_TIMEOUT_MS,
 		});
 		gitCommits30d = Number.parseInt(c30.trim(), 10) || 0;
 		const { stdout: diff } = await execFileAsync("git", ["diff", "--stat", "HEAD~7..HEAD"], {
-			timeout: 5000,
+			timeout: REPORT_COMMAND_TIMEOUT_MS,
 		});
 		const m = diff.match(/(\d+) insertions?\(\+\), (\d+) deletions?\(-\)/);
 		if (m) codeChurn = Number.parseInt(m[1] || "0", 10) + Number.parseInt(m[2] || "0", 10);
@@ -243,6 +276,7 @@ async function aggregateVelocity() {
 /** Run live security scan using spawn (handles large output + non-zero exit). Skips in test mode. */
 async function runLiveSecurityScan(): Promise<{ critical: number; warnings: number; info: number }> {
 	if (process.env.ORPHEUS_TEST) return { critical: 0, warnings: 0, info: 0 };
+	if (!REPORT_DEEP_MODE) return { critical: 0, warnings: 0, info: 0 };
 	const scanScript = path.join(
 		ORPHEUS_CONFIG,
 		"workspaces",
@@ -255,14 +289,17 @@ async function runLiveSecurityScan(): Promise<{ critical: number; warnings: numb
 	return new Promise((resolve) => {
 		let output = "";
 		const child = spawn(scanScript, [], { cwd: HOME_DIR, shell: process.platform === "win32" });
-		const timeout = setTimeout(() => {
-			child.kill();
-			resolve({
-				critical: (output.match(/\[CRITICAL\]/gi) || []).length,
-				warnings: (output.match(/\[WARN\]/gi) || []).length,
-				info: (output.match(/\[INFO\]/gi) || []).length,
-			});
-		}, 60000);
+		const timeout = setTimeout(
+			() => {
+				child.kill();
+				resolve({
+					critical: (output.match(/\[CRITICAL\]/gi) || []).length,
+					warnings: (output.match(/\[WARN\]/gi) || []).length,
+					info: (output.match(/\[INFO\]/gi) || []).length,
+				});
+			},
+			REPORT_DEEP_MODE ? 60000 : 8000
+		);
 
 		child.stdout.on("data", (chunk: Buffer) => {
 			output += chunk.toString();
@@ -291,16 +328,22 @@ async function aggregateRisk() {
 	let uncommittedRepos = 0;
 	const uncommittedRepoNames: string[] = [];
 	try {
-		const repos = walkDirectories(HOME_DIR, {
-			maxDepth: 4,
-			include: (target) => path.basename(target) === ".git",
-		});
-		for (const gitDir of repos.slice(0, 20)) {
+		const repos = uniqueStrings(
+			REPORT_SCAN_ROOTS.flatMap((root) =>
+				walkDirectories(root, {
+					maxDepth: REPORT_DEEP_MODE ? 4 : 3,
+					maxEntries: REPORT_MAX_SCAN_ENTRIES,
+					maxMs: REPORT_MAX_SCAN_MS,
+					include: (target) => path.basename(target) === ".git",
+				})
+			)
+		);
+		for (const gitDir of repos.slice(0, REPORT_MAX_REPOS)) {
 			try {
 				const { stdout: status } = await execFileAsync(
 					"git",
 					["-C", path.dirname(gitDir), "status", "--porcelain"],
-					{ timeout: 5000 }
+					{ timeout: REPORT_COMMAND_TIMEOUT_MS }
 				);
 				if (status.trim()) {
 					uncommittedRepos++;
@@ -316,9 +359,11 @@ async function aggregateRisk() {
 	const securityWarnings = securityResult.warnings;
 
 	let outdatedDependencies = 0;
-	if (!process.env.ORPHEUS_TEST) {
+	if (!process.env.ORPHEUS_TEST && REPORT_DEEP_MODE) {
 		try {
-			const { stdout } = await execFileAsync("npm", ["outdated", "--json"], { timeout: 15000 });
+			const { stdout } = await execFileAsync("npm", ["outdated", "--json"], {
+				timeout: REPORT_COMMAND_TIMEOUT_MS,
+			});
 			outdatedDependencies = Object.keys(JSON.parse(stdout)).length;
 		} catch {}
 	}

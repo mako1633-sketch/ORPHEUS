@@ -31,6 +31,8 @@ export interface MonitorReport {
 const DISK_WARNING_THRESHOLD = 85;
 const DISK_CRITICAL_THRESHOLD = 95;
 const MEMORY_WARNING_THRESHOLD = 90;
+const DEEP_MONITOR = process.env.ORPHEUS_REPORT_DEEP === "1";
+const MONITOR_COMMAND_TIMEOUT_MS = DEEP_MONITOR ? 5000 : 1200;
 
 async function checkDisk(): Promise<SystemAlert[]> {
 	const alerts: SystemAlert[] = [];
@@ -83,21 +85,26 @@ async function checkMemory(): Promise<SystemAlert[]> {
 	return alerts;
 }
 
-async function checkGitDirty(baseDir = process.env.HOME ?? "/Users/matt"): Promise<SystemAlert[]> {
+async function checkGitDirty(baseDir = process.cwd()): Promise<SystemAlert[]> {
 	const alerts: SystemAlert[] = [];
 	try {
-		const { stdout } = await execFileAsync(
-			"find",
-			[baseDir, "-maxdepth", "3", "-name", ".git", "-type", "d"],
-			{ timeout: 15000 }
-		);
-		const repos = stdout.trim().split("\n").filter(Boolean);
+		let repos: string[] = [];
+		if (DEEP_MONITOR) {
+			const { stdout } = await execFileAsync(
+				"find",
+				[os.homedir(), "-maxdepth", "3", "-name", ".git", "-type", "d"],
+				{ timeout: MONITOR_COMMAND_TIMEOUT_MS }
+			);
+			repos = stdout.trim().split("\n").filter(Boolean);
+		} else {
+			repos = [path.join(baseDir, ".git")].filter(Boolean);
+		}
 		const dirtyRepos: string[] = [];
-		for (const gitDir of repos.slice(0, 20)) {
+		for (const gitDir of repos.slice(0, DEEP_MONITOR ? 20 : 1)) {
 			const repoDir = path.dirname(gitDir);
 			try {
 				const { stdout: status } = await execFileAsync("git", ["-C", repoDir, "status", "--porcelain"], {
-					timeout: 5000,
+					timeout: MONITOR_COMMAND_TIMEOUT_MS,
 				});
 				if (status.trim().length > 0) {
 					dirtyRepos.push(path.basename(repoDir));
@@ -120,15 +127,22 @@ async function checkGitDirty(baseDir = process.env.HOME ?? "/Users/matt"): Promi
 	return alerts;
 }
 
-async function checkNodeModulesBloat(baseDir = process.env.HOME ?? "/Users/matt"): Promise<SystemAlert[]> {
+async function checkNodeModulesBloat(baseDir = process.cwd()): Promise<SystemAlert[]> {
 	const alerts: SystemAlert[] = [];
 	try {
-		const { stdout } = await execFileAsync(
-			"find",
-			[baseDir, "-maxdepth", "2", "-name", "node_modules", "-type", "d"],
-			{ timeout: 15000 }
-		);
-		const dirs = stdout.trim().split("\n").filter(Boolean);
+		let dirs: string[] = [];
+		if (DEEP_MONITOR) {
+			const { stdout } = await execFileAsync(
+				"find",
+				[os.homedir(), "-maxdepth", "2", "-name", "node_modules", "-type", "d"],
+				{ timeout: MONITOR_COMMAND_TIMEOUT_MS }
+			);
+			dirs = stdout.trim().split("\n").filter(Boolean);
+		} else {
+			const localNodeModules = path.join(baseDir, "node_modules");
+			const stat = await fs.stat(localNodeModules).catch(() => null);
+			dirs = stat?.isDirectory() ? [localNodeModules] : [];
+		}
 		if (dirs.length > 10) {
 			alerts.push({
 				severity: "info",
