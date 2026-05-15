@@ -7,54 +7,18 @@ import { DaemonState } from "../../types";
 
 const DAEMON_HOME_GIF_PATH = fileURLToPath(new URL("../../../img/daemon.gif", import.meta.url));
 const DAEMON_GIF_ASPECT = 960 / 551;
-const HOME_GIF_MIN_WIDTH = 72;
-const HOME_GIF_MAX_WIDTH = 168;
-const HOME_GIF_WIDTH_RATIO = 0.82;
-const HOME_GIF_TOP_RESERVE_RATIO = 0.18;
-const HOME_GIF_BOTTOM_RESERVE = 4;
-const CHAT_GIF_MIN_WIDTH = 24;
-const CHAT_GIF_MAX_WIDTH = 40;
-const CHAT_GIF_WIDTH_RATIO = 0.2;
+const CHAT_GIF_MIN_WIDTH = 14;
+const CHAT_GIF_MAX_WIDTH = 22;
+const CHAT_GIF_WIDTH_RATIO = 0.12;
 const CHAT_GIF_TOP = 4;
 const CHAT_GIF_RIGHT = 2;
 
-export function calculateHomeGifLayout({
-	viewportWidth,
-	viewportHeight,
-	showBanner,
-}: {
-	viewportWidth: number;
-	viewportHeight: number;
-	showBanner: boolean;
-}): { width: number; height: number; top: number } {
-	const safeViewportWidth = Math.max(1, Math.floor(viewportWidth));
-	const safeViewportHeight = Math.max(1, Math.floor(viewportHeight));
-	const topReserve = showBanner
-		? Math.min(9, Math.floor(safeViewportHeight * HOME_GIF_TOP_RESERVE_RATIO))
-		: 0;
-	const availableHeight = Math.max(1, safeViewportHeight - topReserve - HOME_GIF_BOTTOM_RESERVE);
-	const targetWidth = Math.floor(safeViewportWidth * HOME_GIF_WIDTH_RATIO);
-	const maxWidthForViewport = Math.max(1, safeViewportWidth - 4);
-	let nextWidth = Math.max(
-		Math.min(HOME_GIF_MIN_WIDTH, maxWidthForViewport),
-		Math.min(HOME_GIF_MAX_WIDTH, targetWidth, maxWidthForViewport)
-	);
-	let nextHeight = Math.max(1, Math.floor(nextWidth / DAEMON_GIF_ASPECT / 2));
-
-	if (nextHeight > availableHeight) {
-		nextHeight = availableHeight;
-		nextWidth = Math.max(1, Math.min(maxWidthForViewport, Math.floor(nextHeight * 2 * DAEMON_GIF_ASPECT)));
-	}
-
-	const top = Math.max(0, topReserve + Math.floor((availableHeight - nextHeight) / 2));
-
-	return { width: nextWidth, height: nextHeight, top };
-}
-
 export function calculateChatGifLayout({
 	viewportWidth,
+	top = CHAT_GIF_TOP,
 }: {
 	viewportWidth: number;
+	top?: number;
 }): { width: number; height: number; top: number; right: number } {
 	const safeViewportWidth = Math.max(1, Math.floor(viewportWidth));
 	const targetWidth = Math.floor(safeViewportWidth * CHAT_GIF_WIDTH_RATIO);
@@ -65,7 +29,7 @@ export function calculateChatGifLayout({
 	);
 	const nextHeight = Math.max(1, Math.floor(nextWidth / DAEMON_GIF_ASPECT / 2));
 
-	return { width: nextWidth, height: nextHeight, top: CHAT_GIF_TOP, right: CHAT_GIF_RIGHT };
+	return { width: nextWidth, height: nextHeight, top, right: CHAT_GIF_RIGHT };
 }
 
 export interface AvatarLayerProps {
@@ -106,10 +70,8 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 	const bannerLines = animateBanner ? glitchyBanner.lines : DAEMON_BANNER_LINES;
 	const bannerColors = animateBanner ? glitchyBanner.colors : BANNER_GRADIENT;
 	const bannerWidth = Math.max(...DAEMON_BANNER_LINES.map((line) => line.length));
-	const showHomeGif = showBanner;
-	const gifLayout = calculateHomeGifLayout({ viewportWidth, viewportHeight, showBanner });
-	const chatGifLayout = calculateChatGifLayout({ viewportWidth });
-	const showChatGif = showCompactGif && !showHomeGif;
+	const chatGifLayout = calculateChatGifLayout({ viewportWidth, top: showBanner ? 9 : CHAT_GIF_TOP });
+	const showChatGif = showBanner || showCompactGif;
 
 	// Keep a stable callback ref so we don't detach/reattach on daemonState changes.
 	const daemonStateRef = useRef(daemonState);
@@ -174,28 +136,7 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 					</box>
 				</box>
 			)}
-			{showHomeGif ? (
-				<box
-					position="absolute"
-					top={gifLayout.top}
-					left={0}
-					width="100%"
-					height={gifLayout.height}
-					alignItems="center"
-					justifyContent="center"
-					zIndex={1}
-				>
-					<daemon-gif
-						id="daemon-home-gif"
-						live
-						width={gifLayout.width}
-						height={gifLayout.height}
-						respectAlpha={true}
-						src={DAEMON_HOME_GIF_PATH}
-						frameStride={1}
-					/>
-				</box>
-			) : (
+			{!showBanner && (
 				<>
 					<box
 						position="absolute"
@@ -239,6 +180,28 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 						</box>
 					)}
 				</>
+			)}
+			{showBanner && (
+				<box
+					position="absolute"
+					top={chatGifLayout.top}
+					right={chatGifLayout.right}
+					width={chatGifLayout.width}
+					height={chatGifLayout.height}
+					alignItems="center"
+					justifyContent="center"
+					zIndex={1}
+				>
+					<daemon-gif
+						id="daemon-startup-gif"
+						live
+						width={chatGifLayout.width}
+						height={chatGifLayout.height}
+						respectAlpha={true}
+						src={DAEMON_HOME_GIF_PATH}
+						frameStride={1}
+					/>
+				</box>
 			)}
 		</>
 	);
