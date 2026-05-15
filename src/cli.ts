@@ -3,8 +3,8 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import os from "node:os";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { formatCliHelp, parseCliArgs } from "./cli-args";
 
 const args = process.argv.slice(2);

@@ -7,8 +7,8 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { getAppConfigDir } from "./preferences";
 import { debug } from "./debug-logger";
+import { getAppConfigDir } from "./preferences";
 
 const WORKSPACES_DIR = "workspaces";
 

@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
-import { createRequire } from "node:module";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 
 export type JsRenderingUnavailableReason = "package-not-installed" | "binaries-missing";

@@ -1,7 +1,7 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { OpenAITTSStream, type OpenAITTSOptions } from "./openai-tts-stream";
 import { debug } from "../../utils/debug-logger";
+import { type OpenAITTSOptions, OpenAITTSStream } from "./openai-tts-stream";
 
 export interface TTSPlayerOptions {
 	openai?: OpenAITTSOptions;

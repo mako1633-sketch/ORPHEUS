@@ -2,8 +2,8 @@
  * Enhanced status bar with ambient HUD badges: git state, active tasks, context budget.
  */
 
-import { COLORS } from "../ui/constants";
 import type { HealthSnapshot } from "../health/orpheus-health";
+import { COLORS } from "../ui/constants";
 import type { ModelMetadata } from "../utils/model-metadata";
 
 const SESSION_TITLE_MAX_LENGTH = 40;

@@ -1,8 +1,8 @@
 import {
-	getWindowsHardeningRulesForProfile,
 	type HardeningStage,
 	type WindowsHardeningProfileId,
 	type WindowsHardeningRule,
+	getWindowsHardeningRulesForProfile,
 } from "./windows-hardening-baselines";
 
 export interface HardeningPlanItem {

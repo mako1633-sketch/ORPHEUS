@@ -1,5 +1,5 @@
-import type { ToolBody, ToolLayoutConfig } from "../types";
 import { registerToolLayout } from "../registry";
+import type { ToolBody, ToolLayoutConfig } from "../types";
 
 type UnknownRecord = Record<string, unknown>;
 

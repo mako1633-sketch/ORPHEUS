@@ -1,7 +1,7 @@
+import { summarizeRemediationSla } from "./remediation-sla";
 import type { SecurityControlMapping } from "./security-control-mapping";
 import type { SecurityEvidenceManifest } from "./security-evidence-manifest";
 import type { SecurityEvidencePackInput } from "./security-evidence-pack";
-import { summarizeRemediationSla } from "./remediation-sla";
 
 function escapeHtml(value: string): string {
 	return value

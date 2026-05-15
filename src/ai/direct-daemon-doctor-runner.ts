@@ -1,7 +1,7 @@
-import type { ModelMessage } from "ai";
 import { randomUUID } from "node:crypto";
-import { buildDaemonStatusItems } from "./tools/daemon-status";
+import type { ModelMessage } from "ai";
 import type { StreamCallbacks, TokenUsage } from "../types";
+import { buildDaemonStatusItems } from "./tools/daemon-status";
 
 export interface DirectDaemonDoctorResult {
 	fullText: string;

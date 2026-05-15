@@ -5,8 +5,8 @@
 
 import type { TextareaRenderable } from "@opentui/core";
 import type { RefObject } from "react";
-import { ApiKeyInput } from "./ApiKeyInput";
 import { COLORS } from "../ui/constants";
+import { ApiKeyInput } from "./ApiKeyInput";
 
 interface ApiKeyStepProps {
 	/** Title displayed in the header */

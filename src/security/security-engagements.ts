@@ -2,8 +2,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { getAppConfigDir } from "../utils/preferences";
 import { defaultDueDateForSeverity } from "./remediation-sla";
-import type { AssessmentFinding } from "./windows-assessment-parser";
 import type { WindowsAssessmentDiff, WindowsAssessmentRecord } from "./windows-assessment-history";
+import type { AssessmentFinding } from "./windows-assessment-parser";
 
 export type EngagementRiskTier = "unknown" | "low" | "medium" | "high";
 export type EngagementStatus = "active" | "paused" | "closed";

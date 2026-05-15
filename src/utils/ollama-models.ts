@@ -3,9 +3,9 @@
  * Endpoint: GET {OLLAMA_BASE_URL}/models (OpenAI-compatible v1/models)
  */
 
+import { getOllamaBaseUrl } from "../ai/model-config";
 import type { ModelOption } from "../types";
 import { debug } from "./debug-logger";
-import { getOllamaBaseUrl } from "../ai/model-config";
 
 interface OllamaApiModelItem {
 	id?: string;

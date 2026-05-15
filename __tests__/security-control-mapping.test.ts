@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
+import { buildSecurityControlMappings } from "../src/security/security-control-mapping";
 import type { AssessmentFinding } from "../src/security/windows-assessment-parser";
 import { buildWindowsSecurityReport } from "../src/security/windows-security-report";
-import { buildSecurityControlMappings } from "../src/security/security-control-mapping";
 
 const finding = (id: string, title: string, severity: AssessmentFinding["severity"]): AssessmentFinding => ({
 	id,

@@ -1,8 +1,8 @@
 import type { ScrollBoxRenderable, TextareaRenderable } from "@opentui/core";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { useKeyboard } from "@opentui/react";
-import type { SessionInfo } from "../types";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMenuKeyboard } from "../hooks/use-menu-keyboard";
+import type { SessionInfo } from "../types";
 import { COLORS } from "../ui/constants";
 
 export interface SessionMenuItem extends SessionInfo {

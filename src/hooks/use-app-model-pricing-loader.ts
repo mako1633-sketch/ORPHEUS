@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import type { ModelOption } from "../types";
 import { AVAILABLE_MODELS } from "../ai/model-config";
+import type { ModelOption } from "../types";
 import { getModelsMetadata } from "../utils/model-metadata";
 
 export interface UseAppModelPricingLoaderParams {

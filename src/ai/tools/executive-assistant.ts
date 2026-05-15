@@ -1,19 +1,19 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { getRuntimeContext } from "../../state/runtime-context";
 import {
 	addExecutiveItem,
 	buildExecutiveBriefing,
 	listExecutiveItems,
 	updateExecutiveItem,
 } from "../executive-state";
-import { getRuntimeContext } from "../../state/runtime-context";
+import { getHonchoManager, isHonchoAvailable } from "../memory/honcho-manager";
 import {
 	listTaskStackItems,
 	popNextTaskStackItem,
 	pushTaskStackItem,
 	updateTaskStackItem,
 } from "../task-stack-state";
-import { getHonchoManager, isHonchoAvailable } from "../memory/honcho-manager";
 
 const kindSchema = z.enum(["priority", "follow_up", "decision", "waiting_on", "risk", "note"]);
 const statusSchema = z.enum(["open", "done", "blocked", "archived"]);

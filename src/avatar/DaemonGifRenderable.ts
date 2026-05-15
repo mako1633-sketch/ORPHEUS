@@ -1,13 +1,13 @@
+import { readFileSync } from "node:fs";
 import {
 	type CliRenderer,
 	type FrameBufferOptions,
 	FrameBufferRenderable,
 	type OptimizedBuffer,
 	RGBA,
-	TextAttributes,
 	type RenderContext,
+	TextAttributes,
 } from "@opentui/core";
-import { readFileSync } from "node:fs";
 import { GifReader } from "omggif";
 
 type CellFrame = {

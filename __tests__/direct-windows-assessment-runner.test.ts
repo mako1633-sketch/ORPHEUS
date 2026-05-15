@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import {
-	runDirectWindowsSecurityReview,
 	runDirectWindowsAssessment,
-	shouldRunDirectWindowsSecuritySnapshot,
+	runDirectWindowsSecurityReview,
 	shouldRunDirectWindowsAssessment,
 	shouldRunDirectWindowsQuickPosture,
 	shouldRunDirectWindowsSecurityReview,
+	shouldRunDirectWindowsSecuritySnapshot,
 } from "../src/ai/direct-windows-assessment-runner";
 import type { ModelMessage, StreamCallbacks } from "../src/types";
 

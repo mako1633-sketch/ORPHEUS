@@ -5,6 +5,8 @@
 import { Database } from "bun:sqlite";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { sanitizeAssistantMessagesForModelHistory } from "../ai/assistant-response-guard";
+import { compactModelHistoryForContext } from "../ai/context-compaction";
 import type {
 	ConversationMessage,
 	GroundedStatement,
@@ -15,8 +17,6 @@ import type {
 	TodoItem,
 	TokenUsage,
 } from "../types";
-import { sanitizeAssistantMessagesForModelHistory } from "../ai/assistant-response-guard";
-import { compactModelHistoryForContext } from "../ai/context-compaction";
 import { debug } from "../utils/debug-logger";
 import { getAppConfigDir } from "../utils/preferences";
 import { deleteWorkspace, ensureWorkspaceExists } from "../utils/workspace-manager";

@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 
-import { getRecorder, destroyRecorder } from "./audio-recorder";
+import { destroyRecorder, getRecorder } from "./audio-recorder";
 import { computeMicLevelFromPcm16Chunk, smoothMicLevel } from "./mic-level";
 
 export interface VoiceInputControllerEvents {

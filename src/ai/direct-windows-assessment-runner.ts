@@ -1,16 +1,16 @@
-import type { ModelMessage } from "ai";
 import { randomUUID } from "node:crypto";
-import {
-	buildWindowsSecurityPlaybookCommand,
-	getWindowsSecurityPlaybook,
-	type WindowsSecurityPlaybookId,
-} from "../security/windows-security-playbooks";
+import type { ModelMessage } from "ai";
 import { parseWindowsAssessmentOutput } from "../security/windows-assessment-parser";
 import { buildWindowsRemediationPlan } from "../security/windows-remediation";
+import {
+	type WindowsSecurityPlaybookId,
+	buildWindowsSecurityPlaybookCommand,
+	getWindowsSecurityPlaybook,
+} from "../security/windows-security-playbooks";
 import { buildWindowsSecurityReport } from "../security/windows-security-report";
-import type { StreamCallbacks, ToolApprovalRequest, ToolApprovalResponse, TokenUsage } from "../types";
-import { executeLocalShellCommand } from "./tools/run-bash";
+import type { StreamCallbacks, TokenUsage, ToolApprovalRequest, ToolApprovalResponse } from "../types";
 import { getLastAssistantText } from "./follow-up-context";
+import { executeLocalShellCommand } from "./tools/run-bash";
 
 export interface DirectWindowsAssessmentResult {
 	fullText: string;

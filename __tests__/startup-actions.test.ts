@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import {
 	STARTUP_COMMON_ACTIONS,
-	getStartupActions,
 	getStartupActionForInput,
 	getStartupActionForKey,
+	getStartupActions,
 } from "../src/ui/startup-actions";
 
 describe("startup common actions", () => {

@@ -22,10 +22,10 @@ import { windowsHardening } from "./windows-hardening";
 import { windowsSecurity } from "./windows-security";
 import { writeFile } from "./write-file";
 
-import { getProviderCapabilities } from "../providers/capabilities";
-import { EXA_API_KEY_INVALID_MESSAGE, isCurrentExaApiKeyInvalid } from "../exa-client";
-import { detectLocalPlaywrightChromium } from "../../utils/js-rendering";
 import type { ToolToggleId, ToolToggles } from "../../types";
+import { detectLocalPlaywrightChromium } from "../../utils/js-rendering";
+import { EXA_API_KEY_INVALID_MESSAGE, isCurrentExaApiKeyInvalid } from "../exa-client";
+import { getProviderCapabilities } from "../providers/capabilities";
 
 export type ToolId = ToolToggleId;
 

@@ -1,11 +1,11 @@
 import { memo } from "react";
+import { CommandPalette } from "../../components/CommandPalette";
 import { DeviceMenu } from "../../components/DeviceMenu";
 import { GroundingMenu } from "../../components/GroundingMenu";
 import { HotkeysPane } from "../../components/HotkeysPane";
 import { MemoryMenu } from "../../components/MemoryMenu";
 import { ModelMenu } from "../../components/ModelMenu";
 import { OnboardingOverlay } from "../../components/OnboardingOverlay";
-import { CommandPalette } from "../../components/CommandPalette";
 import { OrpheusMenu, type OrpheusMenuItem } from "../../components/OrpheusMenu";
 import { ProviderMenu } from "../../components/ProviderMenu";
 import { SessionMenu } from "../../components/SessionMenu";

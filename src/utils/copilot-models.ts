@@ -1,5 +1,5 @@
-import type { ModelOption } from "../types";
 import { listCopilotModelsSafe } from "../ai/copilot-client";
+import type { ModelOption } from "../types";
 import { debug } from "./debug-logger";
 
 let inMemoryCache: { timestamp: number; models: ModelOption[] } | null = null;

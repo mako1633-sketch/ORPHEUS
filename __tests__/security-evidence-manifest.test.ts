@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { buildSecurityEvidenceManifest, sha256Hex } from "../src/security/security-evidence-manifest";
-import { buildWindowsSecurityReport } from "../src/security/windows-security-report";
 import type { AssessmentFinding } from "../src/security/windows-assessment-parser";
+import { buildWindowsSecurityReport } from "../src/security/windows-security-report";
 
 const finding: AssessmentFinding = {
 	id: "assessment-output-collected",

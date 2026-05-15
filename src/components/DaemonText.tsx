@@ -1,5 +1,5 @@
-import { formatMarkdownTables } from "../utils/markdown-tables";
 import { COLORS, DAEMON_MARKDOWN_STYLE } from "../ui/constants";
+import { formatMarkdownTables } from "../utils/markdown-tables";
 
 export interface DaemonTextProps {
 	content: string;

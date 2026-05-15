@@ -1,6 +1,6 @@
-import { buildDaemonStatusItems } from "../ai/tools/daemon-status";
 import { detectAssistantResponseLeak, isAssistantResponseGuardNotice } from "../ai/assistant-response-guard";
 import { isHonchoAvailable } from "../ai/memory/honcho-manager";
+import { buildDaemonStatusItems } from "../ai/tools/daemon-status";
 import type { ConversationMessage } from "../types";
 
 export type HealthLevel = "ok" | "watch" | "repair" | "blocked";

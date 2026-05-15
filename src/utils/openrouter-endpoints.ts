@@ -6,8 +6,8 @@
  * `/api/v1/models/{modelId}/endpoints`
  */
 
-import { debug } from "./debug-logger";
 import type { ModelPricing } from "../types";
+import { debug } from "./debug-logger";
 import { mergePricingAverages, parseOpenRouterPricePerTokenToPerMillion } from "./openrouter-pricing";
 
 export interface OpenRouterInferenceProvider {

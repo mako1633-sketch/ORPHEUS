@@ -1,17 +1,17 @@
 import { afterEach, describe, expect, it } from "bun:test";
 
 import {
-	buildMenuItems,
-	buildToolSet,
-	getDefaultToolOrder,
-	resolveToolAvailability,
-} from "../src/ai/tools/tool-registry";
-import {
 	EXA_API_KEY_INVALID_MESSAGE,
 	markCurrentExaApiKeyInvalid,
 	resetExaClientForTests,
 } from "../src/ai/exa-client";
 import { setModelProvider } from "../src/ai/model-config";
+import {
+	buildMenuItems,
+	buildToolSet,
+	getDefaultToolOrder,
+	resolveToolAvailability,
+} from "../src/ai/tools/tool-registry";
 import { DEFAULT_TOOL_TOGGLES } from "../src/types";
 
 const ORIGINAL_ENV = { ...process.env };

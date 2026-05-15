@@ -1,16 +1,16 @@
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { loadCodingTaskState, updateCodingTaskState } from "../src/ai/coding-task-state";
+import { addExecutiveItem, buildExecutiveBriefing, updateExecutiveItem } from "../src/ai/executive-state";
 import {
 	appendPersistentContext,
 	formatPersistentContextForPrompt,
 	loadPersistentContext,
 } from "../src/ai/persistent-context";
-import { loadCodingTaskState, updateCodingTaskState } from "../src/ai/coding-task-state";
-import { addExecutiveItem, buildExecutiveBriefing, updateExecutiveItem } from "../src/ai/executive-state";
-import { loadTaskStack } from "../src/ai/task-stack-state";
 import { loadReflections } from "../src/ai/reflection-state";
+import { loadTaskStack } from "../src/ai/task-stack-state";
 import { codingWorkbench } from "../src/ai/tools/coding-workbench";
 import { daemonStatus } from "../src/ai/tools/daemon-status";
 import { executiveAssistant } from "../src/ai/tools/executive-assistant";

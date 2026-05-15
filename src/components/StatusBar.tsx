@@ -2,8 +2,8 @@
  * Status bar component that displays the current ORPHEUS state.
  */
 
-import { COLORS } from "../ui/constants";
 import type { HealthSnapshot } from "../health/orpheus-health";
+import { COLORS } from "../ui/constants";
 
 const SESSION_TITLE_MAX_LENGTH = 40;
 

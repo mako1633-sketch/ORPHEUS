@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { loadPreferences, updatePreferences } from "../utils/preferences";
 
 const MAX_HISTORY_SIZE = 20;

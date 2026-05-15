@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
-import { startMcpManager } from "../ai/mcp/mcp-manager";
 import { hasCopilotCliAuthSafe } from "../ai/copilot-client";
+import { startMcpManager } from "../ai/mcp/mcp-manager";
 import {
 	getModelProvider,
 	getResponseModelForProvider,

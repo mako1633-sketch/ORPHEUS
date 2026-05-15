@@ -1,15 +1,15 @@
 import { describe, expect, it } from "bun:test";
+import { listWindowsEventTriageQueries } from "../src/security/windows-event-triage";
 import {
+	WINDOWS_HARDENING_RULES,
 	getWindowsHardeningRulesForProfile,
 	listWindowsHardeningProfiles,
-	WINDOWS_HARDENING_RULES,
 } from "../src/security/windows-hardening-baselines";
 import {
 	buildHardeningCheckCommand,
 	buildPolicyCheckCommand,
 	buildWindowsHardeningPlan,
 } from "../src/security/windows-hardening-planner";
-import { listWindowsEventTriageQueries } from "../src/security/windows-event-triage";
 import { scoreWindowsProcess } from "../src/security/windows-process-scoring";
 import {
 	buildWindowsSecurityScheduledTaskPlan,

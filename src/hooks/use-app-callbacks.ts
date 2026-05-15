@@ -1,5 +1,6 @@
-import { useCallback } from "react";
 import { toast } from "@opentui-ui/toast/react";
+import { useCallback } from "react";
+import { getCopilotAuthStatusSafe, resetCopilotClient } from "../ai/copilot-client";
 import {
 	getResponseModelForProvider,
 	setModelProvider,
@@ -9,8 +10,6 @@ import {
 } from "../ai/model-config";
 import { invalidateDaemonToolsCache } from "../ai/tools";
 import { invalidateSubagentToolsCache } from "../ai/tools/subagents";
-import { getCopilotAuthStatusSafe, resetCopilotClient } from "../ai/copilot-client";
-import { setAudioDevice } from "../voice/audio-recorder";
 import { getDaemonManager } from "../state/daemon-state";
 import type {
 	AppPreferences,
@@ -22,6 +21,7 @@ import type {
 	SpeechSpeed,
 	VoiceInteractionType,
 } from "../types";
+import { setAudioDevice } from "../voice/audio-recorder";
 import { determineNextStep } from "./keyboard-handlers";
 
 export interface UseAppCallbacksParams {

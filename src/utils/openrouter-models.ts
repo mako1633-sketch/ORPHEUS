@@ -7,8 +7,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { ModelOption, ModelPricing } from "../types";
 import { debug } from "./debug-logger";
-import { getAppConfigDir } from "./preferences";
 import { parseOpenRouterPricePerTokenToPerMillion } from "./openrouter-pricing";
+import { getAppConfigDir } from "./preferences";
 
 interface OpenRouterModelItem {
 	id?: string;

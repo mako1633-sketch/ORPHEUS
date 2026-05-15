@@ -1,12 +1,12 @@
-import { describe, it, expect } from "bun:test";
-import {
-	calculateCost,
-	formatCost,
-	formatContextUsage,
-	resolveOpenRouterProviderPricing,
-} from "../src/utils/model-metadata";
+import { describe, expect, it } from "bun:test";
 import type { ModelPricing } from "../src/types";
 import { formatContextWindowK } from "../src/utils/formatters";
+import {
+	calculateCost,
+	formatContextUsage,
+	formatCost,
+	resolveOpenRouterProviderPricing,
+} from "../src/utils/model-metadata";
 
 describe("calculateCost", () => {
 	const standardPricing: ModelPricing = {

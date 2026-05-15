@@ -1,5 +1,14 @@
-import { generateResponse } from "./daemon-ai";
+import type {
+	InteractionMode,
+	ModelMessage,
+	ReasoningEffort,
+	StreamCallbacks,
+	TokenUsage,
+	ToolApprovalRequest,
+	ToolApprovalResponse,
+} from "../types";
 import { guardAssistantResponse } from "./assistant-response-guard";
+import { generateResponse } from "./daemon-ai";
 import { runDirectDaemonDoctor, shouldRunDirectDaemonDoctor } from "./direct-daemon-doctor-runner";
 import {
 	runDirectImplementationAdvice,
@@ -35,18 +44,9 @@ import {
 	shouldRunDirectWindowsScheduledTaskSecurity,
 } from "./direct-windows-scheduled-task-runner";
 import { buildUserMessageWithFollowUpContext, resolveNumberedFollowUpPrompt } from "./follow-up-context";
-import { buildUserMessageWithWindowsAssessmentContext } from "./windows-assessment-context";
-import type {
-	InteractionMode,
-	ModelMessage,
-	ReasoningEffort,
-	StreamCallbacks,
-	TokenUsage,
-	ToolApprovalRequest,
-	ToolApprovalResponse,
-} from "../types";
 import { applyRouterDecision, routeTask } from "./model-router";
 import { isVisionRequest } from "./vision-reasoning";
+import { buildUserMessageWithWindowsAssessmentContext } from "./windows-assessment-context";
 
 function buildVisionContextHint(userText: string): string {
 	if (!isVisionRequest(userText)) return "";

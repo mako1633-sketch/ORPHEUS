@@ -1,9 +1,9 @@
-import { OptimizedBuffer, createCliRenderer, RGBA } from "@opentui/core";
-import { SuperSampleType, ThreeCliRenderer } from "@opentui/core/3d";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { OptimizedBuffer, RGBA, createCliRenderer } from "@opentui/core";
+import { SuperSampleType, ThreeCliRenderer } from "@opentui/core/3d";
 import { createDaemonRig } from "./avatar/daemon-avatar-rig";
 
 /** Resolve ffmpeg path - tries ffmpeg-static if available, otherwise falls back to system PATH. */

@@ -2,14 +2,14 @@ import { describe, expect, it } from "bun:test";
 import { mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { WindowsAssessmentRecord } from "../src/security/windows-assessment-history";
-import type { AssessmentFinding } from "../src/security/windows-assessment-parser";
-import { buildWindowsRemediationPlan } from "../src/security/windows-remediation";
-import { buildWindowsSecurityReport } from "../src/security/windows-security-report";
 import {
 	buildSecurityEvidencePackMarkdown,
 	exportSecurityEvidencePack,
 } from "../src/security/security-evidence-pack";
+import type { WindowsAssessmentRecord } from "../src/security/windows-assessment-history";
+import type { AssessmentFinding } from "../src/security/windows-assessment-parser";
+import { buildWindowsRemediationPlan } from "../src/security/windows-remediation";
+import { buildWindowsSecurityReport } from "../src/security/windows-security-report";
 
 const finding = (id: string): AssessmentFinding => ({
 	id,

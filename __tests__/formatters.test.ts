@@ -1,17 +1,17 @@
-import { describe, it, expect } from "bun:test";
-import {
-	formatReasoningPreview,
-	hasVisibleText,
-	formatElapsedTime,
-	formatValue,
-	formatToolInputLines,
-	formatTodoItem,
-	formatTodoDisplayLines,
-	isTodoInput,
-	formatTokenCount,
-	formatPrice,
-} from "../src/utils/formatters";
+import { describe, expect, it } from "bun:test";
 import type { TodoItem } from "../src/types";
+import {
+	formatElapsedTime,
+	formatPrice,
+	formatReasoningPreview,
+	formatTodoDisplayLines,
+	formatTodoItem,
+	formatTokenCount,
+	formatToolInputLines,
+	formatValue,
+	hasVisibleText,
+	isTodoInput,
+} from "../src/utils/formatters";
 
 describe("formatReasoningPreview", () => {
 	it("returns empty string for empty input", () => {

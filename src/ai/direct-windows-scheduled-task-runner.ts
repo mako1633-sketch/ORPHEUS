@@ -1,12 +1,12 @@
-import type { ModelMessage } from "ai";
 import { randomUUID } from "node:crypto";
-import type { StreamCallbacks, ToolApprovalRequest, ToolApprovalResponse, TokenUsage } from "../types";
+import type { ModelMessage } from "ai";
 import {
-	buildWindowsSecurityScheduledTaskPlan,
-	listWindowsSecurityScheduledTaskTemplates,
 	type WindowsSecurityScheduledTaskOperation,
 	type WindowsSecurityScheduledTaskTemplateId,
+	buildWindowsSecurityScheduledTaskPlan,
+	listWindowsSecurityScheduledTaskTemplates,
 } from "../security/windows-scheduled-tasks";
+import type { StreamCallbacks, TokenUsage, ToolApprovalRequest, ToolApprovalResponse } from "../types";
 import { executeLocalShellCommand } from "./tools/run-bash";
 
 export interface DirectWindowsScheduledTaskResult {

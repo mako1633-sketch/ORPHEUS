@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import path from "node:path";
-import { getAppConfigDir, parsePreferences } from "../src/utils/preferences";
 import type { AppPreferences } from "../src/types";
+import { getAppConfigDir, parsePreferences } from "../src/utils/preferences";
 
 const ORIGINAL_ENV = { ...process.env };
 

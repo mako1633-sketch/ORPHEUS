@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef } from "react";
+import { type KeyEvent, TextAttributes } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
-import { TextAttributes, type KeyEvent } from "@opentui/core";
+import { useCallback, useRef, useState } from "react";
 import { COLORS } from "../ui/constants";
 
 interface ApprovalPickerProps {

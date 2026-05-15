@@ -1,6 +1,6 @@
-import type { ModelMessage } from "ai";
 import { randomUUID } from "node:crypto";
-import type { StreamCallbacks, ToolApprovalRequest, ToolApprovalResponse, TokenUsage } from "../types";
+import type { ModelMessage } from "ai";
+import type { StreamCallbacks, TokenUsage, ToolApprovalRequest, ToolApprovalResponse } from "../types";
 import { getLastAssistantText } from "./follow-up-context";
 import { executeLocalShellCommand } from "./tools/run-bash";
 

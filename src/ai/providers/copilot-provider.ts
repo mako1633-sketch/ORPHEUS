@@ -1,12 +1,12 @@
-import type { ModelMessage } from "ai";
 import { randomUUID } from "node:crypto";
+import type { ModelMessage } from "ai";
 import { getDaemonManager } from "../../state/daemon-state";
 import { getRuntimeContext } from "../../state/runtime-context";
 import type { ReasoningEffort, StreamCallbacks } from "../../types";
 import { debug, toolDebug } from "../../utils/debug-logger";
 import { getWorkspacePath } from "../../utils/workspace-manager";
 import { convertToolSetToCopilotTools, getOrCreateCopilotSession } from "../copilot-client";
-import { getResponseModel, getCopilotCodingModel, isCodingTask } from "../model-config";
+import { getCopilotCodingModel, getResponseModel, isCodingTask } from "../model-config";
 import { buildDaemonSystemPrompt } from "../system-prompt";
 import { getCachedToolAvailability, getDaemonTools } from "../tools/index";
 import { createToolAvailabilitySnapshot, resolveToolAvailability } from "../tools/tool-registry";

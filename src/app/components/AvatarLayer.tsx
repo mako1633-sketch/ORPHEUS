@@ -1,6 +1,6 @@
+import { fileURLToPath } from "node:url";
 import { memo, useCallback, useEffect, useRef } from "react";
 import type { RefObject } from "react";
-import { fileURLToPath } from "node:url";
 import type { DaemonAvatarRenderable } from "../../avatar/DaemonAvatarRenderable";
 import { BANNER_GRADIENT, DAEMON_BANNER_LINES, useGlitchyBanner } from "../../hooks/use-glitchy-banner";
 import { DaemonState } from "../../types";

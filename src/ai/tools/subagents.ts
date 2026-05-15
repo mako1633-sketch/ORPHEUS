@@ -3,8 +3,8 @@
  * ORPHEUS can call this tool multiple times in parallel to spawn concurrent subagents.
  */
 
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { tool } from "ai";
 import { type ModelMessage, ToolLoopAgent, stepCountIs } from "ai";
 import type { ToolSet } from "ai";

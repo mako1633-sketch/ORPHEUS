@@ -1,14 +1,14 @@
 import { existsSync } from "node:fs";
 import { tool } from "ai";
 import { z } from "zod";
+import { getKeyHealth } from "../../utils/key-health";
 import { loadCodingTaskState } from "../coding-task-state";
+import { EXA_API_KEY_INVALID_MESSAGE, isCurrentExaApiKeyInvalid } from "../exa-client";
 import { loadExecutiveState } from "../executive-state";
 import { getHonchoManager, isHonchoAvailable } from "../memory/honcho-manager";
 import { loadPersistentContext } from "../persistent-context";
-import { loadTaskStack } from "../task-stack-state";
-import { EXA_API_KEY_INVALID_MESSAGE, isCurrentExaApiKeyInvalid } from "../exa-client";
 import { getProviderCapabilities } from "../providers/capabilities";
-import { getKeyHealth } from "../../utils/key-health";
+import { loadTaskStack } from "../task-stack-state";
 import { getWindowsPowerShellPath } from "./run-bash";
 import { detectSignalCli } from "./signal";
 

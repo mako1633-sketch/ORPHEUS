@@ -4,9 +4,9 @@ import type {
 	MemoryToastPreview,
 	ModelMessage,
 	TokenUsage,
-	ToolCallStatus,
 	ToolApprovalRequest,
 	ToolApprovalResponse,
+	ToolCallStatus,
 } from "../types";
 import { DaemonState } from "../types";
 

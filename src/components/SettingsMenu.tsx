@@ -2,18 +2,18 @@ import type { KeyEvent } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import { useEffect, useState } from "react";
 import { getMemoryManager, isMemoryAvailable } from "../ai/memory";
+import { handleSettingsMenuKey } from "../hooks/keyboard-handlers";
+import { getDaemonManager } from "../state/daemon-state";
 import type {
 	AppPreferences,
+	BashApprovalLevel,
 	InteractionMode,
 	LlmProvider,
-	VoiceInteractionType,
-	SpeechSpeed,
 	ReasoningEffort,
-	BashApprovalLevel,
+	SpeechSpeed,
+	VoiceInteractionType,
 } from "../types";
-import { REASONING_EFFORT_LABELS, BASH_APPROVAL_LABELS } from "../types";
-import { getDaemonManager } from "../state/daemon-state";
-import { handleSettingsMenuKey } from "../hooks/keyboard-handlers";
+import { BASH_APPROVAL_LABELS, REASONING_EFFORT_LABELS } from "../types";
 import { COLORS } from "../ui/constants";
 
 interface SettingsMenuItem {

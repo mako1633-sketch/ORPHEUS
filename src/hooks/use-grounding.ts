@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
-import type { GroundingMap } from "../types";
-import { loadLatestGroundingMap } from "../state/session-store";
+import { useCallback, useEffect, useState } from "react";
 import { daemonEvents } from "../state/daemon-events";
+import { loadLatestGroundingMap } from "../state/session-store";
+import type { GroundingMap } from "../types";
 
 export interface UseGroundingReturn {
 	latestGroundingMap: GroundingMap | null;

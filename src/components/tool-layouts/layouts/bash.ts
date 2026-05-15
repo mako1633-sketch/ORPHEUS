@@ -1,6 +1,6 @@
-import type { ToolLayoutConfig, ToolHeader, ToolBody } from "../types";
-import { registerToolLayout } from "../registry";
 import { classifyCommandRisk } from "../../../security/bash-security-policy";
+import { registerToolLayout } from "../registry";
+import type { ToolBody, ToolHeader, ToolLayoutConfig } from "../types";
 
 type UnknownRecord = Record<string, unknown>;
 

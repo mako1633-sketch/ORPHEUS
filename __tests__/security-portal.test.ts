@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { buildSecurityPortalHtml } from "../src/security/security-portal";
 import { buildSecurityControlMappings } from "../src/security/security-control-mapping";
-import { buildWindowsSecurityReport } from "../src/security/windows-security-report";
+import { buildSecurityPortalHtml } from "../src/security/security-portal";
 import type { AssessmentFinding } from "../src/security/windows-assessment-parser";
+import { buildWindowsSecurityReport } from "../src/security/windows-security-report";
 
 const finding: AssessmentFinding = {
 	id: "admin-membership-review",

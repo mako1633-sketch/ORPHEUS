@@ -1,8 +1,8 @@
 import { TextAttributes } from "@opentui/core";
-import type { ToolLayoutConfig, ToolHeader, ToolLayoutRenderProps } from "../types";
-import { registerToolLayout } from "../registry";
 import { COLORS } from "../../../ui/constants";
-import { formatTodoDisplayLines, isTodoInput, type FormattedTodoItem } from "../../../utils/formatters";
+import { type FormattedTodoItem, formatTodoDisplayLines, isTodoInput } from "../../../utils/formatters";
+import { registerToolLayout } from "../registry";
+import type { ToolHeader, ToolLayoutConfig, ToolLayoutRenderProps } from "../types";
 
 type UnknownRecord = Record<string, unknown>;
 

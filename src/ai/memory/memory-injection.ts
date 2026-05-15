@@ -5,18 +5,18 @@
  * system health monitor, and vision reasoning state.
  */
 
+import { getRuntimeContext } from "../../state/runtime-context";
 import type { MemoryContext, MemoryEntry } from "../../types";
 import { debug } from "../../utils/debug-logger";
-import { getRuntimeContext } from "../../state/runtime-context";
 import { detectAssistantResponseLeak, isAssistantResponseGuardNotice } from "../assistant-response-guard";
 import { loadCodingTaskState } from "../coding-task-state";
 import { buildExecutiveBriefing } from "../executive-state";
 import { formatKnowledgeHits, searchKnowledgeBase } from "../knowledge-base";
 import { isCodingTask } from "../model-config";
 import { ollamaSearchMemories } from "../ollama-memory";
+import { formatPersistentContextForPrompt, loadPersistentContext } from "../persistent-context";
 import { buildReflectionContext } from "../reflection-state";
 import { formatMonitorReport, runSystemMonitor } from "../system-monitor";
-import { formatPersistentContextForPrompt, loadPersistentContext } from "../persistent-context";
 import { loadTaskStack } from "../task-stack-state";
 import { getHonchoManager, isHonchoAvailable } from "./honcho-manager";
 import { getMemoryManager, isMemoryAvailable } from "./memory-manager";

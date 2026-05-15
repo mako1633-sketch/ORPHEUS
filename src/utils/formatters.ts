@@ -2,13 +2,13 @@
  * Utility functions for formatting display values in the UI.
  */
 
-import type { TodoItem } from "../types";
 import {
 	normalizeTodoAction,
 	normalizeTodoIndex,
 	normalizeTodoItems,
 	normalizeTodoStatus,
 } from "../ai/tools/todo-normalizer";
+import type { TodoItem } from "../types";
 import { REASONING_ANIMATION } from "../ui/constants";
 
 const MAX_TOOL_INPUT_LINES = 10;

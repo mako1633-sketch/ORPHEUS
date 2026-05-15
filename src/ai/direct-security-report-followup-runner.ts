@@ -1,9 +1,9 @@
-import type { ModelMessage } from "ai";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import type { ModelMessage } from "ai";
 import type { StreamCallbacks, TokenUsage } from "../types";
-import { getLastAssistantText } from "./follow-up-context";
 import { getAppConfigDir } from "../utils/preferences";
+import { getLastAssistantText } from "./follow-up-context";
 
 export interface DirectSecurityReportFollowUpResult {
 	fullText: string;

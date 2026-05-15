@@ -4,7 +4,7 @@ import type { ScrollBoxRenderable } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
 import { useCallback } from "react";
 import { getDaemonManager } from "../state/daemon-state";
-import { type AppPreferences, type LlmProvider, DaemonState } from "../types";
+import { type AppPreferences, DaemonState, type LlmProvider } from "../types";
 import { COLORS } from "../ui/constants";
 import { getStartupActionForKey } from "../ui/startup-actions";
 

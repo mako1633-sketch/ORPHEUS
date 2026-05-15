@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { useMenuKeyboard } from "../hooks/use-menu-keyboard";
+import type { ModelPricing } from "../types";
 import { COLORS } from "../ui/constants";
 import { formatContextWindowK, formatPrice } from "../utils/formatters";
-import type { ModelPricing } from "../types";
 
 const COL_WIDTH = {
 	CTX: 6,

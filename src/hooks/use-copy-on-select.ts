@@ -1,6 +1,6 @@
-import { useCallback } from "react";
 import { toast } from "@opentui-ui/toast/react";
 import { useRenderer } from "@opentui/react";
+import { useCallback } from "react";
 import { writeClipboardText } from "../utils/clipboard";
 
 export interface UseCopyOnSelectReturn {
