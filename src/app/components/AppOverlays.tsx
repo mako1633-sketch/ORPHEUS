@@ -68,6 +68,8 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 				"Scan the ORPHEUS project files for anomalies, missing imports, stale artifacts, and incomplete wiring.",
 			remediate:
 				"Plan safe auto-remediation for the current ORPHEUS repo issues, asking before destructive changes.",
+			diagnostics:
+				"Run ORPHEUS runtime diagnostics: probe keyboard state, Ollama connectivity, app context, and system health. Report findings with fixes.",
 		};
 		const prompt = prompts[item.id] ?? item.description ?? item.label;
 		menus.setShowOrpheusMenu(false);

@@ -26,6 +26,7 @@ const DEFAULT_ITEMS: OrpheusMenuItem[] = [
 	{ id: "scan", label: "Scan Capabilities", description: "Discover installed tools" },
 	{ id: "scan-files", label: "File Guardian", description: "Scan for file anomalies" },
 	{ id: "remediate", label: "Auto Remediate", description: "Run auto-remediation pipeline" },
+	{ id: "diagnostics", label: "Run Diagnostics", description: "Probe keyboard, Ollama, and app state" },
 ];
 
 interface OrpheusMenuProps {

@@ -2,6 +2,8 @@ import type { ToolSet } from "ai";
 
 import { codingWorkbench } from "./coding-workbench";
 import { daemonStatus } from "./daemon-status";
+import { dependencyAudit } from "./dependency-audit";
+import { diagnostics } from "./diagnostics-tool";
 import { executiveAssistant } from "./executive-assistant";
 import { fetchUrls } from "./fetch-urls";
 import { groundingManager } from "./grounding-manager";
@@ -18,6 +20,7 @@ import { subagent } from "./subagents";
 import { systemStatus } from "./system-status";
 import { todoManager } from "./todo-manager";
 import { webSearch } from "./web-search";
+import { webSearchWithFallback } from "./web-search-fallback";
 import { windowsHardening } from "./windows-hardening";
 import { windowsSecurity } from "./windows-security";
 import { writeFile } from "./write-file";
@@ -75,6 +78,9 @@ const TOOL_REGISTRY: ToolEntry[] = [
 	{ id: "groundingManager", toggleKey: "groundingManager", tool: groundingManager },
 	{ id: "subagent", toggleKey: "subagent", tool: subagent, gate: gateSubagent },
 	{ id: "orpheusCli", toggleKey: "orpheusCli", tool: orpheusCli, gate: gateOrpheusCli },
+	{ id: "dependencyAudit", toggleKey: "dependencyAudit", tool: dependencyAudit },
+	{ id: "webSearchFallback", toggleKey: "webSearchFallback", tool: webSearchWithFallback },
+	{ id: "diagnostics", toggleKey: "diagnostics", tool: diagnostics },
 ];
 
 function gateExa(): Promise<ToolGateResult> {
@@ -168,6 +174,9 @@ function normalizeToggles(toggles?: ToolToggles): ToolToggles {
 		groundingManager: toggles?.groundingManager ?? true,
 		subagent: toggles?.subagent ?? true,
 		orpheusCli: toggles?.orpheusCli ?? true,
+		dependencyAudit: toggles?.dependencyAudit ?? true,
+		webSearchFallback: toggles?.webSearchFallback ?? true,
+		diagnostics: toggles?.diagnostics ?? true,
 	};
 }
 
@@ -279,6 +288,9 @@ export function getToolLabels(): Record<ToolId, string> {
 		groundingManager: "groundingManager",
 		subagent: "subagent",
 		orpheusCli: "orpheusCli",
+		dependencyAudit: "dependencyAudit",
+		webSearchFallback: "webSearchFallback",
+		diagnostics: "diagnostics",
 	};
 }
 
@@ -305,6 +317,9 @@ export function getDefaultToolOrder(): ToolId[] {
 		"groundingManager",
 		"subagent",
 		"orpheusCli",
+		"dependencyAudit",
+		"webSearchFallback",
+		"diagnostics",
 	];
 }
 
@@ -331,5 +346,8 @@ export function createToolAvailabilitySnapshot(availability: ToolAvailabilityMap
 		groundingManager: availability.groundingManager?.enabled ?? false,
 		subagent: availability.subagent?.enabled ?? false,
 		orpheusCli: availability.orpheusCli?.enabled ?? false,
+		dependencyAudit: availability.dependencyAudit?.enabled ?? false,
+		webSearchFallback: availability.webSearchFallback?.enabled ?? false,
+		diagnostics: availability.diagnostics?.enabled ?? false,
 	};
 }

@@ -10,6 +10,7 @@
  * Tool-specific logging uses `~/.config/orpheus/logs/tools.log`.
  * Message logging uses `~/.config/orpheus/logs/messages.log`.
  * Memory logging uses `~/.config/orpheus/logs/memory.log`.
+ * Diagnostics logging uses `~/.config/orpheus/logs/diagnostics.log`.
  */
 
 import fs from "node:fs";
@@ -21,6 +22,7 @@ const LOG_FILE = path.join(LOG_DIR, "debug.log");
 const TOOLS_LOG_FILE = path.join(LOG_DIR, "tools.log");
 const MESSAGES_LOG_FILE = path.join(LOG_DIR, "messages.log");
 const MEMORY_LOG_FILE = path.join(LOG_DIR, "memory.log");
+const DIAGNOSTICS_LOG_FILE = path.join(LOG_DIR, "diagnostics.log");
 const ENABLED = process.env.DEBUG_LOG === "1" || process.env.DEBUG_LOG === "true";
 
 const flushIntervalMs = 500;
@@ -102,3 +104,4 @@ export const debug = createDebugLogger(LOG_FILE);
 export const toolDebug = createDebugLogger(TOOLS_LOG_FILE);
 export const messageDebug = createDebugLogger(MESSAGES_LOG_FILE);
 export const memoryDebug = createDebugLogger(MEMORY_LOG_FILE);
+export const diagnosticsDebug = createDebugLogger(DIAGNOSTICS_LOG_FILE);
