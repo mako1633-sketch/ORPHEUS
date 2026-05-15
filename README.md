@@ -192,6 +192,13 @@ sudo dnf install sox sox-plugins-freeworld
 sudo pacman -S sox
 ```
 
+For the Linux-ready setup flow, see [LINUX.md](./LINUX.md). From a terminal in this folder:
+
+```bash
+./scripts/linux/setup.sh
+./scripts/linux/run.sh
+```
+
 ### Windows
 Install [Bun for Windows](https://bun.sh/docs/installation), then run ORPHEUS from PowerShell, Windows Terminal, or another terminal that supports TUI apps. For voice features, install `sox` and `ffmpeg` and make sure both commands are available on `PATH`.
 
