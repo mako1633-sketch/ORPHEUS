@@ -76,6 +76,7 @@ export function App() {
 						viewportHeight={controller.avatarLayerProps.viewportHeight}
 						zIndex={controller.avatarLayerProps.zIndex}
 						showBanner={controller.avatarLayerProps.showBanner}
+						showCompactGif={controller.avatarLayerProps.showCompactGif}
 						animateBanner={controller.avatarLayerProps.animateBanner}
 						startupAnimationActive={controller.avatarLayerProps.startupAnimationActive}
 					/>
