@@ -13,6 +13,7 @@ import type { OpenRouterInferenceProvider } from "../utils/openrouter-endpoints"
 import { mergePricingAverages } from "../utils/openrouter-pricing";
 import { useAppCopilotModelsLoader } from "./use-app-copilot-models-loader";
 import { useAppModelPricingLoader } from "./use-app-model-pricing-loader";
+import { useAppOllamaModelsLoader } from "./use-app-ollama-models-loader";
 import { useAppOpenRouterModelsLoader } from "./use-app-openrouter-models-loader";
 import { useAppOpenRouterProviderLoader } from "./use-app-openrouter-provider-loader";
 
@@ -67,6 +68,13 @@ export function useAppModel(params: UseAppModelParams): UseAppModelReturn {
 	const [copilotModelsLoading, setCopilotModelsLoading] = useState(false);
 	const [copilotModelsUpdatedAt, setCopilotModelsUpdatedAt] = useState<number | null>(null);
 
+	// Ollama dynamic model list (fetched from local Ollama API)
+	const [ollamaModels, setOllamaModels] = useState<ModelOption[]>(AVAILABLE_OLLAMA_MODELS);
+	const [ollamaModelsLoading, setOllamaModelsLoading] = useState(false);
+	const [ollamaModelsUpdatedAt, setOllamaModelsUpdatedAt] = useState<number | null>(null);
+
+	const isOllamaActive = currentModelProvider === "ollama";
+
 	const currentModelId =
 		currentModelProvider === "openrouter"
 			? openRouterModelId
@@ -98,6 +106,14 @@ export function useAppModel(params: UseAppModelParams): UseAppModelReturn {
 		setModels: setCopilotModels,
 		setLoading: setCopilotModelsLoading,
 		setUpdatedAt: setCopilotModelsUpdatedAt,
+	});
+
+	const { refresh: refreshOllamaModels } = useAppOllamaModelsLoader({
+		preferencesLoaded,
+		enabled: isOllamaActive,
+		setModels: setOllamaModels,
+		setLoading: setOllamaModelsLoading,
+		setUpdatedAt: setOllamaModelsUpdatedAt,
 	});
 
 	const providerMenuItems: ProviderMenuItem[] = useMemo(() => {
@@ -151,25 +167,25 @@ export function useAppModel(params: UseAppModelParams): UseAppModelReturn {
 			? openRouterModelsWithPricing
 			: currentModelProvider === "copilot"
 				? copilotModels
-				: AVAILABLE_OLLAMA_MODELS;
+				: ollamaModels;
 	const modelsForMenu =
 		currentModelProvider === "openrouter"
 			? openRouterModels
 			: currentModelProvider === "copilot"
 				? copilotModels
-				: AVAILABLE_OLLAMA_MODELS;
+				: ollamaModels;
 	const modelsLoading =
 		currentModelProvider === "openrouter"
 			? openRouterModelsLoading
 			: currentModelProvider === "copilot"
 				? copilotModelsLoading
-				: false;
+				: ollamaModelsLoading;
 	const modelsUpdatedAt =
 		currentModelProvider === "openrouter"
 			? openRouterModelsUpdatedAt
 			: currentModelProvider === "copilot"
 				? copilotModelsUpdatedAt
-				: null;
+				: ollamaModelsUpdatedAt;
 	const currentModelSupportsReasoning = useMemo(() => {
 		if (currentModelProvider !== "copilot") {
 			return false;
@@ -221,8 +237,10 @@ export function useAppModel(params: UseAppModelParams): UseAppModelReturn {
 		}
 		if (currentModelProvider === "copilot") {
 			await refreshCopilotModels();
+			return;
 		}
-	}, [currentModelProvider, refreshOpenRouterModelsRaw, refreshCopilotModels]);
+		await refreshOllamaModels();
+	}, [currentModelProvider, refreshOpenRouterModelsRaw, refreshCopilotModels, refreshOllamaModels]);
 
 	return {
 		currentModelProvider,

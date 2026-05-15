@@ -50,16 +50,17 @@ export function ModelMenu({
 	const searchInputRef = useRef<TextareaRenderable | null>(null);
 	const isCopilotProvider = modelProvider === "copilot";
 	const isOllamaProvider = modelProvider === "ollama";
+	const isSingleListProvider = isCopilotProvider || isOllamaProvider;
 
 	const sortedCurated = useMemo(() => {
-		if (isCopilotProvider) return [];
+		if (isCopilotProvider || isOllamaProvider) return [];
 		return [...curatedModels].sort((a, b) => {
 			const priceA = a.pricing ? a.pricing.prompt + a.pricing.completion : Number.MAX_SAFE_INTEGER;
 			const priceB = b.pricing ? b.pricing.prompt + b.pricing.completion : Number.MAX_SAFE_INTEGER;
 			if (priceA !== priceB) return priceA - priceB;
 			return a.name.localeCompare(b.name);
 		});
-	}, [curatedModels, isCopilotProvider]);
+	}, [curatedModels, isCopilotProvider, isOllamaProvider]);
 
 	const curatedIdSet = useMemo(() => new Set(sortedCurated.map((model) => model.id)), [sortedCurated]);
 
@@ -80,7 +81,7 @@ export function ModelMenu({
 	const savedModels = useMemo(() => (savedModel ? [savedModel] : []), [savedModel]);
 
 	const filteredAllModels = useMemo(() => {
-		if (isCopilotProvider || isOllamaProvider) return [];
+		if (isSingleListProvider) return [];
 		const filtered = allModelsWithFallback.filter(
 			(model) => !curatedIdSet.has(model.id) && model.id !== savedModel?.id
 		);
@@ -92,7 +93,7 @@ export function ModelMenu({
 			(model) => model.name.toLowerCase().includes(query) || model.id.toLowerCase().includes(query)
 		);
 		return matching.sort((a, b) => a.name.localeCompare(b.name));
-	}, [allModelsWithFallback, curatedIdSet, isCopilotProvider, isOllamaProvider, savedModel?.id, searchQuery]);
+	}, [allModelsWithFallback, curatedIdSet, isSingleListProvider, savedModel?.id, searchQuery]);
 
 	const copilotModels = useMemo(() => {
 		if (!isCopilotProvider) return [];
@@ -105,11 +106,22 @@ export function ModelMenu({
 		return [...matching].sort((a, b) => a.name.localeCompare(b.name));
 	}, [allModelsWithFallback, isCopilotProvider, searchQuery]);
 
+	const ollamaModels = useMemo(() => {
+		if (!isOllamaProvider) return [];
+		const query = searchQuery.trim().toLowerCase();
+		const matching = query
+			? allModelsWithFallback.filter(
+					(model) => model.name.toLowerCase().includes(query) || model.id.toLowerCase().includes(query)
+				)
+			: allModelsWithFallback;
+		return [...matching].sort((a, b) => a.name.localeCompare(b.name));
+	}, [allModelsWithFallback, isOllamaProvider, searchQuery]);
+
 	const menuItems = useMemo(() => {
 		if (isCopilotProvider) return copilotModels;
-		if (isOllamaProvider) return sortedCurated;
+		if (isOllamaProvider) return ollamaModels;
 		return [...sortedCurated, ...savedModels, ...filteredAllModels];
-	}, [copilotModels, filteredAllModels, isCopilotProvider, isOllamaProvider, savedModels, sortedCurated]);
+	}, [copilotModels, filteredAllModels, isCopilotProvider, isOllamaProvider, ollamaModels, savedModels, sortedCurated]);
 
 	const totalItems = menuItems.length;
 
@@ -138,8 +150,7 @@ export function ModelMenu({
 		if (key.eventType !== "press") return;
 
 		if (
-			!isCopilotProvider &&
-			!isOllamaProvider &&
+			!isSingleListProvider &&
 			!isSearchFocused &&
 			(key.name === "r" || key.sequence?.toLowerCase() === "r")
 		) {
@@ -155,11 +166,12 @@ export function ModelMenu({
 		}
 	});
 
-	const scrollModels = isCopilotProvider ? copilotModels : filteredAllModels;
-	const allSelectedIndex = isCopilotProvider
+	const singleListModels = isCopilotProvider ? copilotModels : ollamaModels;
+	const scrollModels = isSingleListProvider ? singleListModels : filteredAllModels;
+	const allSelectedIndex = isSingleListProvider
 		? selectedIndex
 		: selectedIndex - sortedCurated.length - savedModels.length;
-	const isAllSectionSelected = allSelectedIndex >= 0;
+	const isAllSectionSelected = !isSingleListProvider && allSelectedIndex >= 0;
 
 	const scrollRef = useRef<ScrollBoxRenderable | null>(null);
 	const scrollboxHeight = Math.min(
@@ -195,7 +207,7 @@ export function ModelMenu({
 
 	const updatedAtLabel = formatUpdatedAt(allModelsUpdatedAt);
 	const needsSearchHint =
-		!isCopilotProvider && !isOllamaProvider && searchQuery.trim().length < MIN_ALL_MODEL_QUERY_LENGTH;
+		!isSingleListProvider && searchQuery.trim().length < MIN_ALL_MODEL_QUERY_LENGTH;
 
 	const renderModelRow = (model: ModelOption, isSelected: boolean, isCurrent: boolean) => {
 		const pricing = model.pricing;
@@ -273,7 +285,7 @@ export function ModelMenu({
 					<text>
 						<span fg={COLORS.USER_LABEL}>
 							↑/↓ or j/k navigate · ENTER select
-							{isCopilotProvider || isOllamaProvider ? "" : " · R refresh"} · ESC cancel
+							{isSingleListProvider ? "" : " · R refresh"} · ESC cancel
 						</span>
 					</text>
 				</box>
@@ -349,7 +361,7 @@ export function ModelMenu({
 					</box>
 				) : null}
 
-				{isCopilotProvider ? (
+				{isSingleListProvider ? (
 					<>
 						<box marginBottom={1} marginTop={1}>
 							<text>
@@ -357,7 +369,7 @@ export function ModelMenu({
 								{allModelsLoading ? <span fg={COLORS.REASONING_DIM}> (loading...)</span> : null}
 							</text>
 						</box>
-						{copilotModels.length === 0 ? (
+						{singleListModels.length === 0 ? (
 							<box marginTop={0} paddingLeft={1}>
 								<text>
 									<span fg={COLORS.REASONING_DIM}>
@@ -395,7 +407,7 @@ export function ModelMenu({
 									}}
 								>
 									<box flexDirection="column">
-										{copilotModels.map((model, idx) =>
+										{singleListModels.map((model, idx) =>
 											renderModelRow(model, idx === selectedIndex, model.id === currentModelId)
 										)}
 									</box>
