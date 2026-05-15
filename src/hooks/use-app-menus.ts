@@ -33,6 +33,9 @@ export interface UseAppMenusReturn {
 
 	showOrpheusMenu: boolean;
 	setShowOrpheusMenu: React.Dispatch<React.SetStateAction<boolean>>;
+
+	showCommandPalette: boolean;
+	setShowCommandPalette: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export function useAppMenus(): UseAppMenusReturn {
@@ -47,6 +50,7 @@ export function useAppMenus(): UseAppMenusReturn {
 	const [showToolsMenu, setShowToolsMenu] = useState(false);
 	const [showMemoryMenu, setShowMemoryMenu] = useState(false);
 	const [showOrpheusMenu, setShowOrpheusMenu] = useState(false);
+	const [showCommandPalette, setShowCommandPalette] = useState(false);
 
 	return {
 		showDeviceMenu,
@@ -71,5 +75,7 @@ export function useAppMenus(): UseAppMenusReturn {
 		setShowMemoryMenu,
 		showOrpheusMenu,
 		setShowOrpheusMenu,
+		showCommandPalette,
+		setShowCommandPalette,
 	};
 }

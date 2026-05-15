@@ -29,6 +29,7 @@ export interface KeyboardHandlerActions {
 	setShowToolsMenu: (show: boolean) => void;
 	setShowMemoryMenu: (show: boolean) => void;
 	setShowOrpheusMenu: (show: boolean) => void;
+	setShowCommandPalette: (show: boolean) => void;
 	setTypingInput: (input: string | ((prev: string) => string)) => void;
 	setCurrentTranscription: (text: string) => void;
 	setCurrentResponse: (text: string) => void;
@@ -67,6 +68,7 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 		actions.setShowToolsMenu(false);
 		actions.setShowMemoryMenu(false);
 		actions.setShowOrpheusMenu(false);
+		actions.setShowCommandPalette(false);
 	}, [actions]);
 
 	const handleKeyPress = useCallback(
@@ -303,6 +305,22 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			) {
 				closeAllMenus();
 				actions.setShowOrpheusMenu(true);
+				key.preventDefault();
+				return;
+			}
+
+			// Cmd+Shift+P / Ctrl+Shift+P to open the Command Palette
+			if (
+				key.eventType === "press" &&
+				key.shift &&
+				key.sequence === "P" &&
+				((key.meta && process.platform === "darwin") || (key.ctrl && process.platform !== "darwin")) &&
+				(currentState === DaemonState.IDLE ||
+					currentState === DaemonState.SPEAKING ||
+					currentState === DaemonState.RESPONDING)
+			) {
+				closeAllMenus();
+				actions.setShowCommandPalette(true);
 				key.preventDefault();
 				return;
 			}

@@ -13,6 +13,7 @@ import { useAppSettings } from "./use-app-settings";
 import { useBootstrapController } from "./use-bootstrap-controller";
 import { useConversationManager } from "./use-conversation-manager";
 import { useCopyOnSelect } from "./use-copy-on-select";
+import { useHudData } from "./use-hud-data";
 import { useDaemonKeyboard } from "./use-daemon-keyboard";
 import { useDaemonRuntimeController } from "./use-daemon-runtime-controller";
 import { useOverlayController } from "./use-overlay-controller";
@@ -73,6 +74,7 @@ export function useAppController({
 	});
 
 	const menus = useAppMenus();
+	const hudData = useHudData();
 	const {
 		showDeviceMenu,
 		setShowDeviceMenu,
@@ -96,6 +98,8 @@ export function useAppController({
 		setShowMemoryMenu,
 		showOrpheusMenu,
 		setShowOrpheusMenu,
+		showCommandPalette,
+		setShowCommandPalette,
 	} = menus;
 
 	const session = useSessionController({ showSessionMenu });
@@ -315,6 +319,7 @@ export function useAppController({
 			setShowToolsMenu,
 			setShowMemoryMenu,
 			setShowOrpheusMenu,
+			setShowCommandPalette,
 			setTypingInput: daemon.typing.setTypingInput,
 			setCurrentTranscription: daemon.setCurrentTranscription,
 			setCurrentResponse: daemon.setCurrentResponse,
@@ -341,6 +346,7 @@ export function useAppController({
 			setShowToolsMenu,
 			setShowMemoryMenu,
 			setShowOrpheusMenu,
+			setShowCommandPalette,
 			daemon.typing.setTypingInput,
 			daemon.setCurrentTranscription,
 			daemon.setCurrentResponse,
@@ -433,6 +439,10 @@ export function useAppController({
 		isListeningDim,
 	} = displayState;
 
+	const latestTurnTotal = (daemon.sessionUsage.latestTurnPromptTokens ?? 0) + (daemon.sessionUsage.latestTurnCompletionTokens ?? 0);
+	const contextPercent = daemon.modelMetadata?.contextLength && latestTurnTotal > 0
+		? (latestTurnTotal / daemon.modelMetadata.contextLength) * 100
+		: null;
 	const statusBarHeight = daemon.hasInteracted ? (apiKeyMissingError ? 5 : 3) : 0;
 
 	useEffect(() => {
@@ -480,6 +490,8 @@ export function useAppController({
 			setShowMemoryMenu,
 			showOrpheusMenu,
 			setShowOrpheusMenu,
+			showCommandPalette,
+			setShowCommandPalette,
 		},
 		device: {
 			devices: bootstrap.devices,
@@ -639,6 +651,11 @@ export function useAppController({
 			healthSnapshot: daemon.healthSnapshot,
 			isVoiceOutputEnabled: interactionMode === "voice",
 			startupIntroDone,
+			gitDirty: hudData.gitDirty,
+			gitBranch: hudData.gitBranch,
+			activeTasks: hudData.activeTasks,
+			queuedTasks: hudData.queuedTasks,
+			contextPercent,
 		},
 		appContextValue,
 		overlaysProps: {

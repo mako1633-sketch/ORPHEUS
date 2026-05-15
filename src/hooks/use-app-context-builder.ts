@@ -48,6 +48,8 @@ export interface UseAppContextBuilderParams {
 		setShowMemoryMenu: React.Dispatch<React.SetStateAction<boolean>>;
 		showOrpheusMenu: boolean;
 		setShowOrpheusMenu: React.Dispatch<React.SetStateAction<boolean>>;
+		showCommandPalette: boolean;
+		setShowCommandPalette: React.Dispatch<React.SetStateAction<boolean>>;
 	};
 
 	device: {

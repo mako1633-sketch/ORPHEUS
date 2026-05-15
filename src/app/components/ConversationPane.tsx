@@ -8,8 +8,8 @@ import {
 	shouldHideContentBlock,
 } from "../../components/ContentBlockView";
 import { GroundingBadge } from "../../components/GroundingBadge";
+import { HudStatusBar } from "../../components/HudStatusBar";
 import { InlineStatusIndicator } from "../../components/InlineStatusIndicator";
-import { StatusBar } from "../../components/StatusBar";
 import { TokenUsageDisplay } from "../../components/TokenUsageDisplay";
 import { TypingInputBar } from "../../components/TypingInputBar";
 import type { HealthSnapshot } from "../../health/orpheus-health";
@@ -82,6 +82,12 @@ export interface ConversationPaneProps {
 	healthSnapshot?: HealthSnapshot | null;
 	isVoiceOutputEnabled?: boolean;
 	startupIntroDone?: boolean;
+	// HUD additions
+	gitDirty?: boolean;
+	gitBranch?: string | null;
+	activeTasks?: number;
+	queuedTasks?: number;
+	contextPercent?: number | null;
 }
 
 function ConversationPaneImpl(props: ConversationPaneProps) {
@@ -105,6 +111,11 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 		healthSnapshot,
 		isVoiceOutputEnabled,
 		startupIntroDone = true,
+		gitDirty,
+		gitBranch,
+		activeTasks,
+		queuedTasks,
+		contextPercent,
 	} = props;
 
 	const { conversationHistory, currentTranscription, currentContentBlocks } = conversation;
@@ -191,7 +202,7 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 	return (
 		<>
 			{hasInteracted && !suppressStatusBar && (
-				<StatusBar
+				<HudStatusBar
 					statusText={statusText}
 					statusColor={statusColor}
 					errorText={apiKeyMissingError || error}
@@ -199,6 +210,11 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 					sessionTitle={sessionTitle}
 					hasInteracted={hasInteracted}
 					healthSnapshot={healthSnapshot}
+					gitDirty={gitDirty}
+					gitBranch={gitBranch}
+					activeTasks={activeTasks}
+					queuedTasks={queuedTasks}
+					contextPercent={contextPercent}
 				/>
 			)}
 
@@ -213,7 +229,7 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 					zIndex={2}
 				>
 					<box flexDirection="column" alignItems="center">
-						<StatusBar
+						<HudStatusBar
 							statusText={statusText}
 							statusColor={statusColor}
 							errorText={apiKeyMissingError || error}
@@ -271,9 +287,9 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 										RUN {startupActionRange} OR TYPE {startupActionRange} :: SHIFT+TAB MANUAL INPUT :: SPACE
 										VOX :: ? HELP
 									</span>
-								</text>
-							</box>
-						)}
+									</text>
+								</box>
+							)}
 
 						<box marginTop={2} width="100%" justifyContent="center">
 							{daemonState === DaemonState.TYPING ? (
@@ -456,7 +472,7 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 											/>
 										</box>
 									);
-								})}
+									})}
 							</box>
 						)}
 

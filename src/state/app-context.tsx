@@ -38,6 +38,8 @@ export interface MenuState {
 	setShowMemoryMenu: React.Dispatch<React.SetStateAction<boolean>>;
 	showOrpheusMenu: boolean;
 	setShowOrpheusMenu: React.Dispatch<React.SetStateAction<boolean>>;
+	showCommandPalette: boolean;
+	setShowCommandPalette: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export interface DeviceState {

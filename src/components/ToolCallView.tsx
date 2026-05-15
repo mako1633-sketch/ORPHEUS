@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { getMcpManager } from "../ai/mcp/mcp-manager";
 import { useToolApprovalForCall } from "../hooks/use-tool-approval";
 import type { ToolCall } from "../types";
@@ -21,6 +21,32 @@ interface ToolCallViewProps {
 	call: ToolCall;
 	result?: unknown;
 	showOutput?: boolean;
+}
+
+function StatusChip({ status }: { status: ToolCall["status"] }) {
+	const color =
+		status === "completed"
+			? COLORS.STATUS_COMPLETED
+			: status === "failed"
+				? COLORS.STATUS_FAILED
+				: status === "awaiting_approval"
+					? COLORS.STATUS_APPROVAL
+					: COLORS.STATUS_RUNNING;
+	const label =
+		status === "completed"
+			? "DONE"
+			: status === "failed"
+				? "FAIL"
+				: status === "awaiting_approval"
+					? "APPROVE"
+					: status === "streaming"
+						? "STREAM"
+						: "RUN";
+	return (
+		<text>
+			<span fg={color}>{`[${label}]`}</span>
+		</text>
+	);
 }
 
 function ApprovalResultBadge({ result }: { result: "approved" | "denied" }) {
@@ -50,7 +76,37 @@ function ToolSectionDivider({ label }: { label: string }) {
 	);
 }
 
+function CollapsibleSection({
+	label,
+	children,
+}: {
+	label: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<box flexDirection="column">
+			<box
+				flexDirection="row"
+				paddingLeft={2}
+				marginTop={1}
+			>
+				<text>
+					<span fg={COLORS.REASONING_DIM}>
+						{"▼ "}
+						{label}
+					</span>
+				</text>
+			</box>
+			{children}
+		</box>
+	);
+}
+
 export function ToolCallView({ call, result, showOutput = true }: ToolCallViewProps) {
+	
+	
+	
+
 	const layout = getToolLayout(call.name) ?? defaultToolLayout;
 	const mcpMeta = useMemo(() => getMcpManager().getToolMeta(call.name), [call.name]);
 	const isAwaitingApproval = call.status === "awaiting_approval";
@@ -121,11 +177,20 @@ export function ToolCallView({ call, result, showOutput = true }: ToolCallViewPr
 			paddingBottom={0}
 			width="100%"
 		>
-			<ToolHeaderView toolName={toolName} header={header} isRunning={isRunning} toolColor={toolColor} />
+			<box flexDirection="row" alignItems="center" justifyContent="space-between" width="100%">
+				<ToolHeaderView toolName={toolName} header={header} isRunning={isRunning} toolColor={toolColor} />
+				<box marginLeft={1}>
+					<StatusChip status={call.status} />
+				</box>
+			</box>
 
 			{customBody}
 
-			{!customBody && body && <ToolBodyView body={body} />}
+			{!customBody && body && (
+				<CollapsibleSection label="INPUT" >
+					<ToolBodyView body={body} />
+				</CollapsibleSection>
+			)}
 
 			{needsApproval && (
 				<ApprovalPicker
@@ -137,11 +202,17 @@ export function ToolCallView({ call, result, showOutput = true }: ToolCallViewPr
 				/>
 			)}
 
-			{hasResultPreview && <ToolSectionDivider label="OUTPUT" />}
-			{hasResultPreview && <ResultPreviewView lines={resultPreviewLines ?? []} />}
+			{hasResultPreview && (
+				<CollapsibleSection label="OUTPUT" >
+					<ResultPreviewView lines={resultPreviewLines ?? []} />
+				</CollapsibleSection>
+			)}
 
-			{isFailed && call.error && <ToolSectionDivider label="ERROR" />}
-			{isFailed && call.error && <ErrorPreviewView error={call.error} />}
+			{isFailed && call.error && (
+				<CollapsibleSection label="ERROR" >
+					<ErrorPreviewView error={call.error} />
+				</CollapsibleSection>
+			)}
 
 			{call.approvalResult && <ApprovalResultBadge result={call.approvalResult} />}
 		</box>
