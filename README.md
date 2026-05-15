@@ -195,6 +195,14 @@ sudo pacman -S sox
 ### Windows
 Install [Bun for Windows](https://bun.sh/docs/installation), then run ORPHEUS from PowerShell, Windows Terminal, or another terminal that supports TUI apps. For voice features, install `sox` and `ffmpeg` and make sure both commands are available on `PATH`.
 
+For the Windows-ready setup flow, see [WINDOWS.md](./WINDOWS.md). From PowerShell:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\scripts\windows\setup.ps1
+.\scripts\windows\run.ps1
+```
+
 ## Local models with Ollama
 
 ORPHEUS can use a local Ollama server for agent responses instead of OpenRouter or Copilot.

@@ -11,6 +11,7 @@ export interface AssistantResponseGuardResult {
 const TOOL_PROTOCOL_KEY_PATTERN =
 	/"(?:tool_calls?|tool_call_id|toolCallId|function_call|arguments|toolName|tool_name|action)"\s*:/i;
 const TOOL_INPUT_TAG_PATTERN = /<\/?(?:tool-input|tool_call|function-call|function_call)\b/i;
+const COMPACTED_TOOL_MARKER_PATTERN = /\[(?:tool call|tool result) omitted:\s*[^\]]+\]/i;
 const GUARDED_RESPONSE_NOTICE_PATTERN =
 	/\bI exposed an internal tool call instead of answering you directly\b|\bI got off track and exposed internal operating instructions\b|\bI hit a routing glitch\b/i;
 
@@ -218,6 +219,9 @@ export function detectAssistantResponseLeak(text: string): AssistantResponseGuar
 	if (!trimmed) return null;
 	if (TOOL_INPUT_TAG_PATTERN.test(trimmed) || containsToolProtocolJson(trimmed)) {
 		return "tool-json";
+	}
+	if (COMPACTED_TOOL_MARKER_PATTERN.test(trimmed)) {
+		return "internal-instructions";
 	}
 	if (INTERNAL_INSTRUCTION_PATTERNS.some((pattern) => pattern.test(trimmed))) {
 		return "internal-instructions";

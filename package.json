@@ -41,9 +41,11 @@
 		"dist",
 		"src",
 		"img",
+		"scripts",
 		"bun.lock",
 		"LICENSE",
 		"README.md",
+		"WINDOWS.md",
 		"package.json"
 	],
 	"scripts": {
@@ -60,13 +62,14 @@
 		"preview:avatar:mp4": "bun run src/avatar-preview.ts --mp4 tmp/avatar-preview.mp4",
 		"setup:browsers": "bun run src/scripts/setup-browsers.ts",
 		"setup:hooks": "bash .githooks/setup.sh",
+		"setup:hooks:win": "git config core.hooksPath .githooks",
 		"test": "bun test",
 		"test:watch": "bun test --watch",
 		"prepublishOnly": "bun run build:cli",
-		"release:patch": "bash ./scripts/release.sh patch",
-		"release:minor": "bash ./scripts/release.sh minor",
-		"release:major": "bash ./scripts/release.sh major",
-		"release:notes": "bash ./scripts/release.sh notes"
+		"release:patch": "bun run scripts/release.ts patch",
+		"release:minor": "bun run scripts/release.ts minor",
+		"release:major": "bun run scripts/release.ts major",
+		"release:notes": "bun run scripts/release.ts notes"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.4",

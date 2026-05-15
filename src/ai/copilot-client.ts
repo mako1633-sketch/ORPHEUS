@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import type { StreamCallbacks, ToolApprovalRequest, ToolApprovalResponse } from "../types";
 import { debug } from "../utils/debug-logger";
+import { getCopilotCodingModel, resolveCopilotCodingModel } from "./model-config";
 
 interface CopilotClientRuntime {
 	fingerprint: string;
@@ -135,28 +136,49 @@ function normalizeSessionConfigForModel(
 	config: Omit<SessionConfig, "sessionId">,
 	models: ModelInfo[]
 ): Omit<SessionConfig, "sessionId"> {
-	if (!config.reasoningEffort) {
-		return config;
-	}
-
 	const modelId = typeof config.model === "string" ? config.model.trim() : "";
 	if (!modelId) {
 		return config;
 	}
 
+	let normalizedConfig = config;
 	const selectedModel = models.find((model) => model.id === modelId);
-	if (supportsReasoningEffort(selectedModel)) {
-		return config;
+	if (!selectedModel && modelId === getCopilotCodingModel()) {
+		const resolvedModel = resolveCopilotCodingModel(models, modelId);
+		if (resolvedModel !== modelId) {
+			debug.warn("copilot-codex-model-resolved", {
+				requested: modelId,
+				selected: resolvedModel,
+			});
+			normalizedConfig = {
+				...normalizedConfig,
+				model: resolvedModel,
+			};
+		}
+	}
+
+	if (!normalizedConfig.reasoningEffort) {
+		return normalizedConfig;
+	}
+
+	const normalizedModelId = typeof normalizedConfig.model === "string" ? normalizedConfig.model.trim() : "";
+	if (!normalizedModelId) {
+		return normalizedConfig;
+	}
+
+	const normalizedSelectedModel = models.find((model) => model.id === normalizedModelId);
+	if (supportsReasoningEffort(normalizedSelectedModel)) {
+		return normalizedConfig;
 	}
 
 	debug.warn("copilot-reasoning-effort-omitted", {
-		model: modelId,
-		reasoningEffort: config.reasoningEffort,
-		modelFound: Boolean(selectedModel),
+		model: normalizedModelId,
+		reasoningEffort: normalizedConfig.reasoningEffort,
+		modelFound: Boolean(normalizedSelectedModel),
 	});
 
 	return {
-		...config,
+		...normalizedConfig,
 		reasoningEffort: undefined,
 	};
 }
@@ -494,6 +516,7 @@ export async function getCopilotAuthStatusSafe(): Promise<GetAuthStatusResponse 
 					: hasGhAuth
 						? "GitHub CLI is authenticated, but Copilot SDK is not. Complete Copilot sign-in and retry."
 						: "Copilot SDK is not authenticated.";
+			await resetCopilotClient().catch(() => {});
 			return {
 				...status,
 				statusMessage,
@@ -502,6 +525,7 @@ export async function getCopilotAuthStatusSafe(): Promise<GetAuthStatusResponse 
 		return status;
 	} catch (error) {
 		const err = error instanceof Error ? error : new Error(String(error));
+		await resetCopilotClient().catch(() => {});
 		return {
 			isAuthenticated: false,
 			statusMessage: err.message,
@@ -531,6 +555,7 @@ export async function listCopilotModelsSafe(): Promise<ModelInfo[]> {
 					typeof authStatus.statusMessage === "string" && authStatus.statusMessage.trim().length > 0
 						? authStatus.statusMessage
 						: "Copilot SDK is not authenticated.";
+				await resetCopilotClient().catch(() => {});
 				throw new Error(
 					`Copilot SDK is not authenticated while listing models: ${statusMessage}. Authenticate via GitHub and retry.`
 				);

@@ -1,6 +1,6 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { getAppConfigDir } from "../utils/preferences";
+import { atomicWriteFile, safeReadFile } from "./crash-resistant-state";
 
 const CODING_TASK_STATE_FILE = "coding-task-state.json";
 const MAX_ENTRIES = 24;
@@ -36,8 +36,9 @@ function cleanList(values?: string[]): string[] {
 }
 
 export async function loadCodingTaskState(): Promise<CodingTaskState | null> {
+	const raw = await safeReadFile(getCodingTaskStatePath());
+	if (!raw) return null;
 	try {
-		const raw = await fs.readFile(getCodingTaskStatePath(), "utf8");
 		const parsed = JSON.parse(raw) as Partial<CodingTaskState>;
 		if (!parsed.goal || typeof parsed.goal !== "string") return null;
 
@@ -86,8 +87,7 @@ export async function saveCodingTaskState(input: {
 	};
 
 	const statePath = getCodingTaskStatePath();
-	await fs.mkdir(path.dirname(statePath), { recursive: true });
-	await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+	await atomicWriteFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
 	return { path: statePath, state };
 }
 
@@ -113,6 +113,11 @@ export async function updateCodingTaskState(input: Partial<Omit<CodingTaskState,
 
 export async function clearCodingTaskState(): Promise<{ path: string; cleared: boolean }> {
 	const statePath = getCodingTaskStatePath();
-	await fs.rm(statePath, { force: true });
-	return { path: statePath, cleared: true };
+	try {
+		const { promises: fs } = await import("node:fs");
+		await fs.rm(statePath, { force: true });
+		return { path: statePath, cleared: true };
+	} catch {
+		return { path: statePath, cleared: false };
+	}
 }

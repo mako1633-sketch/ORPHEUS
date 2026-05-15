@@ -1,6 +1,6 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { getAppConfigDir } from "../utils/preferences";
+import { atomicWriteFile, safeReadFile } from "./crash-resistant-state";
 
 const EXECUTIVE_STATE_FILE = "executive-state.json";
 const MAX_ITEMS = 80;
@@ -65,8 +65,9 @@ function normalizeItem(
 }
 
 export async function loadExecutiveState(): Promise<ExecutiveState> {
+	const raw = await safeReadFile(getExecutiveStatePath());
+	if (!raw) return { updatedAt: nowIso(), items: [] };
 	try {
-		const raw = await fs.readFile(getExecutiveStatePath(), "utf8");
 		const parsed = JSON.parse(raw) as Partial<ExecutiveState>;
 		const items = Array.isArray(parsed.items)
 			? parsed.items
@@ -92,12 +93,11 @@ export async function loadExecutiveState(): Promise<ExecutiveState> {
 
 async function saveExecutiveState(state: ExecutiveState): Promise<{ path: string; state: ExecutiveState }> {
 	const statePath = getExecutiveStatePath();
-	await fs.mkdir(path.dirname(statePath), { recursive: true });
 	const next = {
 		updatedAt: nowIso(),
 		items: state.items.slice(-MAX_ITEMS),
 	};
-	await fs.writeFile(statePath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+	await atomicWriteFile(statePath, `${JSON.stringify(next, null, 2)}\n`);
 	return { path: statePath, state: next };
 }
 

@@ -43,6 +43,8 @@ describe("context compaction", () => {
 		expect(serialized).toContain("What happened?");
 		expect(serialized).toContain("I found the issue.");
 		expect(serialized).not.toContain(hugeOutput);
+		expect(serialized).not.toContain("tool call omitted");
+		expect(serialized).not.toContain("tool result omitted");
 		expect(compacted.every((message) => message.role !== "tool")).toBe(true);
 	});
 
@@ -57,8 +59,8 @@ describe("context compaction", () => {
 			maxMessageChars: 200,
 		});
 
-		expect(compacted[0]?.role).toBe("assistant");
-		expect(String(compacted[0]?.content)).toContain("Earlier conversation compacted");
+		expect(compacted[0]?.role).toBe("system");
+		expect(String(compacted[0]?.content)).toContain("Earlier conversation was compacted");
 		expect(JSON.stringify(compacted)).toContain("message-19");
 	});
 });

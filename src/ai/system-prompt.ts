@@ -32,6 +32,7 @@ export interface SystemPromptOptions {
 	toolAvailability?: Partial<ToolAvailability>;
 	workspacePath?: string;
 	memoryInjection?: string;
+	copilotCodingMode?: boolean;
 }
 
 /**
@@ -55,6 +56,7 @@ export function buildDaemonSystemPrompt(options: SystemPromptOptions = {}): stri
 		toolAvailability,
 		workspacePath,
 		memoryInjection,
+		copilotCodingMode = false,
 	} = options;
 	const currentDateString = formatLocalIsoDate(currentDate);
 	const availability = normalizeToolAvailability(toolAvailability);
@@ -66,7 +68,13 @@ export function buildDaemonSystemPrompt(options: SystemPromptOptions = {}): stri
 		return buildVoiceSystemPrompt(currentDateString, toolDefinitions, workspaceSection, memorySection);
 	}
 
-	return buildTextSystemPrompt(currentDateString, toolDefinitions, workspaceSection, memorySection);
+	return buildTextSystemPrompt(
+		currentDateString,
+		toolDefinitions,
+		workspaceSection,
+		memorySection,
+		copilotCodingMode
+	);
 }
 
 function normalizeToolAvailability(toolAvailability?: Partial<ToolAvailability>): ToolAvailability {
@@ -370,12 +378,14 @@ Fetch multiple URLs in one call:
   - Use gitDiff before and after edits to understand the exact change.
   - Use packageScripts to select validation commands from the repo's own scripts.
   - Use selfReview before finishing meaningful code work to separate evidence from inference, surface assumptions, identify likely failure modes, and choose checks.
+  - Use completionGate before claiming a non-trivial coding task is done. If it reports blockers, resolve them or disclose them plainly.
   - Use projectDoctor for one-command repo setup/readiness checks.
   - Use modeProfile when the user wants a different coding posture: fastFix, carefulRefactor, testFirst, securityReview, releasePrep, or explainOnly.
   - Use githubPublishPlan before initializing, committing, creating remotes, or pushing to GitHub.
-  - Use failureRecovery after failed checks or service hiccups to produce likely cause, safe next action, and retry policy.
-  - Use runScript for focused validation after edits. If it fails, call explainFailure or use the failure field, inspect the referenced files, then iterate.
+  - Use failureRecovery after failed checks or service hiccups to produce likely cause, strategy, pivot plan, safe next action, and retry policy.
+  - Use runScript for focused validation after edits. If it fails, call failureRecovery, follow its strategy, inspect the referenced files, then iterate.
   - Use applyPatch for small unified patches when it is safer than rewriting whole files. Run checkOnly first for larger patches.
+  - When taskState is marked completed, ORPHEUS records a structured retrospective and a compact long-term lesson from successes, failures, validation, assumptions, and risks.
 
   **Safety**
   - Never hide failed checks. Persist failures in taskState so the next session can resume.
@@ -487,6 +497,29 @@ When the user asks for programming, debugging, setup, repo changes, or command-l
 - Do not paste large files unless the user asks; show only the useful snippets.
 `;
 
+const COPILOT_CODEX_EXECUTION_CONTENT = `
+# GitHub Copilot/Codex Coding Mode
+You are running through the GitHub Copilot/Codex CLI path for a coding-related task. Treat this as an execution environment, not a chat-only coding model.
+
+**Operating contract**
+- Do not solve coding requests from memory alone when local tools can inspect the repo.
+- Begin by establishing repo state with projectContext or codingWorkbench repoStatus, then read the specific files that govern the requested behavior.
+- For implementation requests, make the concrete file changes unless the user explicitly asked for advice only.
+- Use codingWorkbench taskState for non-trivial work so interrupted tasks remain resumable.
+- Use the repo's own package scripts for validation when available. Prefer targeted checks first, then broader checks when the change touches shared behavior.
+- After a failed check, call codingWorkbench failureRecovery. Retry transient failures once, pivot on deterministic failures before rerunning, and ask the user only for credentials, approval, or external access.
+- When the task is complete, update codingWorkbench taskState with evidence, checks, failures, assumptions, and risks so ORPHEUS can write durable lessons to long-term memory.
+- Before final response, compare the diff against the request and mention only user-relevant changed files, checks run, and residual risk.
+- Use codingWorkbench completionGate before final response on non-trivial edits; do not call the work complete while blockers remain.
+- Never imply GitHub Copilot/Codex CLI performed a change unless the tool events show the actual file edit or command result.
+
+**Quality bar**
+- Preserve unrelated dirty work.
+- Keep patches small and local to the behavior being changed.
+- Prefer existing helpers and project conventions.
+- Treat auth, permissions, filesystem writes, process lifecycle, context length, and platform differences as likely failure points.
+`;
+
 const WINDOWS_SECURITY_CONTENT = `
 # Windows Security Posture
 You are security-first on Windows. Default to defensive administration, privacy preservation, and least privilege.
@@ -577,8 +610,10 @@ function buildTextSystemPrompt(
 	currentDateString: string,
 	toolDefinitions: string,
 	workspaceSection: string,
-	memorySection: string
+	memorySection: string,
+	copilotCodingMode: boolean
 ): string {
+	const copilotCodingSection = copilotCodingMode ? COPILOT_CODEX_EXECUTION_CONTENT : "";
 	return `
 You are **ORPHEUS** — a terminal-bound AI with a clean, sci-fi aesthetic.
 You are calm, direct, and practical.
@@ -596,6 +631,8 @@ ${PERSONALITY_CONTENT}
 - If the user asks what something is, how it works, or whether ORPHEUS can do something, answer the question first. Use tools only when the user asks for an action, current/local evidence, or a concrete change.
 
 ${CODING_AGENT_CONTENT}
+
+${copilotCodingSection}
 
 ${WINDOWS_SECURITY_CONTENT}
 

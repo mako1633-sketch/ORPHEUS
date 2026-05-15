@@ -45,6 +45,13 @@ import type {
 	ToolApprovalRequest,
 	ToolApprovalResponse,
 } from "../types";
+import { applyRouterDecision, routeTask } from "./model-router";
+import { isVisionRequest } from "./vision-reasoning";
+
+function buildVisionContextHint(userText: string): string {
+	if (!isVisionRequest(userText)) return "";
+	return "\n\n[VISUAL CONTEXT REQUEST] The user may be asking about visible screen or UI state. If current visual evidence is required, use the screenshot tool so normal approval and platform checks apply.";
+}
 
 export interface AgentTurnParams {
 	userText: string;
@@ -166,6 +173,12 @@ export class AgentTurnRunner {
 			const platform = params.platform ?? process.platform;
 			const windowsDirectActionsAvailable = platform === "win32";
 
+			// Adaptive Model Router: auto-select provider before generating response
+			const routerDecision = await routeTask(routedUserText);
+			applyRouterDecision(routerDecision);
+
+			const visionContext = buildVisionContextHint(routedUserText);
+
 			if (shouldRunDirectTurnExplanation(routedUserText, params.conversationHistory)) {
 				result = await runDirectTurnExplanation(params.conversationHistory, wrapped);
 				return result;
@@ -244,7 +257,8 @@ export class AgentTurnRunner {
 			}
 
 			const continuityText = buildUserMessageWithFollowUpContext(params.userText, params.conversationHistory);
-			const modelUserText = buildUserMessageWithWindowsAssessmentContext(continuityText, platform);
+			const modelUserText =
+				buildUserMessageWithWindowsAssessmentContext(continuityText, platform) + visionContext;
 			await generateResponse(
 				modelUserText,
 				wrapped,

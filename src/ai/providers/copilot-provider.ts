@@ -163,15 +163,10 @@ function buildHistoryPreamble(messages: ModelMessage[]): string {
 
 function buildCopilotPrompt(
 	userMessage: string,
-	memoryInjection: string | undefined,
 	conversationHistory: ModelMessage[],
 	includeHistory: boolean
 ): string {
 	const sections: string[] = [];
-
-	if (memoryInjection) {
-		sections.push(`Relevant memory:\n${memoryInjection}`);
-	}
 
 	if (includeHistory) {
 		const history = buildHistoryPreamble(conversationHistory);
@@ -238,15 +233,16 @@ async function streamCopilotSession(params: {
 	const toolAvailability =
 		getCachedToolAvailability() ?? (await resolveToolAvailability(getDaemonManager().toolToggles));
 	const workspacePath = sessionId ? getWorkspacePath(sessionId) : undefined;
+	const selectedModel = selectCopilotModel(userMessage);
+	const copilotCodingMode = isCodingTask(userMessage) || selectedModel.toLowerCase().includes("codex");
 
 	const systemPrompt = buildDaemonSystemPrompt({
 		mode: interactionMode,
 		toolAvailability: createToolAvailabilitySnapshot(toolAvailability),
 		workspacePath,
 		memoryInjection,
+		copilotCodingMode,
 	});
-
-	const selectedModel = selectCopilotModel(userMessage);
 
 	const baseSessionConfig = {
 		model: selectedModel,
@@ -555,7 +551,7 @@ async function streamCopilotSession(params: {
 		sendStartedAt = Date.now();
 		await withTimeout(
 			session.send({
-				prompt: buildCopilotPrompt(userMessage, memoryInjection, conversationHistory, created),
+				prompt: buildCopilotPrompt(userMessage, conversationHistory, created),
 			}),
 			sendTimeoutMs,
 			sendTimeoutMessage

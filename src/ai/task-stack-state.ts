@@ -1,6 +1,6 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { getAppConfigDir } from "../utils/preferences";
+import { atomicWriteFile, safeReadFile } from "./crash-resistant-state";
 
 const TASK_STACK_FILE = "task-stack.json";
 const MAX_TASKS = 120;
@@ -81,8 +81,9 @@ function sortTasks(items: TaskStackItem[]): TaskStackItem[] {
 }
 
 export async function loadTaskStack(): Promise<TaskStackState> {
+	const raw = await safeReadFile(getTaskStackPath());
+	if (!raw) return { updatedAt: nowIso(), items: [] };
 	try {
-		const raw = await fs.readFile(getTaskStackPath(), "utf8");
 		const parsed = JSON.parse(raw) as Partial<TaskStackState>;
 		const items = Array.isArray(parsed.items)
 			? parsed.items
@@ -113,8 +114,7 @@ async function saveTaskStack(items: TaskStackItem[]): Promise<{ path: string; st
 		items: sortTasks(items).slice(0, MAX_TASKS),
 	};
 	const stackPath = getTaskStackPath();
-	await fs.mkdir(path.dirname(stackPath), { recursive: true });
-	await fs.writeFile(stackPath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+	await atomicWriteFile(stackPath, `${JSON.stringify(state, null, 2)}\n`);
 	return { path: stackPath, state };
 }
 

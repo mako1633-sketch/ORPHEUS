@@ -1,6 +1,8 @@
 /**
  * Memory injection for first message context.
  * Retrieves relevant memories and formats them for system prompt injection.
+ * Now includes: Ollama semantic memory, knowledge base, reflection context,
+ * system health monitor, and vision reasoning state.
  */
 
 import type { MemoryContext, MemoryEntry } from "../../types";
@@ -9,6 +11,11 @@ import { getRuntimeContext } from "../../state/runtime-context";
 import { detectAssistantResponseLeak, isAssistantResponseGuardNotice } from "../assistant-response-guard";
 import { loadCodingTaskState } from "../coding-task-state";
 import { buildExecutiveBriefing } from "../executive-state";
+import { formatKnowledgeHits, searchKnowledgeBase } from "../knowledge-base";
+import { isCodingTask } from "../model-config";
+import { ollamaSearchMemories } from "../ollama-memory";
+import { buildReflectionContext } from "../reflection-state";
+import { formatMonitorReport, runSystemMonitor } from "../system-monitor";
 import { formatPersistentContextForPrompt, loadPersistentContext } from "../persistent-context";
 import { loadTaskStack } from "../task-stack-state";
 import { getHonchoManager, isHonchoAvailable } from "./honcho-manager";
@@ -18,6 +25,24 @@ function isContaminatedMemoryText(text: string): boolean {
 	const trimmed = text.trim();
 	return Boolean(
 		trimmed && (detectAssistantResponseLeak(trimmed) || isAssistantResponseGuardNotice(trimmed))
+	);
+}
+
+function isExecutiveContextRequest(userMessage: string): boolean {
+	return /\b(briefing|dashboard|priority|priorities|follow[- ]?up|waiting on|decision|risk|backlog|stack|queue|roadmap)\b/i.test(
+		userMessage
+	);
+}
+
+function isSystemHealthRequest(userMessage: string): boolean {
+	return /\b(system health|health check|doctor|diagnostic|memory pressure|ram|disk|storage|node_modules|setup|install|configured|configuration)\b/i.test(
+		userMessage
+	);
+}
+
+function isKnowledgeContextRequest(userMessage: string): boolean {
+	return /\b(remember|memory|previous|prior|earlier|notes|knowledge|indexed|documents|docs|where did|what did we)\b/i.test(
+		userMessage
 	);
 }
 
@@ -100,6 +125,56 @@ ${lines.join("\n")}
 </orpheus-task-stack>`;
 }
 
+async function formatOllamaMemoriesForPrompt(userMessage: string): Promise<string> {
+	try {
+		const memories = await ollamaSearchMemories(userMessage, 3);
+		if (memories.length === 0) return "";
+		const formatted = memories.map((m, i) => `${i + 1}. ${m.memory}`).join("\n");
+		return `<ollama-memories>
+Local semantic memories (Ollama-powered):
+
+${formatted}
+</ollama-memories>`;
+	} catch {
+		return "";
+	}
+}
+
+async function formatKnowledgeBaseForPrompt(userMessage: string): Promise<string> {
+	try {
+		const hits = await searchKnowledgeBase(userMessage, 3);
+		return formatKnowledgeHits(hits);
+	} catch {
+		return "";
+	}
+}
+
+async function formatReflectionContextForPrompt(userMessage: string): Promise<string> {
+	try {
+		// Auto-detect likely task type from message keywords
+		const lower = userMessage.toLowerCase();
+		let taskType: "coding" | "debug" | "setup" | "security" | "general" = "general";
+		if (lower.includes("code") || lower.includes("program")) taskType = "coding";
+		else if (lower.includes("bug") || lower.includes("error") || lower.includes("fix")) taskType = "debug";
+		else if (lower.includes("setup") || lower.includes("install") || lower.includes("config"))
+			taskType = "setup";
+		else if (lower.includes("security") || lower.includes("audit") || lower.includes("assessment"))
+			taskType = "security";
+		return await buildReflectionContext(taskType);
+	} catch {
+		return "";
+	}
+}
+
+async function formatSystemHealthForPrompt(): Promise<string> {
+	try {
+		const report = await runSystemMonitor();
+		return formatMonitorReport(report);
+	} catch {
+		return "";
+	}
+}
+
 /** Retrieve relevant memories for a user message */
 export async function getMemoryContextForMessage(
 	userMessage: string,
@@ -146,6 +221,10 @@ export async function buildMemoryInjection(
 ): Promise<string> {
 	const { limit = 5 } = options;
 	const sections: string[] = [];
+	const codingRequest = isCodingTask(userMessage);
+	const executiveRequest = isExecutiveContextRequest(userMessage);
+	const healthRequest = isSystemHealthRequest(userMessage);
+	const knowledgeRequest = isKnowledgeContextRequest(userMessage);
 
 	const persistentContext = formatPersistentContextForPrompt(await loadPersistentContext());
 	if (persistentContext && !isContaminatedMemoryText(persistentContext)) {
@@ -157,20 +236,49 @@ export async function buildMemoryInjection(
 		sections.push(codingTaskState);
 	}
 
-	const executiveBriefing = await formatExecutiveBriefingForPrompt();
-	if (executiveBriefing && !isContaminatedMemoryText(executiveBriefing)) {
-		sections.push(executiveBriefing);
+	if (!codingRequest || executiveRequest) {
+		const executiveBriefing = await formatExecutiveBriefingForPrompt();
+		if (executiveBriefing && !isContaminatedMemoryText(executiveBriefing)) {
+			sections.push(executiveBriefing);
+		}
 	}
 
-	const taskStack = await formatTaskStackForPrompt();
-	if (taskStack && !isContaminatedMemoryText(taskStack)) {
-		sections.push(taskStack);
+	if (!codingRequest || executiveRequest) {
+		const taskStack = await formatTaskStackForPrompt();
+		if (taskStack && !isContaminatedMemoryText(taskStack)) {
+			sections.push(taskStack);
+		}
 	}
 
 	const context = await getMemoryContextForMessage(userMessage, limit);
-
 	if (context && context.memories.length > 0) {
 		sections.push(formatMemoriesForInjection(context.memories));
+	}
+
+	if (!codingRequest || knowledgeRequest) {
+		const ollamaMemories = await formatOllamaMemoriesForPrompt(userMessage);
+		if (ollamaMemories && !isContaminatedMemoryText(ollamaMemories)) {
+			sections.push(ollamaMemories);
+		}
+	}
+
+	if (!codingRequest || knowledgeRequest) {
+		const knowledgeBase = await formatKnowledgeBaseForPrompt(userMessage);
+		if (knowledgeBase && !isContaminatedMemoryText(knowledgeBase)) {
+			sections.push(knowledgeBase);
+		}
+	}
+
+	const reflectionContext = await formatReflectionContextForPrompt(userMessage);
+	if (reflectionContext && !isContaminatedMemoryText(reflectionContext)) {
+		sections.push(reflectionContext);
+	}
+
+	if (!codingRequest || healthRequest) {
+		const systemHealth = await formatSystemHealthForPrompt();
+		if (systemHealth && !isContaminatedMemoryText(systemHealth)) {
+			sections.push(systemHealth);
+		}
 	}
 
 	if (isHonchoAvailable()) {

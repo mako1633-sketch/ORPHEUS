@@ -53,6 +53,13 @@ Here is the JSON for this tool:
 		expect(detectAssistantResponseLeak(leaked)).toBe("internal-instructions");
 	});
 
+	it("detects compacted tool placeholders from older sessions", () => {
+		const leaked = "Now I have the full picture.\n[tool call omitted: writeFile]";
+
+		expect(detectAssistantResponseLeak(leaked)).toBe("internal-instructions");
+		expect(sanitizeAssistantMessagesForModelHistory([{ role: "assistant", content: leaked }])).toEqual([]);
+	});
+
 	it("detects invented action JSON questionnaires", () => {
 		const leaked = `To address this question in the context of the previous conversation, I'll provide a JSON object that includes an action.
 

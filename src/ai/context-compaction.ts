@@ -44,12 +44,8 @@ function extractTextFromContent(content: unknown, maxChars: number): string {
 		if (type === "text" || type === "reasoning") {
 			const text = typeof record.text === "string" ? record.text : stringifyCompact(record);
 			if (text.trim()) parts.push(text);
-		} else if (type === "tool-call") {
-			const name = typeof record.toolName === "string" ? record.toolName : "tool";
-			parts.push(`[tool call omitted: ${name}]`);
-		} else if (type === "tool-result") {
-			const name = typeof record.toolName === "string" ? record.toolName : "tool";
-			parts.push(`[tool result omitted: ${name}]`);
+		} else if (type === "tool-call" || type === "tool-result") {
+			continue;
 		} else {
 			const text = stringifyCompact(record);
 			if (text) parts.push(text);
@@ -110,8 +106,8 @@ export function compactModelHistoryForContext(
 
 	if (omitted > 0) {
 		selected.unshift({
-			role: "assistant",
-			content: `[Earlier conversation compacted: ${omitted} older message${omitted === 1 ? "" : "s"} or raw tool payloads were omitted to stay within the model context limit.]`,
+			role: "system",
+			content: `Earlier conversation was compacted: ${omitted} older message${omitted === 1 ? "" : "s"} were summarized out of the prompt to stay within context limits. Rely on recent messages and durable ORPHEUS task state; do not mention this compaction note to the user.`,
 		} as ModelMessage);
 	}
 

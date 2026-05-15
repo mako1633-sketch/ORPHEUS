@@ -7,6 +7,7 @@ import { getExaClient } from "./exa-client";
 
 const MAX_CHAR_LIMIT = 50_000;
 const DEFAULT_TTL_MS = 30 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 20;
 
 interface CachedPage {
 	url: string;
@@ -42,7 +43,23 @@ export function getCachedPage(url: string): CachedPage | null {
 		cache.delete(key);
 		return null;
 	}
+	cache.delete(key);
+	cache.set(key, entry);
 	return entry;
+}
+
+function pruneCache(): void {
+	for (const [key, entry] of cache) {
+		if (!isValidCache(entry)) {
+			cache.delete(key);
+		}
+	}
+
+	while (cache.size > MAX_CACHE_ENTRIES) {
+		const oldestKey = cache.keys().next().value as string | undefined;
+		if (!oldestKey) return;
+		cache.delete(oldestKey);
+	}
 }
 
 export function setCachedPage(url: string, text: string, ttlMs: number = DEFAULT_TTL_MS): void {
@@ -53,6 +70,7 @@ export function setCachedPage(url: string, text: string, ttlMs: number = DEFAULT
 		fetchedAt: Date.now(),
 		ttlMs,
 	});
+	pruneCache();
 }
 
 export async function fetchWithCache(

@@ -26,7 +26,7 @@ export const AVAILABLE_OLLAMA_MODELS: ModelOption[] = [
 // Default model IDs
 export const DEFAULT_OPENROUTER_MODEL_ID = "z-ai/glm-4.7";
 export const DEFAULT_COPILOT_MODEL_ID = "claude-sonnet-4.5";
-export const DEFAULT_CODEX_COPILOT_MODEL_ID = "o4-mini";
+export const DEFAULT_CODEX_COPILOT_MODEL_ID = "gpt-5.1-codex";
 export const DEFAULT_OLLAMA_MODEL_ID = "llama3.1:8b";
 export const DEFAULT_MODEL_ID = DEFAULT_OPENROUTER_MODEL_ID;
 export const DEFAULT_MODEL_PROVIDER: LlmProvider = "openrouter";
@@ -121,6 +121,51 @@ export function getCopilotCodingModel(): string {
 		return envModel;
 	}
 	return DEFAULT_CODEX_COPILOT_MODEL_ID;
+}
+
+type CopilotModelLike = { id: string; name?: string };
+
+function scoreCopilotCodingModel(model: CopilotModelLike): number {
+	const normalized = `${model.id} ${model.name ?? ""}`.trim().toLowerCase();
+	if (!normalized) return 0;
+	if (normalized.includes("codex")) {
+		if (normalized.includes("5.2")) return 120;
+		if (normalized.includes("5.1")) return 115;
+		if (normalized.includes("gpt-5")) return 110;
+		return 100;
+	}
+	if (normalized.includes("o4")) return 80;
+	if (normalized.includes("o3")) return 70;
+	if (normalized.includes("o1")) return 60;
+	return 0;
+}
+
+/**
+ * Resolve the best available Copilot coding model.
+ * Environment override wins when present and available; otherwise prefer Codex-labeled models.
+ */
+export function resolveCopilotCodingModel(
+	availableModels: CopilotModelLike[] = [],
+	requestedModel = getCopilotCodingModel()
+): string {
+	const requested = requestedModel.trim();
+	const hasExplicitOverride = Boolean(process.env.CODEX_CODING_MODEL?.trim());
+	const models = availableModels.filter((model) => model.id.trim().length > 0);
+	if (models.length === 0) {
+		return requested || DEFAULT_CODEX_COPILOT_MODEL_ID;
+	}
+
+	const exactRequested = models.find((model) => model.id === requested);
+	if (exactRequested && hasExplicitOverride) {
+		return exactRequested.id;
+	}
+
+	const best = [...models].sort((a, b) => scoreCopilotCodingModel(b) - scoreCopilotCodingModel(a))[0];
+	if (best && scoreCopilotCodingModel(best) > 0) {
+		return best.id;
+	}
+
+	return requested || DEFAULT_CODEX_COPILOT_MODEL_ID;
 }
 
 /**
@@ -224,8 +269,30 @@ const CODING_KEYWORDS = new Set([
 	"venv",
 ]);
 
+const STRONG_CODING_PATTERNS = [
+	/\b(fix|debug|investigate|trace|diagnose)\b.*\b(bug|error|exception|crash|failure|failing|test|build|compile|typecheck|lint)\b/i,
+	/\b(implement|refactor|patch|modify|edit|update|add|remove)\b.*\b(code|repo|project|app|api|component|hook|function|class|module|script|test|file)\b/i,
+	/\b(run|execute)\b.*\b(test|tests|typecheck|lint|format|build|compile)\b/i,
+	/\b(open|inspect|review|read)\b.*\b(diff|pull request|pr|branch|commit|repo|codebase)\b/i,
+	/\b(tsc|typescript|eslint|biome|jest|vitest|playwright|bun test|npm test|pnpm test|cargo test|pytest)\b/i,
+	/\b[A-Za-z0-9_.-]+\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go|java|kt|swift|rb|php|cs|cpp|c|h|hpp|sql|css|scss|html|json|yaml|yml|toml|mdx?)\b/i,
+];
+
+const CODING_CONTEXT_PATTERNS = [
+	/\b(repo|repository|codebase|workspace|package\.json|tsconfig|lockfile|migration|schema|endpoint|component|hook)\b/i,
+	/\b(stack trace|traceback|compiler error|type error|lint error|test failure|failing test)\b/i,
+];
+
 export function isCodingTask(userMessage: string): boolean {
 	const normalized = userMessage.toLowerCase();
+	if (STRONG_CODING_PATTERNS.some((pattern) => pattern.test(userMessage))) {
+		return true;
+	}
+
+	if (CODING_CONTEXT_PATTERNS.some((pattern) => pattern.test(userMessage))) {
+		return true;
+	}
+
 	// Count keyword matches
 	let matches = 0;
 	for (const keyword of CODING_KEYWORDS) {

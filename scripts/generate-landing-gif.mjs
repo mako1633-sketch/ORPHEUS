@@ -61,7 +61,14 @@ function line(frame, x0, y0, x1, y1, color, thickness = 1) {
 	for (let s = 0; s <= steps; s++) {
 		const x = x0 + (dx * s) / steps;
 		const y = y0 + (dy * s) / steps;
-		fillRect(frame, Math.round(x - thickness / 2), Math.round(y - thickness / 2), thickness, thickness, color);
+		fillRect(
+			frame,
+			Math.round(x - thickness / 2),
+			Math.round(y - thickness / 2),
+			thickness,
+			thickness,
+			color
+		);
 	}
 }
 
@@ -76,7 +83,14 @@ function ellipse(frame, cx, cy, rx, ry, color, thickness = 1, start = 0, end = M
 		const a = start + ((end - start) * s) / steps;
 		const x = cx + Math.cos(a) * rx;
 		const y = cy + Math.sin(a) * ry;
-		fillRect(frame, Math.round(x - thickness / 2), Math.round(y - thickness / 2), thickness, thickness, color);
+		fillRect(
+			frame,
+			Math.round(x - thickness / 2),
+			Math.round(y - thickness / 2),
+			thickness,
+			thickness,
+			color
+		);
 	}
 }
 
@@ -166,7 +180,8 @@ function text(frame, x, y, value, color, scale = 2) {
 		const glyph = font[ch] ?? font[" "];
 		for (let row = 0; row < glyph.length; row++) {
 			for (let col = 0; col < glyph[row].length; col++) {
-				if (glyph[row][col] === "1") fillRect(frame, cursor + col * scale, y + row * scale, scale, scale, color);
+				if (glyph[row][col] === "1")
+					fillRect(frame, cursor + col * scale, y + row * scale, scale, scale, color);
 			}
 		}
 		cursor += (glyph[0].length + 2) * scale;
@@ -195,7 +210,15 @@ function drawAvatar(frame, t) {
 	const glitch = Math.sin(t * Math.PI * 16) > 0.78 ? 22 : 0;
 
 	for (let i = 0; i < 7; i++) {
-		ellipse(frame, cx + glitch / 2, cy + bob, 128 + i * 42, 86 + i * 22, mix(colors.bg1, colors.deepRed, 0.18), 2);
+		ellipse(
+			frame,
+			cx + glitch / 2,
+			cy + bob,
+			128 + i * 42,
+			86 + i * 22,
+			mix(colors.bg1, colors.deepRed, 0.18),
+			2
+		);
 	}
 	glowEllipse(frame, cx + glitch, cy + bob, 152, 104, mix(colors.red, colors.cyan, pulse * 0.12), pulse);
 

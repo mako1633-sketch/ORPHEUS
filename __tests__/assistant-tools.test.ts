@@ -10,6 +10,7 @@ import {
 import { loadCodingTaskState, updateCodingTaskState } from "../src/ai/coding-task-state";
 import { addExecutiveItem, buildExecutiveBriefing, updateExecutiveItem } from "../src/ai/executive-state";
 import { loadTaskStack } from "../src/ai/task-stack-state";
+import { loadReflections } from "../src/ai/reflection-state";
 import { codingWorkbench } from "../src/ai/tools/coding-workbench";
 import { daemonStatus } from "../src/ai/tools/daemon-status";
 import { executiveAssistant } from "../src/ai/tools/executive-assistant";
@@ -178,6 +179,39 @@ describe("assistant-style local tools", () => {
 		expect(state?.nextStep).toBe("Run formatter and retry check");
 	});
 
+	it("writes completed coding lessons to long-term memory", async () => {
+		const result = await (
+			codingWorkbench as unknown as {
+				execute: (input: unknown) => Promise<{ success: boolean; state?: { status: string } }>;
+			}
+		).execute({
+			action: "taskState",
+			mode: "save",
+			goal: "Improve failure recovery",
+			status: "completed",
+			filesChanged: ["src/ai/tools/coding-workbench.ts"],
+			checksRun: ["bun test __tests__/assistant-tools.test.ts"],
+			failures: ["Initial broad retry policy hid deterministic failures"],
+			evidence: ["Added pivot strategy for deterministic failures"],
+			assumptions: ["Transient provider errors can be retried once"],
+			risks: ["Failure handling can create retry loops"],
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.state?.status).toBe("completed");
+
+		const reflections = await loadReflections();
+		const latest = reflections.entries.at(-1);
+		expect(latest?.goal).toBe("Improve failure recovery");
+		expect(latest?.whatWorked).toContain("Added pivot strategy for deterministic failures");
+		expect(latest?.whatFailed).toContain("Initial broad retry policy hid deterministic failures");
+
+		const persistentContext = await loadPersistentContext();
+		expect(persistentContext).toContain("ORPHEUS learned from coding task");
+		expect(persistentContext).toContain("Reuse: Added pivot strategy");
+		expect(persistentContext).toContain("Watch for: Initial broad retry policy");
+	});
+
 	it("discovers validation scripts through the coding workbench", async () => {
 		const projectDir = await mkdtemp(path.join(os.tmpdir(), "orpheus-coding-workbench-"));
 		try {
@@ -262,6 +296,31 @@ describe("assistant-style local tools", () => {
 		expect(result.completionGate?.join("\n")).toContain("readback");
 	});
 
+	it("blocks coding completion when evidence is missing", async () => {
+		const result = await (
+			codingWorkbench as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					ready?: boolean;
+					blockers?: string[];
+					requiredEvidence?: string[];
+					recommendedNextActions?: string[];
+				}>;
+			}
+		).execute({
+			action: "completionGate",
+			goal: "Tighten Codex coding behavior",
+			changedFiles: ["src/ai/system-prompt.ts", "src/ai/providers/copilot-provider.ts"],
+			checksRun: ["bun test __tests__/system-prompt.test.ts"],
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.ready).toBe(false);
+		expect(result.blockers?.join("\n")).toContain("typecheck");
+		expect(result.requiredEvidence?.join("\n")).toContain("regression test");
+		expect(result.recommendedNextActions?.join("\n")).toContain("typecheck");
+	});
+
 	it("runs project doctor and coding mode QoL actions", async () => {
 		const projectDir = await mkdtemp(path.join(os.tmpdir(), "orpheus-project-doctor-"));
 		try {
@@ -323,6 +382,9 @@ describe("assistant-style local tools", () => {
 				execute: (input: unknown) => Promise<{
 					success: boolean;
 					failure?: { signals: string[] };
+					strategy?: string;
+					pivotPlan?: string[];
+					alternateRoutes?: string[];
 					retryPolicy?: string[];
 				}>;
 			}
@@ -333,7 +395,48 @@ describe("assistant-style local tools", () => {
 		});
 		expect(recovery.success).toBe(true);
 		expect(recovery.failure?.signals).toContain("module-resolution");
+		expect(recovery.strategy).toBe("pivot");
+		expect(recovery.pivotPlan?.join("\n")).toContain("import path");
+		expect(recovery.alternateRoutes?.join("\n")).toContain("Search for the exported symbol");
 		expect(recovery.retryPolicy?.join("\n")).toContain("Do not retry deterministic");
+	});
+
+	it("chooses bounded retries or user escalation for recoverable failures", async () => {
+		const transient = await (
+			codingWorkbench as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					strategy?: string;
+					retryPolicy?: string[];
+				}>;
+			}
+		).execute({
+			action: "failureRecovery",
+			command: "provider stream",
+			output: "HTTP 503 temporary service unavailable",
+		});
+		expect(transient.success).toBe(true);
+		expect(transient.strategy).toBe("retry");
+		expect(transient.retryPolicy?.join("\n")).toContain("only once before pivoting");
+
+		const blocked = await (
+			codingWorkbench as unknown as {
+				execute: (input: unknown) => Promise<{
+					success: boolean;
+					strategy?: string;
+					reason?: string;
+					pivotPlan?: string[];
+				}>;
+			}
+		).execute({
+			action: "failureRecovery",
+			command: "gh pr checks",
+			output: "403 forbidden: authenticate before retrying",
+		});
+		expect(blocked.success).toBe(true);
+		expect(blocked.strategy).toBe("ask_user");
+		expect(blocked.reason).toContain("approval, credentials, or permissions");
+		expect(blocked.pivotPlan?.join("\n")).toContain("ask for the specific approval");
 	});
 
 	it("returns dashboard, context budget, and launch briefing status", async () => {

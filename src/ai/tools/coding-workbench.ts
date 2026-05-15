@@ -5,10 +5,12 @@ import { tool } from "ai";
 import { z } from "zod";
 import {
 	clearCodingTaskState,
+	type CodingTaskState,
 	loadCodingTaskState,
 	saveCodingTaskState,
 	updateCodingTaskState,
 } from "../coding-task-state";
+import { addReflection } from "../reflection-state";
 import { summarizeProjectContext } from "./project-context";
 
 const MAX_OUTPUT = 60_000;
@@ -555,24 +557,187 @@ function githubPublishPlan(
 
 function failureRecovery(input: { command?: string; output: string }): {
 	failure: ReturnType<typeof explainFailure>;
+	strategy: "retry" | "pivot" | "ask_user" | "stop_and_report";
+	reason: string;
 	recovery: string[];
+	pivotPlan: string[];
+	alternateRoutes: string[];
 	retryPolicy: string[];
 } {
 	const command = input.command ?? "last command";
+	const output = input.output;
+	const failure = explainFailure(command, output);
+	const isTransient =
+		/\b(econnreset|etimedout|eai_again|enotfound|network|socket hang up|rate limit|429|503|temporar)/i.test(
+			output
+		);
+	const needsUser =
+		/\b(permission denied|not authorized|unauthorized|forbidden|401|403|login|sign in|authenticate|approval required|operation not permitted)\b/i.test(
+			output
+		);
+	const timedOut = /\b(timed out|timeout|aborted|signal sigterm|signal sigkill)\b/i.test(output);
+	const contextTooLarge =
+		/\b(context length|prompt too long|maximum context|token limit|too many tokens)\b/i.test(output);
+	const deterministic =
+		failure.signals.some((signal) =>
+			["module-resolution", "typescript", "test-assertion", "formatting"].includes(signal)
+		) || /\b(schema|parse error|syntaxerror|typeerror|referenceerror|lint)\b/i.test(output);
+
+	const strategy: "retry" | "pivot" | "ask_user" | "stop_and_report" = needsUser
+		? "ask_user"
+		: isTransient
+			? "retry"
+			: deterministic || timedOut || contextTooLarge
+				? "pivot"
+				: "pivot";
+
+	const reason =
+		strategy === "ask_user"
+			? "The failure appears to require user approval, credentials, or permissions."
+			: strategy === "retry"
+				? "The failure looks transient, so one bounded retry is reasonable."
+				: contextTooLarge
+					? "The failure is likely caused by context size, so shrink the input and resume from saved state."
+					: timedOut
+						? "The command ran too long, so narrow the scope before trying again."
+						: deterministic
+							? "The failure is deterministic, so inspect evidence and change the approach before retrying."
+							: "The failure lacks a safe immediate retry signal, so pivot to diagnosis first.";
+
 	return {
-		failure: explainFailure(command, input.output),
+		failure,
+		strategy,
+		reason,
 		recovery: [
 			"Read the first concrete error, not the last cascade.",
 			"Inspect the referenced file or config before editing.",
 			"Patch the smallest cause and rerun the narrowest failing command.",
 			"Persist the failure and next step if the task is interrupted.",
 		],
+		pivotPlan: unique([
+			"Record the failed command/output in taskState before changing direction.",
+			contextTooLarge
+				? "Compact the working context to goal, touched files, evidence, failures, and next step."
+				: "",
+			timedOut ? "Replace the broad command with the smallest targeted script or file-level check." : "",
+			failure.signals.includes("module-resolution")
+				? "Inspect the import path, package manager lockfile, generated files, and tsconfig/module aliases."
+				: "",
+			failure.signals.includes("typescript")
+				? "Open the first TypeScript diagnostic location and fix errors in dependency order."
+				: "",
+			failure.signals.includes("test-assertion")
+				? "Read the failing test and implementation together, then decide whether behavior or expectation is wrong."
+				: "",
+			failure.signals.includes("formatting")
+				? "Run the formatter or apply the formatter output before rerunning broader validation."
+				: "",
+			needsUser ? "Pause mutation and ask for the specific approval or authentication step required." : "",
+			isTransient
+				? "Retry once after a short wait, then pivot to diagnostics if the same failure repeats."
+				: "",
+			"After the pivot, rerun only the narrowest command that proves the new hypothesis.",
+		]),
+		alternateRoutes: unique([
+			contextTooLarge ? "Use git diff plus targeted file reads instead of sending whole files." : "",
+			timedOut
+				? "Run a focused test file, typecheck subset, or package script with a longer timeout only if needed."
+				: "",
+			failure.signals.includes("module-resolution")
+				? "Search for the exported symbol or neighboring file before creating a new dependency."
+				: "",
+			failure.signals.includes("typescript")
+				? "If the first fix fans out, add a local type guard or adapter instead of widening shared types globally."
+				: "",
+			failure.signals.includes("test-assertion")
+				? "Add a smaller regression test around the expected behavior before broad snapshot updates."
+				: "",
+			needsUser
+				? "Use available local evidence and report the blocked external step without pretending it ran."
+				: "",
+			isTransient ? "Switch provider/route or resume from taskState if the retry fails again." : "",
+		]),
 		retryPolicy: [
-			"Retry immediately only for transient provider/network errors.",
+			"Retry immediately only for transient provider/network errors, and only once before pivoting.",
 			"Do not retry deterministic type, lint, test, or schema failures without changing something.",
+			"If a broad command times out, pivot to a narrower command before increasing timeout.",
 			"Escalate to the user only when approval, credentials, or external service access is required.",
 		],
 	};
+}
+
+function completionGate(input: {
+	goal?: string;
+	changedFiles?: string[];
+	checksRun?: string[];
+	failures?: string[];
+}): {
+	ready: boolean;
+	blockers: string[];
+	requiredEvidence: string[];
+	recommendedNextActions: string[];
+} {
+	const changedFiles = input.changedFiles ?? [];
+	const checksRun = input.checksRun ?? [];
+	const failures = input.failures ?? [];
+	const hasRuntimeChange = changedFiles.some((file) => /\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go)$/.test(file));
+	const hasTestChange = changedFiles.some((file) => file.includes("__tests__") || /\.test\./.test(file));
+	const hasPromptOrMemoryChange = changedFiles.some((file) =>
+		/prompt|memory|context|provider|tool/i.test(file)
+	);
+	const hasTypecheck = checksRun.some((check) => /typecheck|tsc|check/i.test(check));
+	const hasTest = checksRun.some((check) =>
+		/\btest\b|bun test|npm test|pnpm test|pytest|cargo test/i.test(check)
+	);
+	const hasLintOrFormat = checksRun.some((check) => /lint|format|biome/i.test(check));
+
+	const blockers = unique([
+		failures.length > 0 ? `Unresolved failures: ${failures.join("; ")}` : "",
+		changedFiles.length === 0 ? "No changed files were recorded." : "",
+		hasRuntimeChange && !hasTypecheck
+			? "Runtime code changed but no typecheck/check command was recorded."
+			: "",
+		hasTestChange && !hasTest ? "Tests changed but no test command was recorded." : "",
+		hasPromptOrMemoryChange && !hasTest
+			? "Prompt, memory, provider, or tool behavior changed without a focused regression test."
+			: "",
+	]);
+
+	const requiredEvidence = unique([
+		input.goal ? `Goal matched: ${input.goal}` : "User goal restated and matched to the final diff.",
+		"Final diff inspected for unrelated churn.",
+		"Changed files listed in the final response.",
+		"Validation commands and outcomes listed in the final response.",
+		hasRuntimeChange ? "Type/runtime validation has passed or the gap is explicitly disclosed." : "",
+		hasPromptOrMemoryChange ? "A regression test covers the changed agent behavior." : "",
+	]);
+
+	const recommendedNextActions = unique([
+		blockers.includes("No changed files were recorded.") ? "Record changed files before completion." : "",
+		hasRuntimeChange && !hasTypecheck ? "Run the repo typecheck/check script." : "",
+		hasTestChange && !hasTest ? "Run the relevant test command." : "",
+		!hasLintOrFormat ? "Run lint or format check if the repo provides one." : "",
+		failures.length > 0 ? "Fix or explicitly report each unresolved failure." : "",
+	]);
+
+	return {
+		ready: blockers.length === 0,
+		blockers,
+		requiredEvidence,
+		recommendedNextActions,
+	};
+}
+
+async function recordCompletedCodingLearning(state: CodingTaskState): Promise<void> {
+	await addReflection({
+		taskType: "coding",
+		goal: state.goal,
+		whatWorked: [...state.evidence, ...state.checksRun],
+		whatFailed: state.failures,
+		validationThatCaught: state.failures.length > 0 ? state.checksRun : [],
+		keyAssumptions: state.assumptions,
+		risksSurfaced: state.risks,
+	});
 }
 
 const inputSchema = z.discriminatedUnion("action", [
@@ -652,6 +817,13 @@ const inputSchema = z.discriminatedUnion("action", [
 		output: z.string().min(1),
 	}),
 	z.object({
+		action: z.literal("completionGate"),
+		goal: z.string().optional(),
+		changedFiles: z.array(z.string()).optional(),
+		checksRun: z.array(z.string()).optional(),
+		failures: z.array(z.string()).optional(),
+	}),
+	z.object({
 		action: z.literal("explainFailure"),
 		command: z.string().min(1),
 		output: z.string().min(1),
@@ -679,9 +851,19 @@ export const codingWorkbench = tool({
 			}
 			if (input.mode === "save") {
 				if (!input.goal) return { success: false, error: "goal is required when saving task state." };
-				return { success: true, ...(await saveCodingTaskState(input as { goal: string })) };
+				const result = await saveCodingTaskState(input as { goal: string });
+				// Self-reflection: write a retrospective when a coding task completes
+				if (result.state.status === "completed") {
+					await recordCompletedCodingLearning(result.state);
+				}
+				return { success: true, ...result };
 			}
-			return { success: true, ...(await updateCodingTaskState(input)) };
+			const result = await updateCodingTaskState(input);
+			// Self-reflection: write a retrospective when a coding task completes
+			if (result.state.status === "completed") {
+				await recordCompletedCodingLearning(result.state);
+			}
+			return { success: true, ...result };
 		}
 
 		if (input.action === "explainFailure") {
@@ -698,6 +880,10 @@ export const codingWorkbench = tool({
 
 		if (input.action === "failureRecovery") {
 			return { success: true, ...failureRecovery(input) };
+		}
+
+		if (input.action === "completionGate") {
+			return { success: true, ...completionGate(input) };
 		}
 
 		const root = resolveRoot(input.root);

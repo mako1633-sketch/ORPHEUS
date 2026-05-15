@@ -26,9 +26,40 @@ describe("system prompt", () => {
 		expect(prompt).toContain("Do not claim a file write, command, migration, or fix succeeded");
 		expect(prompt).toContain("Keep the self-critique mostly silent");
 		expect(prompt).toContain("Use selfReview before finishing meaningful code work");
+		expect(prompt).toContain("Use completionGate before claiming a non-trivial coding task is done");
 		expect(prompt).toContain("Use projectDoctor for one-command repo setup/readiness checks");
 		expect(prompt).toContain("Use githubPublishPlan before initializing");
 		expect(prompt).toContain("Use failureRecovery after failed checks or service hiccups");
+		expect(prompt).toContain("strategy, pivot plan, safe next action, and retry policy");
+		expect(prompt).toContain("records a structured retrospective and a compact long-term lesson");
+	});
+
+	it("adds stricter GitHub Copilot/Codex execution guidance for coding mode", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+			copilotCodingMode: true,
+		});
+
+		expect(prompt).toContain("# GitHub Copilot/Codex Coding Mode");
+		expect(prompt).toContain("Treat this as an execution environment, not a chat-only coding model");
+		expect(prompt).toContain("Do not solve coding requests from memory alone");
+		expect(prompt).toContain(
+			"Begin by establishing repo state with projectContext or codingWorkbench repoStatus"
+		);
+		expect(prompt).toContain("After a failed check, call codingWorkbench failureRecovery");
+		expect(prompt).toContain("pivot on deterministic failures before rerunning");
+		expect(prompt).toContain("write durable lessons to long-term memory");
+		expect(prompt).toContain("Never imply GitHub Copilot/Codex CLI performed a change");
+	});
+
+	it("does not add Copilot/Codex execution guidance outside coding mode", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).not.toContain("# GitHub Copilot/Codex Coding Mode");
 	});
 
 	it("includes concise coding guidance in voice mode", () => {
