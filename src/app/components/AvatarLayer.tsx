@@ -7,44 +7,6 @@ import { DaemonState } from "../../types";
 
 const DAEMON_HOME_GIF_PATH = fileURLToPath(new URL("../../../img/daemon.gif", import.meta.url));
 const DAEMON_GIF_ASPECT = 960 / 551;
-const HOME_GIF_MIN_WIDTH = 72;
-const HOME_GIF_MAX_WIDTH = 168;
-const HOME_GIF_WIDTH_RATIO = 0.82;
-const HOME_GIF_TOP_RESERVE_RATIO = 0.18;
-const HOME_GIF_BOTTOM_RESERVE = 4;
-
-export function calculateHomeGifLayout({
-	viewportWidth,
-	viewportHeight,
-	showBanner,
-}: {
-	viewportWidth: number;
-	viewportHeight: number;
-	showBanner: boolean;
-}): { width: number; height: number; top: number } {
-	const safeViewportWidth = Math.max(1, Math.floor(viewportWidth));
-	const safeViewportHeight = Math.max(1, Math.floor(viewportHeight));
-	const topReserve = showBanner
-		? Math.min(9, Math.floor(safeViewportHeight * HOME_GIF_TOP_RESERVE_RATIO))
-		: 0;
-	const availableHeight = Math.max(1, safeViewportHeight - topReserve - HOME_GIF_BOTTOM_RESERVE);
-	const targetWidth = Math.floor(safeViewportWidth * HOME_GIF_WIDTH_RATIO);
-	const maxWidthForViewport = Math.max(1, safeViewportWidth - 4);
-	let nextWidth = Math.max(
-		Math.min(HOME_GIF_MIN_WIDTH, maxWidthForViewport),
-		Math.min(HOME_GIF_MAX_WIDTH, targetWidth, maxWidthForViewport)
-	);
-	let nextHeight = Math.max(1, Math.floor(nextWidth / DAEMON_GIF_ASPECT / 2));
-
-	if (nextHeight > availableHeight) {
-		nextHeight = availableHeight;
-		nextWidth = Math.max(1, Math.min(maxWidthForViewport, Math.floor(nextHeight * 2 * DAEMON_GIF_ASPECT)));
-	}
-
-	const top = Math.max(0, topReserve + Math.floor((availableHeight - nextHeight) / 2));
-
-	return { width: nextWidth, height: nextHeight, top };
-}
 
 export interface AvatarLayerProps {
 	avatarRef: RefObject<DaemonAvatarRenderable | null>;
@@ -52,7 +14,6 @@ export interface AvatarLayerProps {
 	applyAvatarForState: (state: DaemonState) => void;
 	width: number;
 	height: number;
-	viewportWidth?: number;
 	viewportHeight?: number;
 	zIndex?: number;
 	showBanner?: boolean;
@@ -67,7 +28,6 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 		applyAvatarForState,
 		width,
 		height,
-		viewportWidth = width,
 		viewportHeight = height,
 		zIndex = 0,
 		showBanner = false,
@@ -83,7 +43,9 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 	const bannerColors = animateBanner ? glitchyBanner.colors : BANNER_GRADIENT;
 	const bannerWidth = Math.max(...DAEMON_BANNER_LINES.map((line) => line.length));
 	const showHomeGif = showBanner;
-	const gifLayout = calculateHomeGifLayout({ viewportWidth, viewportHeight, showBanner });
+	const gifWidth = Math.max(56, Math.min(96, Math.floor(width * 0.56)));
+	const gifHeight = Math.max(16, Math.min(30, Math.floor(gifWidth / DAEMON_GIF_ASPECT / 2), height));
+	const gifTop = Math.max(0, Math.floor((viewportHeight - gifHeight) / 2));
 
 	// Keep a stable callback ref so we don't detach/reattach on daemonState changes.
 	const daemonStateRef = useRef(daemonState);
@@ -151,10 +113,10 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 			{showHomeGif ? (
 				<box
 					position="absolute"
-					top={gifLayout.top}
+					top={gifTop}
 					left={0}
 					width="100%"
-					height={gifLayout.height}
+					height={gifHeight}
 					alignItems="center"
 					justifyContent="center"
 					zIndex={1}
@@ -162,11 +124,11 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 					<daemon-gif
 						id="daemon-home-gif"
 						live
-						width={gifLayout.width}
-						height={gifLayout.height}
+						width={gifWidth}
+						height={gifHeight}
 						respectAlpha={true}
 						src={DAEMON_HOME_GIF_PATH}
-						frameStride={1}
+						frameStride={3}
 					/>
 				</box>
 			) : (

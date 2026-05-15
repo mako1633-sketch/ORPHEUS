@@ -27,7 +27,7 @@ const UPPER_BLOCK = 1;
 const LOWER_BLOCK = 2;
 const FULL_CELL = 3;
 const MIN_FRAME_DELAY_MS = 33;
-const DEFAULT_FRAME_STRIDE = 1;
+const DEFAULT_FRAME_STRIDE = 3;
 const TRANSPARENT_ALPHA = RGBA.fromValues(0, 0, 0, 0);
 
 function packColor(r: number, g: number, b: number, a: number): number {

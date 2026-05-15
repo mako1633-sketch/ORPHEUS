@@ -72,8 +72,6 @@ export function App() {
 						applyAvatarForState={controller.avatarLayerProps.applyAvatarForState}
 						width={controller.avatarLayerProps.width}
 						height={controller.avatarLayerProps.height}
-						viewportWidth={controller.avatarLayerProps.viewportWidth}
-						viewportHeight={controller.avatarLayerProps.viewportHeight}
 						zIndex={controller.avatarLayerProps.zIndex}
 						showBanner={controller.avatarLayerProps.showBanner}
 						animateBanner={controller.avatarLayerProps.animateBanner}
