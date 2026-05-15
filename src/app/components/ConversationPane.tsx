@@ -7,6 +7,7 @@ import {
 	isLastTextBlockInList,
 	shouldHideContentBlock,
 } from "../../components/ContentBlockView";
+import { ContextCompactionPrompt } from "../../components/ContextCompactionPrompt";
 import { GroundingBadge } from "../../components/GroundingBadge";
 import { HudStatusBar } from "../../components/HudStatusBar";
 import { InlineStatusIndicator } from "../../components/InlineStatusIndicator";
@@ -353,6 +354,13 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 						<span fg={COLORS.ERROR}>[ Press ESC again to cancel ]</span>
 					</text>
 				</box>
+			)}
+
+			{hasInteracted && (
+				<ContextCompactionPrompt
+					contextPercent={contextPercent ?? null}
+					daemonState={daemonState}
+				/>
 			)}
 
 			{hasInteracted && (

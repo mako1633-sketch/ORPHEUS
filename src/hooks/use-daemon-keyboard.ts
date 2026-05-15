@@ -7,6 +7,7 @@ import { getDaemonManager } from "../state/daemon-state";
 import { type AppPreferences, type LlmProvider, DaemonState } from "../types";
 import { COLORS } from "../ui/constants";
 import { getStartupActionForKey } from "../ui/startup-actions";
+
 export interface KeyboardHandlerState {
 	isOverlayOpen: boolean;
 	escPendingCancel: boolean;
@@ -245,6 +246,17 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			// 'N' key to start a new session (in IDLE or SPEAKING state)
 			if (
 				(key.sequence === "n" || key.sequence === "N") &&
+				key.eventType === "press" &&
+				(currentState === DaemonState.IDLE || currentState === DaemonState.SPEAKING)
+			) {
+				actions.startNewSession();
+				key.preventDefault();
+				return;
+			}
+
+			// 'C' key to start a new session when context compaction prompt is visible (in IDLE or SPEAKING state)
+			if (
+				(key.sequence === "c" || key.sequence === "C") &&
 				key.eventType === "press" &&
 				(currentState === DaemonState.IDLE || currentState === DaemonState.SPEAKING)
 			) {
