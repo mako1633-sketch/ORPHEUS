@@ -50,6 +50,9 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 			task: "List active ORPHEUS tasks and identify any stale or incomplete work.",
 			suggest: "Suggest the next best ORPHEUS maintenance or coding action based on the current repo state.",
 			diff: "Review the current ORPHEUS git diff and call out risks, incomplete wiring, and missing tests.",
+			ci: "Run local ORPHEUS CI checks (pre-push gate): typecheck, lint, format-check, and tests. Summarize failures and suggest fixes.",
+			"github-triage":
+				"Run ORPHEUS GitHub triage: check recent workflow failures, open issues, and PRs. Summarize actionable items.",
 			shell: "Review ORPHEUS shell and CLI startup behavior for macOS compatibility issues.",
 			status:
 				"Show an ORPHEUS status dashboard with app health, tools, model provider, memory, and repo state.",
@@ -282,7 +285,7 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 						{
 							id: "orpheus",
 							label: "ORPHEUS Quick Actions",
-							shortcut: "Cmd+Shift+O",
+							shortcut: "Ctrl+Shift+O",
 							action: () => {
 								menus.setShowCommandPalette(false);
 								menus.setShowOrpheusMenu(true);

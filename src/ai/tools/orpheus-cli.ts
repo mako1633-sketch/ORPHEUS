@@ -63,13 +63,13 @@ export function resolveOrpheusCliPath(env: NodeJS.ProcessEnv = process.env): str
 
 export const orpheusCli = tool({
 	description:
-		"Execute ORPHEUS local CLI commands to run health checks, security scans, project/registry actions, task orchestration, workflow automation, capability/file scans, proactive suggestions, diff review, shell optimization, and auto-remediation. Available commands: startup, security, project, task, workflow, scan capabilities, scan files, suggest, diff, shell, remediate, scheduler, status. Only runs in explicit user direction or when the user asks about local ORPHEUS tooling.",
+		"Execute ORPHEUS local CLI commands to run health checks, security scans, project/registry actions, task orchestration, workflow automation, capability/file scans, proactive suggestions, diff review, shell optimization, and auto-remediation. Available commands: startup, security, project, task, workflow, scan, suggest, diff, shell, remediate, scheduler, status. Pass 'capabilities' or 'files' as the args value when using the 'scan' command. Only runs in explicit user direction or when the user asks about local ORPHEUS tooling.",
 	inputSchema: z.object({
 		command: commandSchema.describe("The ORPHEUS CLI category/sub-command to run."),
 		args: z
 			.string()
 			.optional()
-			.describe("Additional arguments for the command (e.g. 'detect' for project, 'summary' for diff)."),
+			.describe("Additional arguments for the command (e.g. 'detect' for project, 'summary' for diff, 'capabilities' or 'files' for scan)."),
 		auto: z.boolean().optional().describe("For 'suggest': execute the top suggestion automatically."),
 	}),
 	execute: async ({ command, args, auto }) => {

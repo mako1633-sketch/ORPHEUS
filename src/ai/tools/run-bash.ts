@@ -9,6 +9,7 @@ import {
 
 const DEFAULT_TIMEOUT_MS = 30000;
 const MAX_OUTPUT_LENGTH = 50000;
+const DISABLED_ASKPASS = "/usr/bin/false";
 
 export type LocalShell = {
 	name: "powershell" | "bash";
@@ -34,6 +35,19 @@ export function getLocalShellCommand(command: string, platform = process.platfor
 		name: "bash",
 		command: "bash",
 		args: ["-c", command],
+	};
+}
+
+export function buildNonInteractiveShellEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+	return {
+		...env,
+		CI: env.CI ?? "1",
+		GIT_ASKPASS: env.GIT_ASKPASS ?? DISABLED_ASKPASS,
+		GIT_TERMINAL_PROMPT: "0",
+		NPM_CONFIG_AUDIT: env.NPM_CONFIG_AUDIT ?? "false",
+		NPM_CONFIG_FUND: env.NPM_CONFIG_FUND ?? "false",
+		SUDO_ASKPASS: env.SUDO_ASKPASS ?? DISABLED_ASKPASS,
+		SSH_ASKPASS: env.SSH_ASKPASS ?? DISABLED_ASKPASS,
 	};
 }
 
@@ -74,8 +88,9 @@ export async function executeLocalShellCommand({
 
 		const proc = spawn(shell.command, shell.args, {
 			cwd,
-			env: process.env,
+			env: buildNonInteractiveShellEnv(),
 			shell: false,
+			stdio: ["ignore", "pipe", "pipe"],
 			windowsHide: true,
 		});
 

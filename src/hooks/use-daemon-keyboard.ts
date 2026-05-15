@@ -305,12 +305,11 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 				return;
 			}
 
-			// Cmd+Shift+O / Ctrl+Shift+O to open the ORPHEUS quick-action menu
+			// Ctrl+O (also catches Ctrl+Shift+O, which many terminals conflate)
 			if (
 				key.eventType === "press" &&
-				key.shift &&
-				key.sequence === "O" &&
-				((key.meta && process.platform === "darwin") || (key.ctrl && process.platform !== "darwin")) &&
+				(key.meta || key.ctrl) &&
+				key.name?.toLowerCase() === "o" &&
 				(currentState === DaemonState.IDLE ||
 					currentState === DaemonState.SPEAKING ||
 					currentState === DaemonState.RESPONDING)
@@ -321,12 +320,11 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 				return;
 			}
 
-			// Cmd+Shift+P / Ctrl+Shift+P to open the Command Palette
+			// Ctrl+P (also catches Ctrl+Shift+P, which many terminals conflate)
 			if (
 				key.eventType === "press" &&
-				key.shift &&
-				key.sequence === "P" &&
-				((key.meta && process.platform === "darwin") || (key.ctrl && process.platform !== "darwin")) &&
+				(key.meta || key.ctrl) &&
+				key.name?.toLowerCase() === "p" &&
 				(currentState === DaemonState.IDLE ||
 					currentState === DaemonState.SPEAKING ||
 					currentState === DaemonState.RESPONDING)
@@ -341,6 +339,8 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			if (
 				(key.sequence === "r" || key.sequence === "R") &&
 				key.eventType === "press" &&
+				!key.ctrl &&
+				!key.meta &&
 				(currentState === DaemonState.IDLE ||
 					currentState === DaemonState.SPEAKING ||
 					currentState === DaemonState.RESPONDING)
@@ -364,6 +364,8 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			if (
 				(key.sequence === "o" || key.sequence === "O") &&
 				key.eventType === "press" &&
+				!key.ctrl &&
+				!key.meta &&
 				(currentState === DaemonState.IDLE ||
 					currentState === DaemonState.SPEAKING ||
 					currentState === DaemonState.RESPONDING)

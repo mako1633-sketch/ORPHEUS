@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
 
-import { getLocalShellCommand, getWindowsPowerShellPath } from "../src/ai/tools/run-bash";
+import {
+	buildNonInteractiveShellEnv,
+	getLocalShellCommand,
+	getWindowsPowerShellPath,
+} from "../src/ai/tools/run-bash";
 import {
 	classifyCommandRisk,
 	getBlockedCommandReason,
@@ -37,6 +41,16 @@ describe("local shell command execution", () => {
 		expect(shell.name).toBe("bash");
 		expect(shell.command).toBe("bash");
 		expect(shell.args).toEqual(["-c", "ls -la"]);
+	});
+
+	it("disables interactive auth prompts for background shell commands", () => {
+		const env = buildNonInteractiveShellEnv({});
+
+		expect(env.CI).toBe("1");
+		expect(env.GIT_TERMINAL_PROMPT).toBe("0");
+		expect(env.GIT_ASKPASS).toBe("/usr/bin/false");
+		expect(env.SSH_ASKPASS).toBe("/usr/bin/false");
+		expect(env.SUDO_ASKPASS).toBe("/usr/bin/false");
 	});
 });
 
