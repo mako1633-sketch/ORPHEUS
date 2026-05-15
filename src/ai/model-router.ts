@@ -109,12 +109,12 @@ export async function routeTask(userMessage: string): Promise<RouterDecision> {
 		};
 	}
 
-	// Priority 2: Coding tasks -> Copilot with Codex model
-	if (isCode) {
+	// Priority 2: Coding tasks on Copilot -> Codex model
+	if (isCode && currentProvider === "copilot") {
 		return {
 			provider: "copilot",
 			modelId: getCopilotCodingModel(),
-			reason: "Coding task detected — routing to Copilot Codex",
+			reason: "Coding task detected on Copilot — using Copilot Codex",
 			useSubagents: needsParallel,
 		};
 	}

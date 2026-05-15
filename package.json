@@ -65,6 +65,7 @@
 		"setup:hooks": "bash .githooks/setup.sh",
 		"setup:hooks:win": "git config core.hooksPath .githooks",
 		"setup:linux": "bash ./scripts/linux/setup.sh",
+		"setup:linux:check": "bash ./scripts/linux/setup.sh --check-only",
 		"run:linux": "bash ./scripts/linux/run.sh",
 		"test": "bun test",
 		"test:watch": "bun test --watch",

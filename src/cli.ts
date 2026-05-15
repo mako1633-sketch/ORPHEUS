@@ -52,7 +52,7 @@ for (const candidate of bunCandidates.slice(1)) {
 
 if (bunCheck.error || bunCheck.status !== 0) {
 	const installHint =
-		process.platform === "darwin"
+		process.platform === "darwin" || process.platform === "linux"
 			? "Install it with: curl -fsSL https://bun.sh/install | bash"
 			: "Install it from https://bun.sh and try again.";
 	console.error(`ORPHEUS requires Bun. ${installHint}`);

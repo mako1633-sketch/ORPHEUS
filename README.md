@@ -131,15 +131,18 @@ The terminal UI includes an ORPHEUS quick-action menu for common maintenance and
 | JS Page Rendering | Optional Playwright renderer for SPA content. |
 | MCP | Model Context Protocol tools. |
 
-## Install (npm)
+## Install
 
-ORPHEUS is published as a CLI package. It **requires Bun** at runtime, even if you install via npm.
+ORPHEUS is published as an npm CLI package. It **requires Bun** at runtime, even when installed with npm, because the app runs through Bun for TypeScript, SQLite, and terminal runtime support.
 
 To install Bun on macOS/Linux:
+
 ```bash
 curl -fsSL https://bun.sh/install | bash
 ```
+
 Then install ORPHEUS:
+
 ```bash
 # Global npm install
 npm i -g @makefinks/orpheus
@@ -174,22 +177,23 @@ Voice input requires `sox` or other platform-specific audio libraries. Voice out
 
 ### macOS
 ```bash
-brew install sox
+brew install sox ffmpeg
 ```
 
 ### Linux (Debian/Ubuntu)
 ```bash
-sudo apt install sox libsox-fmt-pulse
+sudo apt update
+sudo apt install -y git curl sox libsox-fmt-pulse ffmpeg
 ```
 
 ### Linux (Fedora)
 ```bash
-sudo dnf install sox sox-plugins-freeworld
+sudo dnf install -y git curl sox sox-plugins-freeworld ffmpeg
 ```
 
 ### Linux (Arch)
 ```bash
-sudo pacman -S sox
+sudo pacman -S git curl sox ffmpeg
 ```
 
 For the Linux-ready setup flow, see [LINUX.md](./LINUX.md). From a terminal in this folder:
@@ -198,6 +202,8 @@ For the Linux-ready setup flow, see [LINUX.md](./LINUX.md). From a terminal in t
 ./scripts/linux/setup.sh
 ./scripts/linux/run.sh
 ```
+
+The Linux setup keeps Playwright browser downloads optional. Add `--with-browser-setup` when you want the `renderUrl` Chromium backend, or use `./scripts/linux/setup.sh --check-only` for a no-download readiness check.
 
 ### Windows
 Install [Bun for Windows](https://bun.sh/docs/installation), then run ORPHEUS from PowerShell, Windows Terminal, or another terminal that supports TUI apps. For voice features, install `sox` and `ffmpeg` and make sure both commands are available on `PATH`.
@@ -257,11 +263,11 @@ ORPHEUS defaults to Exa-based `fetchUrls` for retrieving web page text. For Java
 This feature is **optional** and intentionally not installed by default (browser downloads are large). The render tool is not available to ORPHEUS without the installation below.
 
 ```bash
-# 1) Install Playwright globally
-npm i -g playwright
+# From a source checkout
+./scripts/linux/setup.sh --with-browser-setup
 
-# 2) Install Chromium browser binaries
-npx playwright install chromium
+# Or after installing the npm package's dependencies from source
+bun run setup:browsers
 ```
 
 ## MCP server setup (Model Context Protocol)

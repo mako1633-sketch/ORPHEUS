@@ -10,7 +10,7 @@ This folder is prepared to run ORPHEUS on Linux terminals through Bun and Bash.
 - Bun
 - Optional: Ollama for local models
 - Optional voice tools: `sox`, `ffmpeg`, and a working ALSA/PulseAudio/PipeWire input device
-- Optional browser rendering: Playwright browsers installed by the setup script
+- Optional browser rendering: Playwright Chromium installed with `--with-browser-setup`
 
 ## Install System Packages
 
@@ -55,6 +55,18 @@ If dependencies are already installed:
 ./scripts/linux/setup.sh --skip-install
 ```
 
+If you want the optional Playwright-backed browser renderer:
+
+```bash
+./scripts/linux/setup.sh --with-browser-setup
+```
+
+For CI or a quick readiness check without dependency downloads:
+
+```bash
+./scripts/linux/setup.sh --check-only
+```
+
 ## Daily Use
 
 ```bash
@@ -74,7 +86,7 @@ bun test
 - Local shell commands use Bash.
 - ORPHEUS stores configuration under `~/.config/orpheus` unless overridden.
 - Voice capture uses `rec`/SoX and expects `sox` to be available on `PATH`.
-- Browser rendering uses Playwright Chromium when installed.
+- Browser rendering uses Playwright Chromium when installed with `--with-browser-setup` or `bun run setup:browsers`.
 - The release workflow is available through `bun run release:patch`, `release:minor`, `release:major`, and `release:notes`.
 
 ## Useful Checks
@@ -84,6 +96,7 @@ bun run typecheck
 bun x biome lint src __tests__ scripts
 bun x biome format src __tests__ scripts
 bun test
+./scripts/linux/setup.sh --check-only
 ```
 
 ## Troubleshooting

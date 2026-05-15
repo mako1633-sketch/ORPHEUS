@@ -18,10 +18,10 @@ describe("model config", () => {
 	});
 
 	it("uses CODEX_CODING_MODEL when explicitly configured", () => {
-		process.env.CODEX_CODING_MODEL = "gpt-5.1-codex";
+		process.env.CODEX_CODING_MODEL = "gpt-5.2-codex";
 
-		expect(getCopilotCodingModel()).toBe("gpt-5.1-codex");
-		expect(resolveCopilotCodingModel([{ id: "gpt-5.1-codex", name: "GPT 5.1 Codex" }])).toBe("gpt-5.1-codex");
+		expect(getCopilotCodingModel()).toBe("gpt-5.2-codex");
+		expect(resolveCopilotCodingModel([{ id: "gpt-5.2-codex", name: "GPT 5.2 Codex" }])).toBe("gpt-5.2-codex");
 	});
 
 	it("falls back to the best available Codex-like Copilot model", () => {
@@ -30,10 +30,11 @@ describe("model config", () => {
 		expect(
 			resolveCopilotCodingModel([
 				{ id: "claude-sonnet-4.5", name: "Claude Sonnet 4.5" },
+				{ id: "gpt-5.2-codex", name: "GPT 5.2 Codex" },
 				{ id: "gpt-5.1-codex", name: "GPT 5.1 Codex" },
 				{ id: "o4-mini", name: "o4 mini" },
 			])
-		).toBe("gpt-5.1-codex");
+		).toBe("gpt-5.2-codex");
 	});
 
 	it("keeps the default when no available model list is provided", () => {

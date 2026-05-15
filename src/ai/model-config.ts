@@ -25,8 +25,8 @@ export const AVAILABLE_OLLAMA_MODELS: ModelOption[] = [
 
 // Default model IDs
 export const DEFAULT_OPENROUTER_MODEL_ID = "z-ai/glm-4.7";
-export const DEFAULT_COPILOT_MODEL_ID = "claude-sonnet-4.5";
-export const DEFAULT_CODEX_COPILOT_MODEL_ID = "gpt-5.1-codex";
+export const DEFAULT_CODEX_COPILOT_MODEL_ID = "gpt-5.2-codex";
+export const DEFAULT_COPILOT_MODEL_ID = DEFAULT_CODEX_COPILOT_MODEL_ID;
 export const DEFAULT_OLLAMA_MODEL_ID = "llama3.1:8b";
 export const DEFAULT_MODEL_ID = DEFAULT_OPENROUTER_MODEL_ID;
 export const DEFAULT_MODEL_PROVIDER: LlmProvider = "openrouter";
