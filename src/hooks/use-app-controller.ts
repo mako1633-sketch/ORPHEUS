@@ -35,7 +35,6 @@ export interface AppControllerResult {
 		viewportHeight: number;
 		zIndex: number;
 		showBanner: boolean;
-		showCompactGif: boolean;
 		animateBanner: boolean;
 		startupAnimationActive: boolean;
 	};
@@ -586,7 +585,6 @@ export function useAppController({
 			// Show banner only when idle, not interacted, and terminal is large enough
 			showBanner:
 				onboardingComplete && !daemon.hasInteracted && terminalSize.height >= 30 && terminalSize.width >= 100,
-			showCompactGif: daemon.hasInteracted && terminalSize.height >= 24 && terminalSize.width >= 100,
 			animateBanner: startupAnimationActive,
 			startupAnimationActive,
 		},
