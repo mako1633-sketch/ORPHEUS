@@ -10,6 +10,7 @@ import path from "node:path";
 import { debug } from "../utils/debug-logger";
 
 const WAL_EXTENSION = ".wal.tmp";
+const isWindows = process.platform === "win32";
 
 /** Atomic write: write to temp, fsync, rename */
 export async function atomicWriteFile(filePath: string, data: string): Promise<void> {
@@ -25,12 +26,14 @@ export async function atomicWriteFile(filePath: string, data: string): Promise<v
 	}
 	// Atomic rename
 	await fs.rename(tmpPath, filePath);
-	// fsync the directory to guarantee rename durability
-	const dirFd = await fs.open(path.dirname(filePath), "r");
-	try {
-		await dirFd.sync();
-	} finally {
-		await dirFd.close();
+	// fsync the directory to guarantee rename durability (skipped on Windows — EPERM)
+	if (!isWindows) {
+		const dirFd = await fs.open(path.dirname(filePath), "r");
+		try {
+			await dirFd.sync();
+		} finally {
+			await dirFd.close();
+		}
 	}
 }
 

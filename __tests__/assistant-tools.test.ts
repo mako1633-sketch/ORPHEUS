@@ -154,7 +154,7 @@ describe("assistant-style local tools", () => {
 			expect(summary.importantFiles).toContain("package.json");
 			expect(summary.importantFiles).toContain("tsconfig.json");
 			expect(summary.files).toContain("src/");
-			expect(summary.files).toContain("src/index.ts");
+			expect(summary.files).toContain(path.join("src", "index.ts"));
 		} finally {
 			await rm(projectDir, { recursive: true, force: true });
 		}
