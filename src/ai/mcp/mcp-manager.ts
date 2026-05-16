@@ -119,7 +119,8 @@ function resolveServerConfigs(raw: McpServerConfig[] | undefined): McpServerReso
 		if (!entry || typeof entry !== "object") continue;
 		const type = entry.type;
 		const url = entry.url;
-		if ((type !== "http" && type !== "sse") || typeof url !== "string" || url.trim().length === 0) continue;
+		if ((type !== "http" && type !== "sse") || typeof url !== "string" || url.trim().length === 0)
+			continue;
 		const derivedId = entry.id?.trim() ? entry.id.trim() : deriveServerIdFromUrl(url.trim());
 		const id = derivedId
 			? ensureUniqueId(derivedId, usedIds)

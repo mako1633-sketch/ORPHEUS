@@ -11,7 +11,11 @@ function normalizeLines(text: string): string[] {
 }
 
 function escapeXmlAttribute(value: string): string {
-	return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/"/g, "&quot;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
 }
 
 interface TextResult {
@@ -160,7 +164,12 @@ export const fetchUrls = tool({
 				return { success: false, url: request.url, error };
 			}
 
-			return paginateText(request.url, text, request.effectiveLineOffset, request.effectiveLineLimit);
+			return paginateText(
+				request.url,
+				text,
+				request.effectiveLineOffset,
+				request.effectiveLineLimit
+			);
 		});
 
 		return formatFetchUrlsXml(results);

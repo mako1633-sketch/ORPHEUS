@@ -77,7 +77,8 @@ const CHECKS: Record<WindowsSecurityCheckId, WindowsSecurityCheck> = {
 		id: "admins",
 		title: "Local administrators",
 		why: "Identifies who has local administrative control without reading credentials or secrets.",
-		command: "Get-LocalGroupMember -Group Administrators | Select-Object Name,ObjectClass,PrincipalSource",
+		command:
+			"Get-LocalGroupMember -Group Administrators | Select-Object Name,ObjectClass,PrincipalSource",
 	},
 	startupItems: {
 		id: "startupItems",
@@ -157,7 +158,8 @@ const PLAYBOOKS: Record<WindowsSecurityPlaybookId, WindowsSecurityPlaybook> = {
 	startupPersistence: {
 		id: "startupPersistence",
 		title: "Startup and persistence review",
-		description: "Read-only review of startup entries, automatic services, and enabled scheduled tasks.",
+		description:
+			"Read-only review of startup entries, automatic services, and enabled scheduled tasks.",
 		riskLevel: "read-only",
 		checks: [CHECKS.startupItems, CHECKS.services, CHECKS.scheduledTasks],
 	},
@@ -173,7 +175,12 @@ const PLAYBOOKS: Record<WindowsSecurityPlaybookId, WindowsSecurityPlaybook> = {
 		title: "Suspicious process triage",
 		description: "Read-only process, service, startup, and security-event signals for triage.",
 		riskLevel: "read-only",
-		checks: [CHECKS.processOverview, CHECKS.services, CHECKS.startupItems, CHECKS.recentSecurityEvents],
+		checks: [
+			CHECKS.processOverview,
+			CHECKS.services,
+			CHECKS.startupItems,
+			CHECKS.recentSecurityEvents,
+		],
 	},
 	securitySignalsReview: {
 		id: "securitySignalsReview",

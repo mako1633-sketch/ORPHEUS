@@ -63,7 +63,12 @@ export const webSearch = tool({
 			}
 
 			const rawData = (await exaClientResult.client.search(query, searchOptions)) as unknown as {
-				results: Array<{ title?: string; url?: string; publishedDate?: string; [key: string]: unknown }>;
+				results: Array<{
+					title?: string;
+					url?: string;
+					publishedDate?: string;
+					[key: string]: unknown;
+				}>;
 			};
 
 			const results = (rawData.results ?? []).map((r) => {

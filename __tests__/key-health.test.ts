@@ -21,6 +21,8 @@ describe("key health", () => {
 		});
 
 		expect(health.find((item) => item.name === "OPENAI_API_KEY")?.status).toBe("invalid-format");
-		expect(health.find((item) => item.name === "OPENROUTER_API_KEY")?.status).toBe("invalid-format");
+		expect(health.find((item) => item.name === "OPENROUTER_API_KEY")?.status).toBe(
+			"invalid-format"
+		);
 	});
 });

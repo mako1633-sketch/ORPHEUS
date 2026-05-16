@@ -9,7 +9,8 @@ import { buildWindowsSecurityReport } from "../src/security/windows-security-rep
 
 describe("assistant response guard", () => {
 	it("detects leaked tool JSON", () => {
-		const leaked = '{"action":"write","todos":{"content":"Apply least privilege","status":"pending"}}';
+		const leaked =
+			'{"action":"write","todos":{"content":"Apply least privilege","status":"pending"}}';
 		expect(detectAssistantResponseLeak(leaked)).toBe("tool-json");
 	});
 
@@ -57,7 +58,9 @@ Here is the JSON for this tool:
 		const leaked = "Now I have the full picture.\n[tool call omitted: writeFile]";
 
 		expect(detectAssistantResponseLeak(leaked)).toBe("internal-instructions");
-		expect(sanitizeAssistantMessagesForModelHistory([{ role: "assistant", content: leaked }])).toEqual([]);
+		expect(
+			sanitizeAssistantMessagesForModelHistory([{ role: "assistant", content: leaked }])
+		).toEqual([]);
 	});
 
 	it("detects invented action JSON questionnaires", () => {
@@ -91,7 +94,8 @@ Here is the JSON for this tool:
 			responseMessages: [
 				{
 					role: "assistant",
-					content: '{"action":"write","todos":{"content":"Apply least privilege","status":"pending"}}',
+					content:
+						'{"action":"write","todos":{"content":"Apply least privilege","status":"pending"}}',
 				},
 			],
 			userText: "Well, that's good.",
@@ -111,7 +115,9 @@ Here is the JSON for this tool:
 			"I hit a routing glitch and blocked an invalid internal action before it reached the system.";
 
 		expect(isAssistantResponseGuardNotice(notice)).toBe(true);
-		expect(sanitizeAssistantMessagesForModelHistory([{ role: "assistant", content: notice }]).length).toBe(0);
+		expect(
+			sanitizeAssistantMessagesForModelHistory([{ role: "assistant", content: notice }]).length
+		).toBe(0);
 	});
 
 	it("recovers with a useful answer for immediate implementation prompts", () => {
@@ -197,7 +203,9 @@ Here is the JSON for this tool:
 	it("leaves normal assistant responses unchanged", () => {
 		const result = guardAssistantResponse({
 			fullText: "Yes. Least privilege is the right direction here.",
-			responseMessages: [{ role: "assistant", content: "Yes. Least privilege is the right direction here." }],
+			responseMessages: [
+				{ role: "assistant", content: "Yes. Least privilege is the right direction here." },
+			],
 			userText: "Does that sound right?",
 		});
 

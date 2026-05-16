@@ -172,7 +172,9 @@ async function main() {
 				await stitchToMp4({ outDir: opts.outDir, fps: opts.fps, mp4Path: opts.mp4 });
 			} catch (err: unknown) {
 				const e = err instanceof Error ? err : new Error(String(err));
-				console.error(`Failed to stitch MP4. Ensure ffmpeg is installed and on PATH. (${e.message})`);
+				console.error(
+					`Failed to stitch MP4. Ensure ffmpeg is installed and on PATH. (${e.message})`
+				);
 			}
 		}
 	} finally {

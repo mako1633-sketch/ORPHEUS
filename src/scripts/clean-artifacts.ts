@@ -40,7 +40,8 @@ async function cleanRootFiles(): Promise<void> {
 	for (const entry of entries) {
 		if (!entry.isFile()) continue;
 		const shouldRemove =
-			removableFileExtensions.has(path.extname(entry.name)) || removableReportPattern.test(entry.name);
+			removableFileExtensions.has(path.extname(entry.name)) ||
+			removableReportPattern.test(entry.name);
 		if (shouldRemove) {
 			await removePath(path.join(projectRoot, entry.name));
 		}

@@ -49,7 +49,9 @@ export function StatusBar({
 	if (hasInteracted) {
 		const showTitleSpinner = sessionTitle && isDefaultSessionTitle(sessionTitle);
 		const displayTitle =
-			sessionTitle && !showTitleSpinner ? truncateWithEllipsis(sessionTitle, SESSION_TITLE_MAX_LENGTH) : null;
+			sessionTitle && !showTitleSpinner
+				? truncateWithEllipsis(sessionTitle, SESSION_TITLE_MAX_LENGTH)
+				: null;
 
 		return (
 			<box
@@ -98,7 +100,13 @@ export function StatusBar({
 				</box>
 
 				{errorText && (
-					<box width="100%" flexDirection="row" justifyContent="center" alignItems="center" marginTop={1}>
+					<box
+						width="100%"
+						flexDirection="row"
+						justifyContent="center"
+						alignItems="center"
+						marginTop={1}
+					>
 						<text>
 							<span fg={COLORS.DAEMON_ERROR}>{errorText}</span>
 						</text>
@@ -130,7 +138,13 @@ export function StatusBar({
 			</box>
 
 			{healthSnapshot && (
-				<box width="100%" flexDirection="row" justifyContent="center" alignItems="center" marginTop={1}>
+				<box
+					width="100%"
+					flexDirection="row"
+					justifyContent="center"
+					alignItems="center"
+					marginTop={1}
+				>
 					<text>
 						<span fg={healthColor}>{healthLabel}</span>
 					</text>
@@ -139,7 +153,13 @@ export function StatusBar({
 
 			{/* Error text if present */}
 			{errorText && (
-				<box width="100%" flexDirection="row" justifyContent="center" alignItems="center" marginTop={1}>
+				<box
+					width="100%"
+					flexDirection="row"
+					justifyContent="center"
+					alignItems="center"
+					marginTop={1}
+				>
 					<text>
 						<span fg={COLORS.DAEMON_ERROR}>{errorText}</span>
 					</text>

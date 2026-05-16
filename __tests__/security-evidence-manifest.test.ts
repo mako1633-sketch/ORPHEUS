@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { buildSecurityEvidenceManifest, sha256Hex } from "../src/security/security-evidence-manifest";
+import {
+	buildSecurityEvidenceManifest,
+	sha256Hex,
+} from "../src/security/security-evidence-manifest";
 import type { AssessmentFinding } from "../src/security/windows-assessment-parser";
 import { buildWindowsSecurityReport } from "../src/security/windows-security-report";
 

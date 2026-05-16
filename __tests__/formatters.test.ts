@@ -101,7 +101,9 @@ describe("formatValue", () => {
 		expect(formatValue([])).toBe("[]");
 		expect(formatValue(["a", "b", "c"])).toBe("a, b, c");
 		expect(formatValue([1, 2, 3, 4, 5])).toBe("[5 items]");
-		expect(formatValue(["a".repeat(30), "b".repeat(30)])).toContain("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+		expect(formatValue(["a".repeat(30), "b".repeat(30)])).toContain(
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+		);
 	});
 
 	it("formats objects as JSON", () => {
@@ -193,7 +195,9 @@ describe("formatTodoDisplayLines", () => {
 
 	it("handles malformed write todos without throwing", () => {
 		const result = formatTodoDisplayLines(
-			{ action: "write", todos: "not an array" } as unknown as Parameters<typeof formatTodoDisplayLines>[0],
+			{ action: "write", todos: "not an array" } as unknown as Parameters<
+				typeof formatTodoDisplayLines
+			>[0],
 			undefined,
 			[]
 		);

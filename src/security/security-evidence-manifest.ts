@@ -51,10 +51,13 @@ export function buildSecurityEvidenceManifest(params: {
 		});
 	}
 
-	const controlMappingSummary = params.controlMappings.reduce<Record<string, number>>((summary, mapping) => {
-		summary[mapping.status] = (summary[mapping.status] ?? 0) + 1;
-		return summary;
-	}, {});
+	const controlMappingSummary = params.controlMappings.reduce<Record<string, number>>(
+		(summary, mapping) => {
+			summary[mapping.status] = (summary[mapping.status] ?? 0) + 1;
+			return summary;
+		},
+		{}
+	);
 
 	return {
 		version: 1,

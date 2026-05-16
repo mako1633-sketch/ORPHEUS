@@ -58,7 +58,8 @@ export function defaultDueDateForSeverity(
 }
 
 function effectiveDueDate(issue: RemediationLedgerIssue): string {
-	if (issue.status === "accepted-risk" && issue.acceptedRiskExpiresAt) return issue.acceptedRiskExpiresAt;
+	if (issue.status === "accepted-risk" && issue.acceptedRiskExpiresAt)
+		return issue.acceptedRiskExpiresAt;
 	return issue.dueDate ?? defaultDueDateForSeverity(issue.severity, issue.openedAt);
 }
 
@@ -75,7 +76,10 @@ function severityWeight(severity: AssessmentFinding["severity"]): number {
 	return 1;
 }
 
-export function buildRemediationEscalationText(issue: RemediationLedgerIssue, now = new Date()): string {
+export function buildRemediationEscalationText(
+	issue: RemediationLedgerIssue,
+	now = new Date()
+): string {
 	const state = evaluateRemediationSla(issue, now);
 	if (issue.status === "verified") return "Verified resolved; no escalation required.";
 	if (issue.status === "accepted-risk" && !state.overdue) {
@@ -90,13 +94,18 @@ export function buildRemediationEscalationText(issue: RemediationLedgerIssue, no
 	return `On track: ${issue.title} is due by ${state.dueDate}.`;
 }
 
-export function evaluateRemediationSla(issue: RemediationLedgerIssue, now = new Date()): RemediationSlaState {
+export function evaluateRemediationSla(
+	issue: RemediationLedgerIssue,
+	now = new Date()
+): RemediationSlaState {
 	const opened = parseDate(issue.openedAt, now);
 	const due = parseDate(effectiveDueDate(issue), opened);
 	const active = isActiveForSla(issue);
 	const ageDays = Math.max(0, fullDaysBetween(opened, now));
 	const daysUntilDue = Math.ceil((due.getTime() - now.getTime()) / DAY_MS);
-	const overdueDays = active ? Math.max(0, Math.floor((now.getTime() - due.getTime()) / DAY_MS)) : 0;
+	const overdueDays = active
+		? Math.max(0, Math.floor((now.getTime() - due.getTime()) / DAY_MS))
+		: 0;
 	const overdue = overdueDays > 0;
 	const dueSoon = active && !overdue && daysUntilDue <= 7;
 
@@ -143,7 +152,10 @@ export function summarizeRemediationSla(
 	};
 }
 
-export function buildRemediationSlaMarkdown(issues: RemediationLedgerIssue[] = [], now = new Date()): string {
+export function buildRemediationSlaMarkdown(
+	issues: RemediationLedgerIssue[] = [],
+	now = new Date()
+): string {
 	const summary = summarizeRemediationSla(issues, now);
 	if (summary.totalTracked === 0) return "- No remediation SLA items are currently tracked.";
 

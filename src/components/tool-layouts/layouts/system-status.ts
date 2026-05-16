@@ -30,7 +30,8 @@ function formatUptime(seconds: unknown): string {
 
 function formatResult(result: unknown): string[] | null {
 	if (!isRecord(result)) return null;
-	if (result.success === false && typeof result.error === "string") return [`error: ${result.error}`];
+	if (result.success === false && typeof result.error === "string")
+		return [`error: ${result.error}`];
 
 	const memory = isRecord(result.memory) ? result.memory : {};
 	const cpu = isRecord(result.cpu) ? result.cpu : {};
@@ -40,7 +41,10 @@ function formatResult(result: unknown): string[] | null {
 
 	const lines = [
 		`host: ${typeof result.hostname === "string" ? result.hostname : "--"} · ${String(result.platform ?? "--")} · uptime ${formatUptime(result.uptimeSeconds)}`,
-		`cpu: ${String(cpu.cores ?? "--")} cores · load ${(Array.isArray(cpu.loadAverage) ? cpu.loadAverage : [])
+		`cpu: ${String(cpu.cores ?? "--")} cores · load ${(Array.isArray(cpu.loadAverage)
+			? cpu.loadAverage
+			: []
+		)
 			.slice(0, 3)
 			.map((v) => (typeof v === "number" ? v.toFixed(2) : String(v)))
 			.join(", ")}`,
@@ -53,7 +57,9 @@ function formatResult(result: unknown): string[] | null {
 		);
 	}
 	if (battery) {
-		lines.push(`battery: ${String(battery.percent ?? "--")}% · ${String(battery.state ?? "unknown")}`);
+		lines.push(
+			`battery: ${String(battery.percent ?? "--")}% · ${String(battery.state ?? "unknown")}`
+		);
 	}
 	if (ollama) {
 		const reachable = ollama.reachable === true ? "reachable" : "unreachable";

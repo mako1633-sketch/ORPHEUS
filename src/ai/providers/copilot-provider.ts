@@ -53,7 +53,9 @@ function extractErrorDiagnostics(error: unknown): {
 	const message = typeof candidate.message === "string" ? candidate.message : undefined;
 	const name = typeof candidate.name === "string" ? candidate.name : undefined;
 	const code =
-		typeof candidate.code === "string" || typeof candidate.code === "number" ? candidate.code : undefined;
+		typeof candidate.code === "string" || typeof candidate.code === "number"
+			? candidate.code
+			: undefined;
 
 	return { message, name, code };
 }
@@ -234,7 +236,8 @@ async function streamCopilotSession(params: {
 		getCachedToolAvailability() ?? (await resolveToolAvailability(getDaemonManager().toolToggles));
 	const workspacePath = sessionId ? getWorkspacePath(sessionId) : undefined;
 	const selectedModel = selectCopilotModel(userMessage);
-	const copilotCodingMode = isCodingTask(userMessage) || selectedModel.toLowerCase().includes("codex");
+	const copilotCodingMode =
+		isCodingTask(userMessage) || selectedModel.toLowerCase().includes("codex");
 
 	const systemPrompt = buildDaemonSystemPrompt({
 		mode: interactionMode,
@@ -604,10 +607,13 @@ async function streamCopilotSession(params: {
 			timeoutPhase,
 			elapsedMs: now - requestStartedAt,
 			sendDurationMs:
-				sendStartedAt !== null && sendCompletedAt !== null ? sendCompletedAt - sendStartedAt : undefined,
+				sendStartedAt !== null && sendCompletedAt !== null
+					? sendCompletedAt - sendStartedAt
+					: undefined,
 			idleWaitElapsedMs: idleWaitStartedAt !== null ? now - idleWaitStartedAt : undefined,
 			sinceLastEventMs: lastEventAt !== null ? now - lastEventAt : undefined,
-			sinceLastToolCompletionMs: lastToolCompletionAt !== null ? now - lastToolCompletionAt : undefined,
+			sinceLastToolCompletionMs:
+				lastToolCompletionAt !== null ? now - lastToolCompletionAt : undefined,
 			idleResolved: idleResolvedAt !== null,
 			eventCounts: {
 				assistantReasoningEvents,
@@ -641,7 +647,9 @@ async function streamCopilotSession(params: {
 	}
 }
 
-async function streamCopilotResponse(request: ProviderStreamRequest): Promise<ProviderStreamResult | null> {
+async function streamCopilotResponse(
+	request: ProviderStreamRequest
+): Promise<ProviderStreamResult | null> {
 	const result = await streamCopilotSession({
 		userMessage: request.userMessage,
 		callbacks: request.callbacks,
@@ -658,7 +666,9 @@ async function streamCopilotResponse(request: ProviderStreamRequest): Promise<Pr
 
 	const finalText = result.finalText || result.fullText;
 	if (!finalText) {
-		request.callbacks.onError?.(new Error("Model returned empty response. Check Copilot authentication."));
+		request.callbacks.onError?.(
+			new Error("Model returned empty response. Check Copilot authentication.")
+		);
 		return null;
 	}
 

@@ -35,7 +35,12 @@ function packColor(r: number, g: number, b: number, a: number): number {
 }
 
 function unpackColor(color: number): RGBA {
-	return RGBA.fromInts((color >>> 24) & 255, (color >>> 16) & 255, (color >>> 8) & 255, color & 255);
+	return RGBA.fromInts(
+		(color >>> 24) & 255,
+		(color >>> 16) & 255,
+		(color >>> 8) & 255,
+		color & 255
+	);
 }
 
 function isVisible(color: number): boolean {
@@ -72,7 +77,8 @@ export class DaemonGifRenderable extends FrameBufferRenderable {
 	private frameStride: number;
 	private frames: CellFrame[] = [];
 	private loadError: Error | null = null;
-	private loadedForSize: { width: number; height: number; src: string; stride: number } | null = null;
+	private loadedForSize: { width: number; height: number; src: string; stride: number } | null =
+		null;
 	private playbackStartedAt = performance.now();
 	private totalDurationMs = 0;
 
@@ -191,8 +197,26 @@ export class DaemonGifRenderable extends FrameBufferRenderable {
 
 		for (let y = 0; y < cellHeight; y++) {
 			for (let x = 0; x < cellWidth; x++) {
-				const top = samplePixel(pixels, sourceWidth, sourceHeight, x, y * 2, offsetX, offsetY, scale);
-				const bottom = samplePixel(pixels, sourceWidth, sourceHeight, x, y * 2 + 1, offsetX, offsetY, scale);
+				const top = samplePixel(
+					pixels,
+					sourceWidth,
+					sourceHeight,
+					x,
+					y * 2,
+					offsetX,
+					offsetY,
+					scale
+				);
+				const bottom = samplePixel(
+					pixels,
+					sourceWidth,
+					sourceHeight,
+					x,
+					y * 2 + 1,
+					offsetX,
+					offsetY,
+					scale
+				);
 				const topVisible = isVisible(top);
 				const bottomVisible = isVisible(bottom);
 				const index = y * cellWidth + x;
@@ -237,7 +261,8 @@ export class DaemonGifRenderable extends FrameBufferRenderable {
 				if (charType === TRANSPARENT) continue;
 
 				const fg = unpackColor(frame.fg[index] ?? 0);
-				const bgColor = charType === FULL_CELL ? unpackColor(frame.bg[index] ?? 0) : TRANSPARENT_ALPHA;
+				const bgColor =
+					charType === FULL_CELL ? unpackColor(frame.bg[index] ?? 0) : TRANSPARENT_ALPHA;
 				const char = charType === LOWER_BLOCK ? "▄" : "▀";
 				fb.setCellWithAlphaBlending(x, y, char, fg, bgColor);
 			}

@@ -519,9 +519,13 @@ export async function listAudioDevices(): Promise<AudioDevice[]> {
 
 async function listAudioDevicesMacOS(): Promise<AudioDevice[]> {
 	return new Promise((resolve) => {
-		const proc = spawn("sox", ["-V6", "-n", "-t", "coreaudio", "nonexistent_device_to_force_list"], {
-			stdio: ["ignore", "pipe", "pipe"],
-		});
+		const proc = spawn(
+			"sox",
+			["-V6", "-n", "-t", "coreaudio", "nonexistent_device_to_force_list"],
+			{
+				stdio: ["ignore", "pipe", "pipe"],
+			}
+		);
 
 		let output = "";
 		proc.stderr?.on("data", (data: Buffer) => {

@@ -5,7 +5,12 @@
 import type { TokenUsage } from "../types";
 import { COLORS } from "../ui/constants";
 import { formatTokenCount } from "../utils/formatters";
-import { type ModelMetadata, calculateCost, formatContextUsage, formatCost } from "../utils/model-metadata";
+import {
+	type ModelMetadata,
+	calculateCost,
+	formatContextUsage,
+	formatCost,
+} from "../utils/model-metadata";
 
 interface TokenUsageDisplayProps {
 	usage: TokenUsage;
@@ -13,7 +18,11 @@ interface TokenUsageDisplayProps {
 	hideCost?: boolean;
 }
 
-export function TokenUsageDisplay({ usage, modelMetadata, hideCost = false }: TokenUsageDisplayProps) {
+export function TokenUsageDisplay({
+	usage,
+	modelMetadata,
+	hideCost = false,
+}: TokenUsageDisplayProps) {
 	const mainPromptTokens = usage.promptTokens;
 	const mainCompletionTokens = usage.completionTokens;
 
@@ -32,7 +41,8 @@ export function TokenUsageDisplay({ usage, modelMetadata, hideCost = false }: To
 				: null;
 
 	// Context % uses latest turn only (prompt already includes full history, completion is that turn's output)
-	const latestTurnTotal = (usage.latestTurnPromptTokens ?? 0) + (usage.latestTurnCompletionTokens ?? 0);
+	const latestTurnTotal =
+		(usage.latestTurnPromptTokens ?? 0) + (usage.latestTurnCompletionTokens ?? 0);
 	const contextUsage =
 		modelMetadata?.contextLength && latestTurnTotal > 0
 			? formatContextUsage(latestTurnTotal, modelMetadata.contextLength)
@@ -69,7 +79,9 @@ export function TokenUsageDisplay({ usage, modelMetadata, hideCost = false }: To
 				{usage.reasoningTokens !== undefined && usage.reasoningTokens > 0 && (
 					<>
 						<span fg={COLORS.TOKEN_USAGE_LABEL}> / </span>
-						<span fg={COLORS.REASONING_DIM}>{formatTokenCount(usage.reasoningTokens)} reasoning</span>
+						<span fg={COLORS.REASONING_DIM}>
+							{formatTokenCount(usage.reasoningTokens)} reasoning
+						</span>
 					</>
 				)}
 

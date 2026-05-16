@@ -84,7 +84,9 @@ export function DeviceMenu({
 				<box marginBottom={1}>
 					<text>
 						<span fg={COLORS.USER_LABEL}>
-							{soxAvailable ? "↑/↓ or j/k to navigate, ENTER to select, ESC to cancel" : "ESC to close"}
+							{soxAvailable
+								? "↑/↓ or j/k to navigate, ENTER to select, ESC to cancel"
+								: "ESC to close"}
 						</span>
 					</text>
 				</box>
@@ -121,7 +123,9 @@ export function DeviceMenu({
 							{devices.map((device, idx) => (
 								<box
 									key={`input-${device.name}`}
-									backgroundColor={idx === inputSelectedIdx ? COLORS.MENU_SELECTED_BG : COLORS.MENU_BG}
+									backgroundColor={
+										idx === inputSelectedIdx ? COLORS.MENU_SELECTED_BG : COLORS.MENU_BG
+									}
 									paddingLeft={1}
 									paddingRight={1}
 								>
@@ -144,7 +148,9 @@ export function DeviceMenu({
 							{devices.map((device, idx) => (
 								<box
 									key={`output-${device.name}`}
-									backgroundColor={idx === outputSelectedIdx ? COLORS.MENU_SELECTED_BG : COLORS.MENU_BG}
+									backgroundColor={
+										idx === outputSelectedIdx ? COLORS.MENU_SELECTED_BG : COLORS.MENU_BG
+									}
 									paddingLeft={1}
 									paddingRight={1}
 								>

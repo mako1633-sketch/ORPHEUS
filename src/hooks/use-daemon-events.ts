@@ -11,7 +11,13 @@ import { daemonEvents } from "../state/daemon-events";
 import { getDaemonManager } from "../state/daemon-state";
 import { buildModelHistoryFromConversation } from "../state/session-store";
 import { DaemonState } from "../types";
-import type { ContentBlock, ConversationMessage, LlmProvider, TokenUsage, ToolCall } from "../types";
+import type {
+	ContentBlock,
+	ConversationMessage,
+	LlmProvider,
+	TokenUsage,
+	ToolCall,
+} from "../types";
 import { REASONING_COLORS, STATE_COLORS } from "../types/theme";
 import { REASONING_ANIMATION } from "../ui/constants";
 import { type ModelMetadata, getModelMetadata } from "../utils/model-metadata";
@@ -121,9 +127,9 @@ export function useDaemonEvents(params: UseDaemonEventsParams): UseDaemonEventsR
 	conversationHistoryRef.current = conversationHistory;
 
 	const refreshHealth = useCallback((history?: ConversationMessage[]) => {
-		void buildOrpheusHealthSnapshot({ conversationHistory: history ?? conversationHistoryRef.current }).then(
-			setHealthSnapshot
-		);
+		void buildOrpheusHealthSnapshot({
+			conversationHistory: history ?? conversationHistoryRef.current,
+		}).then(setHealthSnapshot);
 	}, []);
 
 	const resetSessionUsage = useCallback(() => {
@@ -257,7 +263,8 @@ export function useDaemonEvents(params: UseDaemonEventsParams): UseDaemonEventsR
 			let target = currentReasoningBlockRef.current;
 			if (!target) {
 				target =
-					[...blocks].reverse().find((b) => b.type === "reasoning" && b.durationMs === undefined) ?? null;
+					[...blocks].reverse().find((b) => b.type === "reasoning" && b.durationMs === undefined) ??
+					null;
 			}
 			if (target && target.type === "reasoning") {
 				target.durationMs = durationMs;

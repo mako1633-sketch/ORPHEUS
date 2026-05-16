@@ -45,7 +45,10 @@ export const executiveAssistant = tool({
 			dueAt: z.string().optional().describe("Optional due date/time as ISO or natural text."),
 			owner: z.string().optional().describe("Optional person responsible or waited on."),
 			context: z.string().optional().describe("Useful context, source detail, or next action."),
-			source: z.string().optional().describe("Where this came from, such as chat, meeting, repo, or note."),
+			source: z
+				.string()
+				.optional()
+				.describe("Where this came from, such as chat, meeting, repo, or note."),
 			status: statusSchema.optional().default("open"),
 		}),
 		z.object({

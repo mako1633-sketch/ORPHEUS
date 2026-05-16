@@ -40,7 +40,9 @@ describe("direct Windows assessment runner", () => {
 			},
 		];
 
-		expect(shouldRunDirectWindowsAssessment("Please proceed with the assessment", history)).toBe(true);
+		expect(shouldRunDirectWindowsAssessment("Please proceed with the assessment", history)).toBe(
+			true
+		);
 	});
 
 	it("leaves unrelated prompts with the normal model path", () => {
@@ -48,20 +50,30 @@ describe("direct Windows assessment runner", () => {
 	});
 
 	it("leaves conversational assessment questions on the normal model path", () => {
-		expect(shouldRunDirectWindowsSecuritySnapshot("What is an ORPHEUS Security Snapshot?")).toBe(false);
-		expect(shouldRunDirectWindowsSecuritySnapshot("How does cyber readiness scoring work?")).toBe(false);
+		expect(shouldRunDirectWindowsSecuritySnapshot("What is an ORPHEUS Security Snapshot?")).toBe(
+			false
+		);
+		expect(shouldRunDirectWindowsSecuritySnapshot("How does cyber readiness scoring work?")).toBe(
+			false
+		);
 		expect(shouldRunDirectWindowsQuickPosture("What is a quick Windows posture scan?")).toBe(false);
-		expect(shouldRunDirectWindowsAssessment("What is a full Windows security assessment?")).toBe(false);
+		expect(shouldRunDirectWindowsAssessment("What is a full Windows security assessment?")).toBe(
+			false
+		);
 		expect(
-			shouldRunDirectWindowsSecurityReview("What are Defender, firewall, startup, services, ports, and logs?")
+			shouldRunDirectWindowsSecurityReview(
+				"What are Defender, firewall, startup, services, ports, and logs?"
+			)
 		).toBe(false);
 	});
 
 	it("routes quick posture prompts to deterministic execution", () => {
-		expect(shouldRunDirectWindowsQuickPosture("Run a quick Windows security posture playbook")).toBe(true);
-		expect(shouldRunDirectWindowsQuickPosture("Run a full read-only Windows security assessment")).toBe(
-			false
-		);
+		expect(
+			shouldRunDirectWindowsQuickPosture("Run a quick Windows security posture playbook")
+		).toBe(true);
+		expect(
+			shouldRunDirectWindowsQuickPosture("Run a full read-only Windows security assessment")
+		).toBe(false);
 	});
 
 	it("routes Defender firewall services ports and logs review prompts to deterministic execution", () => {

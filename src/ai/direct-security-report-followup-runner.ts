@@ -24,7 +24,8 @@ const SECURITY_REPORT_PATTERN =
 	/\bORPHEUS Security Snapshot\b|\bCyber Readiness Controls\b|\bSuggested Follow-up Prompts\b/i;
 const SECURITY_REPORT_FOLLOWUP_CONTEXT_PATTERN =
 	/\bSecurity Snapshot\b|\bWindows Security Snapshot\b|\bplain-English version of the Security Snapshot\b|\bcyber insurance readiness checklist\b/i;
-const OWNER_EXPLANATION_PATTERN = /\b(explain|plain[-\s]?english|non[-\s]?technical|business owner|owner)\b/i;
+const OWNER_EXPLANATION_PATTERN =
+	/\b(explain|plain[-\s]?english|non[-\s]?technical|business owner|owner)\b/i;
 const CLIENT_EMAIL_PATTERN = /\b(client[-\s]?ready|client email|email)\b/i;
 const SHORT_EXPORT_PATTERN = /^(?:e|export|save|write|download)\s*$/i;
 const EXPORT_REPORT_PATTERN =
@@ -41,7 +42,12 @@ function messageContentToText(message: ModelMessage): string {
 	return message.content
 		.map((part) => {
 			if (!part || typeof part !== "object") return "";
-			if ("type" in part && part.type === "text" && "text" in part && typeof part.text === "string") {
+			if (
+				"type" in part &&
+				part.type === "text" &&
+				"text" in part &&
+				typeof part.text === "string"
+			) {
 				return part.text;
 			}
 			return "";
@@ -94,7 +100,8 @@ export function classifySecurityReportFollowUp(userText: string): ReportFollowUp
 	const normalized = userText.trim();
 	if (!normalized) return null;
 	if (getSelectionNumber(normalized) !== null) return "selection";
-	if (SHORT_EXPORT_PATTERN.test(normalized) || EXPORT_REPORT_PATTERN.test(normalized)) return "export";
+	if (SHORT_EXPORT_PATTERN.test(normalized) || EXPORT_REPORT_PATTERN.test(normalized))
+		return "export";
 	if (CLIENT_EMAIL_PATTERN.test(normalized)) return "client-email";
 	if (NO_ADMIN_PATTERN.test(normalized)) return "no-admin";
 	if (INSURANCE_PATTERN.test(normalized)) return "insurance";
@@ -175,7 +182,8 @@ export async function exportSecurityReportMarkdown(
 function extractScoreLine(report: string): string {
 	const score = report.match(/\*\*Score:\*\*\s*([^\n]+)/i)?.[1]?.trim();
 	const risk = report.match(/\*\*Risk:\*\*\s*([^\n]+)/i)?.[1]?.trim();
-	if (score && risk) return `The snapshot scored this machine at ${score}, with ${risk.toLowerCase()} risk.`;
+	if (score && risk)
+		return `The snapshot scored this machine at ${score}, with ${risk.toLowerCase()} risk.`;
 	if (score) return `The snapshot score was ${score}.`;
 	return "The snapshot produced a local Windows security summary.";
 }
@@ -211,7 +219,9 @@ function buildOwnerExplanation(report: string): string {
 		"**Business controls to confirm**",
 		...(controls.length > 0
 			? controls.map((line) => line.replace(/^-+\s*/, "- "))
-			: ["- Confirm MFA, backups, endpoint protection, and incident response outside the local scan."]),
+			: [
+					"- Confirm MFA, backups, endpoint protection, and incident response outside the local scan.",
+				]),
 		"",
 		"Nothing in this explanation changes Windows settings. It is a plain-language summary of the report ORPHEUS already generated.",
 	].join("\n");

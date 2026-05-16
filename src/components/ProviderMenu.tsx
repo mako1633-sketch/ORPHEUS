@@ -28,7 +28,13 @@ interface ProviderMenuProps {
 	onSelect: (tag: string | undefined) => void;
 }
 
-export function ProviderMenu({ items, currentProviderTag, modelId, onClose, onSelect }: ProviderMenuProps) {
+export function ProviderMenu({
+	items,
+	currentProviderTag,
+	modelId,
+	onClose,
+	onSelect,
+}: ProviderMenuProps) {
 	const sortedItems = useMemo(() => {
 		return [...items].sort((a, b) => {
 			if (a.tag === null) return -1;
@@ -100,7 +106,9 @@ export function ProviderMenu({ items, currentProviderTag, modelId, onClose, onSe
 				</box>
 				<box marginBottom={1}>
 					<text>
-						<span fg={COLORS.USER_LABEL}>↑/↓ or j/k to navigate, ENTER to select, ESC to cancel</span>
+						<span fg={COLORS.USER_LABEL}>
+							↑/↓ or j/k to navigate, ENTER to select, ESC to cancel
+						</span>
 					</text>
 				</box>
 
@@ -128,7 +136,8 @@ export function ProviderMenu({ items, currentProviderTag, modelId, onClose, onSe
 						<box flexDirection="column">
 							{sortedItems.map((item, idx) => {
 								const isSelected = idx === selectedIndex;
-								const isCurrent = item.tag === null ? !currentProviderTag : item.tag === currentProviderTag;
+								const isCurrent =
+									item.tag === null ? !currentProviderTag : item.tag === currentProviderTag;
 								const hasPrice = Boolean(item.pricing);
 								const supportsCaching = Boolean(item.supportsCaching);
 

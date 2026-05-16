@@ -8,9 +8,9 @@ import type { StreamCallbacks } from "../src/types";
 
 describe("direct security evidence pack runner", () => {
 	it("routes explicit client evidence pack prompts", () => {
-		expect(shouldRunDirectSecurityEvidencePack("Create a Managed Security Evidence Pack for Acme.")).toBe(
-			true
-		);
+		expect(
+			shouldRunDirectSecurityEvidencePack("Create a Managed Security Evidence Pack for Acme.")
+		).toBe(true);
 		expect(shouldRunDirectSecurityEvidencePack("Run client evidence pack for Acme")).toBe(true);
 		expect(shouldRunDirectSecurityEvidencePack("What is an evidence pack?")).toBe(false);
 	});
@@ -39,7 +39,10 @@ describe("direct security evidence pack runner", () => {
 			},
 		};
 
-		await runDirectSecurityEvidencePack("Create a Managed Security Evidence Pack for Acme.", callbacks);
+		await runDirectSecurityEvidencePack(
+			"Create a Managed Security Evidence Pack for Acme.",
+			callbacks
+		);
 
 		expect(events).toContain("tool:windowsSecurity");
 		expect(events).toContain("tool:runBash");

@@ -21,12 +21,16 @@ describe("system prompt", () => {
 		expect(prompt).toContain("Form a concrete edit-and-validation loop");
 		expect(prompt).toContain("After code changes, run the smallest meaningful validation first");
 		expect(prompt).toContain("Treat every coding task as a closed loop");
-		expect(prompt).toContain("Before finishing meaningful code work, run an adversarial self-review");
+		expect(prompt).toContain(
+			"Before finishing meaningful code work, run an adversarial self-review"
+		);
 		expect(prompt).toContain("empty inputs, stale state, auth/permission boundaries");
 		expect(prompt).toContain("Do not claim a file write, command, migration, or fix succeeded");
 		expect(prompt).toContain("Keep the self-critique mostly silent");
 		expect(prompt).toContain("Use selfReview before finishing meaningful code work");
-		expect(prompt).toContain("Use completionGate before claiming a non-trivial coding task is done");
+		expect(prompt).toContain(
+			"Use completionGate before claiming a non-trivial coding task is done"
+		);
 		expect(prompt).toContain("Use projectDoctor for one-command repo setup/readiness checks");
 		expect(prompt).toContain("Use githubPublishPlan before initializing");
 		expect(prompt).toContain("Use failureRecovery after failed checks or service hiccups");
@@ -42,7 +46,9 @@ describe("system prompt", () => {
 		});
 
 		expect(prompt).toContain("# GitHub Copilot/Codex Coding Mode");
-		expect(prompt).toContain("Treat this as an execution environment, not a chat-only coding model");
+		expect(prompt).toContain(
+			"Treat this as an execution environment, not a chat-only coding model"
+		);
 		expect(prompt).toContain("Do not solve coding requests from memory alone");
 		expect(prompt).toContain(
 			"Begin by establishing repo state with projectContext or codingWorkbench repoStatus"
@@ -72,7 +78,9 @@ describe("system prompt", () => {
 		expect(prompt).toContain("inspect files and project scripts before recommending changes");
 		expect(prompt).toContain("Run targeted validation after changes when practical");
 		expect(prompt).toContain("separate evidence from inference");
-		expect(prompt).toContain("compact status, project doctor, context budget, and failure recovery");
+		expect(prompt).toContain(
+			"compact status, project doctor, context budget, and failure recovery"
+		);
 	});
 
 	it("includes Windows security-first behavior in text mode", () => {
@@ -144,7 +152,9 @@ describe("system prompt", () => {
 		});
 
 		expect(prompt).toContain("# Tool Behavior");
-		expect(prompt).toContain("Do not print fake tool calls, function-call JSON, or tool parameter JSON");
+		expect(prompt).toContain(
+			"Do not print fake tool calls, function-call JSON, or tool parameter JSON"
+		);
 		expect(prompt).toContain("Do not narrate internal tool selection");
 		expect(prompt).toContain('Do not tell the user "the provided functions do not include"');
 		expect(prompt).toContain(
@@ -217,7 +227,9 @@ describe("system prompt", () => {
 
 		expect(prompt).toContain("If grounding validation fails");
 		expect(prompt).toContain("do not show corrected groundingManager JSON");
-		expect(prompt).toContain("do not teach the user the tool schema or print a corrected tool call");
+		expect(prompt).toContain(
+			"do not teach the user the tool schema or print a corrected tool call"
+		);
 		expect(prompt).toContain("Briefly say the web-sourced claim could not be grounded");
 	});
 
@@ -239,7 +251,9 @@ describe("system prompt", () => {
 			currentDate: new Date("2026-05-03T12:00:00"),
 		});
 
-		expect(prompt).toContain("If webSearch or fetchUrls reports that EXA_API_KEY is invalid or unavailable");
+		expect(prompt).toContain(
+			"If webSearch or fetchUrls reports that EXA_API_KEY is invalid or unavailable"
+		);
 		expect(prompt).toContain("do not retry web search in the same answer");
 		expect(prompt).toContain("web search is unavailable until the key is updated");
 	});

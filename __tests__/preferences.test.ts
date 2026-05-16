@@ -212,7 +212,9 @@ describe("parsePreferences", () => {
 		process.env.DAEMON_CONFIG_DIR = undefined;
 		process.env.APPDATA = "C:\\Users\\operator\\AppData\\Roaming";
 
-		expect(getAppConfigDir("win32")).toBe(path.join("C:\\Users\\operator\\AppData\\Roaming", "orpheus"));
+		expect(getAppConfigDir("win32")).toBe(
+			path.join("C:\\Users\\operator\\AppData\\Roaming", "orpheus")
+		);
 	});
 
 	it("honors explicit legacy config overrides only when requested", () => {

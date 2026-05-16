@@ -9,7 +9,11 @@ function normalizeWhitespace(text: string): string {
 }
 
 function escapeXmlAttribute(value: string): string {
-	return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/"/g, "&quot;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
 }
 
 function truncateText(text: string, maxChars: number): { text: string; truncated: boolean } {
@@ -18,7 +22,10 @@ function truncateText(text: string, maxChars: number): { text: string; truncated
 	return { text: `${text.slice(0, maxChars - 1)}…`, truncated: true };
 }
 
-function splitPreviewLines(text: string, maxLines: number): { lines: string[]; truncated: boolean } {
+function splitPreviewLines(
+	text: string,
+	maxLines: number
+): { lines: string[]; truncated: boolean } {
 	const normalized = normalizeWhitespace(text);
 	const rawLines = normalized.split("\n");
 	const trimmedLines = rawLines.map((l) => l.trimEnd()).filter((l) => l.length > 0);
@@ -116,7 +123,11 @@ function formatExaFetchResult(result: unknown): string | null {
 	if (typeof result === "string") {
 		const trimmed = result.trim();
 		if (!trimmed) return null;
-		if (trimmed.startsWith("<fetchUrls") && trimmed.includes("error=") && !trimmed.includes("</fetchUrls>")) {
+		if (
+			trimmed.startsWith("<fetchUrls") &&
+			trimmed.includes("error=") &&
+			!trimmed.includes("</fetchUrls>")
+		) {
 			return trimmed;
 		}
 
@@ -135,12 +146,15 @@ function formatExaFetchResult(result: unknown): string | null {
 
 		let contentLine: string | undefined;
 		if (normalLines.length === 1) {
-			const firstUrlIdx = rawLines.findIndex((line) => line.includes("<url") && line.includes("href="));
+			const firstUrlIdx = rawLines.findIndex(
+				(line) => line.includes("<url") && line.includes("href=")
+			);
 			if (firstUrlIdx >= 0) {
 				contentLine = rawLines
 					.slice(firstUrlIdx + 1)
 					.find(
-						(line) => !line.includes("</url>") && !line.includes("<url") && !line.includes("</fetchUrls>")
+						(line) =>
+							!line.includes("</url>") && !line.includes("<url") && !line.includes("</fetchUrls>")
 					)
 					?.trim();
 			}
@@ -194,9 +208,12 @@ function formatExaFetchResult(result: unknown): string | null {
 		if (!url) continue;
 
 		const attributes: string[] = [`href="${escapeXmlAttribute(url)}"`];
-		if (typeof candidate.lineOffset === "number") attributes.push(`lineOffset="${candidate.lineOffset}"`);
-		if (typeof candidate.lineLimit === "number") attributes.push(`lineLimit="${candidate.lineLimit}"`);
-		if (typeof candidate.totalLines === "number") attributes.push(`totalLines="${candidate.totalLines}"`);
+		if (typeof candidate.lineOffset === "number")
+			attributes.push(`lineOffset="${candidate.lineOffset}"`);
+		if (typeof candidate.lineLimit === "number")
+			attributes.push(`lineLimit="${candidate.lineLimit}"`);
+		if (typeof candidate.totalLines === "number")
+			attributes.push(`totalLines="${candidate.totalLines}"`);
 		if (typeof candidate.remainingLines === "number") {
 			attributes.push(`remainingLines="${candidate.remainingLines}"`);
 		} else if (candidate.remainingLines === null) {
@@ -247,7 +264,9 @@ function formatRenderUrlResult(result: unknown): string | null {
 	const rangeParts: string[] = [];
 	if (lineOffset !== undefined) rangeParts.push(`lineOffset=${lineOffset}`);
 	if (lineLimit !== undefined) rangeParts.push(`lineLimit=${lineLimit}`);
-	rangeParts.push(remainingLines === null ? "remainingLines=unknown" : `remainingLines=${remainingLines}`);
+	rangeParts.push(
+		remainingLines === null ? "remainingLines=unknown" : `remainingLines=${remainingLines}`
+	);
 	const remainingSuffix = rangeParts.length > 0 ? ` (${rangeParts.join(", ")})` : "";
 
 	const header = `${url}${remainingSuffix}`;
@@ -308,7 +327,8 @@ function extractMcpContentText(item: unknown): string {
 	const it = item as McpContentLike;
 	if (typeof it.text === "string") return it.text;
 	if (typeof it.content === "string") return it.content;
-	if (typeof it.type === "string" && it.type === "text" && typeof it.data === "string") return it.data;
+	if (typeof it.type === "string" && it.type === "text" && typeof it.data === "string")
+		return it.data;
 	return "";
 }
 
@@ -381,7 +401,10 @@ export function formatToolOutputPreview(toolName: string, result: unknown): stri
 			anyTruncated = true;
 			break;
 		}
-		const { text: truncatedLine, truncated } = truncateText(line, Math.min(MAX_CHARS_PER_LINE, remaining));
+		const { text: truncatedLine, truncated } = truncateText(
+			line,
+			Math.min(MAX_CHARS_PER_LINE, remaining)
+		);
 		anyTruncated = anyTruncated || truncated;
 		outputLines.push(truncatedLine);
 		usedChars += truncatedLine.length;
@@ -423,7 +446,10 @@ export function formatGenericToolOutputPreview(result: unknown): string[] | null
 			anyTruncated = true;
 			break;
 		}
-		const { text: truncatedLine, truncated } = truncateText(line, Math.min(MAX_CHARS_PER_LINE, remaining));
+		const { text: truncatedLine, truncated } = truncateText(
+			line,
+			Math.min(MAX_CHARS_PER_LINE, remaining)
+		);
 		anyTruncated = anyTruncated || truncated;
 		outputLines.push(truncatedLine);
 		usedChars += truncatedLine.length;

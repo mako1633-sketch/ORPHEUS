@@ -76,7 +76,9 @@ export async function saveWindowsAssessmentRecord(params: {
 }): Promise<{ record: WindowsAssessmentRecord; diff: WindowsAssessmentDiff }> {
 	const records = await readHistory();
 	const previous = params.clientName
-		? (records.find((item) => item.clientName?.toLowerCase() === params.clientName?.toLowerCase()) ?? null)
+		? (records.find(
+				(item) => item.clientName?.toLowerCase() === params.clientName?.toLowerCase()
+			) ?? null)
 		: (records[0] ?? null);
 	const record: WindowsAssessmentRecord = {
 		id: crypto.randomUUID(),

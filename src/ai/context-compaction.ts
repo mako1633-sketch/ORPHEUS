@@ -60,7 +60,10 @@ function compactMessage(message: ModelMessage, maxMessageChars: number): ModelMe
 		return null;
 	}
 
-	const content = extractTextFromContent((message as { content?: unknown }).content, maxMessageChars).trim();
+	const content = extractTextFromContent(
+		(message as { content?: unknown }).content,
+		maxMessageChars
+	).trim();
 	if (!content) return null;
 
 	return {

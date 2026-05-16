@@ -223,7 +223,10 @@ class DaemonStateManager {
 		// Check if we have enough audio data
 		const minDuration = 0.5;
 		if (audioBuffer.length < 1000 || duration < minDuration) {
-			this.emitEvent("error", new Error(`Recording too short (${duration.toFixed(1)}s). Hold longer.`));
+			this.emitEvent(
+				"error",
+				new Error(`Recording too short (${duration.toFixed(1)}s). Hold longer.`)
+			);
 			this.setState(DaemonState.IDLE);
 			return;
 		}
@@ -306,7 +309,8 @@ class DaemonStateManager {
 				},
 				{
 					onReasoningToken: (token) => this.emitEvent("reasoningToken", token),
-					onToolCallStart: (toolName, toolCallId) => this.emitEvent("toolInputStart", toolName, toolCallId),
+					onToolCallStart: (toolName, toolCallId) =>
+						this.emitEvent("toolInputStart", toolName, toolCallId),
 					onToolCall: (toolName, args, toolCallId) =>
 						this.emitEvent("toolInvocation", toolName, args, toolCallId),
 					onToolResult: (toolName, resultValue, toolCallId) =>

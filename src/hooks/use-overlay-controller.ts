@@ -29,7 +29,10 @@ export interface OverlayControllerActions {
 	setShowOrpheusMenu: (show: boolean) => void;
 }
 
-export function useOverlayController(state: OverlayControllerState, actions: OverlayControllerActions) {
+export function useOverlayController(
+	state: OverlayControllerState,
+	actions: OverlayControllerActions
+) {
 	const {
 		showDeviceMenu,
 		showSettingsMenu,

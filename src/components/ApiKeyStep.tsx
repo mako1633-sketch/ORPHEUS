@@ -68,12 +68,16 @@ export function ApiKeyStep({
 			)}
 			<box marginBottom={1}>
 				<text>
-					<span fg={COLORS.REASONING_DIM}>Option 1: Paste your key (Ctrl+v) below and press ENTER</span>
+					<span fg={COLORS.REASONING_DIM}>
+						Option 1: Paste your key (Ctrl+v) below and press ENTER
+					</span>
 				</text>
 			</box>
 			<box marginBottom={1}>
 				<text>
-					<span fg={COLORS.REASONING_DIM}>Option 2: Quit, set {envVarName} env variable and restart</span>
+					<span fg={COLORS.REASONING_DIM}>
+						Option 2: Quit, set {envVarName} env variable and restart
+					</span>
 				</text>
 			</box>
 			{optional && (

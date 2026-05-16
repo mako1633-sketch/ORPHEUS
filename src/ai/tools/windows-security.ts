@@ -35,8 +35,14 @@ export const windowsSecurity = tool({
 				"Use list to show playbooks, get to retrieve a playbook command, parse to structure output, or history to list prior parsed assessments."
 			),
 		playbook: PlaybookIdSchema.optional().describe("Playbook id to retrieve when action is get."),
-		output: z.string().optional().describe("Raw PowerShell assessment output to parse when action is parse."),
-		save: z.boolean().optional().describe("When parsing, save the parsed assessment to local history."),
+		output: z
+			.string()
+			.optional()
+			.describe("Raw PowerShell assessment output to parse when action is parse."),
+		save: z
+			.boolean()
+			.optional()
+			.describe("When parsing, save the parsed assessment to local history."),
 	}),
 	execute: async ({ action, playbook, output, save }) => {
 		if (action === "list") {

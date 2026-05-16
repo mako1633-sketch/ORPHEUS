@@ -39,10 +39,14 @@ export const notesLayout: ToolLayoutConfig = {
 
 	formatResult: (result) => {
 		if (!isRecord(result)) return null;
-		if (result.success === false && typeof result.error === "string") return [`error: ${result.error}`];
+		if (result.success === false && typeof result.error === "string")
+			return [`error: ${result.error}`];
 
 		if (result.action === "create") {
-			return [`saved: ${String(result.title ?? "Untitled note")}`, `path: ${String(result.path ?? "--")}`];
+			return [
+				`saved: ${String(result.title ?? "Untitled note")}`,
+				`path: ${String(result.path ?? "--")}`,
+			];
 		}
 
 		if (result.action === "list") {

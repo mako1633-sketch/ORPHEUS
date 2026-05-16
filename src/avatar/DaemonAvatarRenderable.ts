@@ -69,7 +69,10 @@ export class DaemonAvatarRenderable extends FrameBufferRenderable {
 		if (!this.rig) return;
 
 		// 1. Aspect Ratio
-		const desiredAspect = this.getDesiredAspectRatio(this.frameBuffer.width, this.frameBuffer.height);
+		const desiredAspect = this.getDesiredAspectRatio(
+			this.frameBuffer.width,
+			this.frameBuffer.height
+		);
 		if (
 			this.lastAppliedAspectRatio === null ||
 			Math.abs(this.lastAppliedAspectRatio - desiredAspect) >= 0.001
@@ -139,10 +142,14 @@ export class DaemonAvatarRenderable extends FrameBufferRenderable {
 			this.rig.setColors(this.pendingTheme);
 		}
 		if (this.pendingIntensity) {
-			this.rig.setIntensity(this.pendingIntensity.value, { immediate: this.pendingIntensity.immediate });
+			this.rig.setIntensity(this.pendingIntensity.value, {
+				immediate: this.pendingIntensity.immediate,
+			});
 		}
 		if (this.pendingAudioLevel) {
-			this.rig.setAudioLevel(this.pendingAudioLevel.value, { immediate: this.pendingAudioLevel.immediate });
+			this.rig.setAudioLevel(this.pendingAudioLevel.value, {
+				immediate: this.pendingAudioLevel.immediate,
+			});
 		}
 		if (this.pendingSpawnAction) {
 			if (this.pendingSpawnAction === "reset") {

@@ -26,7 +26,10 @@ function normalizeCopilotModels(
 		.filter((item) => typeof item.id === "string" && item.id.trim().length > 0)
 		.map((item) => ({
 			id: item.id.trim(),
-			name: typeof item.name === "string" && item.name.trim().length > 0 ? item.name.trim() : item.id.trim(),
+			name:
+				typeof item.name === "string" && item.name.trim().length > 0
+					? item.name.trim()
+					: item.id.trim(),
 			contextLength: item.capabilities?.limits?.max_context_window_tokens,
 			supportsReasoningEffort: item.capabilities?.supports?.reasoningEffort === true,
 			supportsReasoningEffortXHigh: supportsXHighReasoning(item.id.trim()),

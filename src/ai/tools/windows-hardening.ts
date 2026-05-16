@@ -52,7 +52,9 @@ export const windowsHardening = tool({
 			"scheduledTaskInventoryCommand",
 			"scheduledTaskPlan",
 		]),
-		profile: ProfileSchema.optional().describe("Hardening profile for rules, plan, and command actions."),
+		profile: ProfileSchema.optional().describe(
+			"Hardening profile for rules, plan, and command actions."
+		),
 		scheduledTaskTemplate: ScheduledTaskTemplateSchema.optional().describe(
 			"Security scheduled-task template."
 		),
@@ -120,7 +122,11 @@ export const windowsHardening = tool({
 
 		const profileId = profile as WindowsHardeningProfileId;
 		if (action === "rules") {
-			return { success: true, profile: profileId, rules: getWindowsHardeningRulesForProfile(profileId) };
+			return {
+				success: true,
+				profile: profileId,
+				rules: getWindowsHardeningRulesForProfile(profileId),
+			};
 		}
 		if (action === "plan") {
 			return { success: true, plan: buildWindowsHardeningPlan(profileId) };

@@ -44,11 +44,13 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 		const prompts: Record<string, string> = {
 			startup:
 				"Run the ORPHEUS startup protocol: check local health, git state, configuration, provider route, and summarize any issues with fixes.",
-			security: "Run an ORPHEUS security scan for this local project and summarize actionable findings.",
+			security:
+				"Run an ORPHEUS security scan for this local project and summarize actionable findings.",
 			project:
 				"Inspect the current ORPHEUS project setup and explain what is wired correctly or incorrectly.",
 			task: "List active ORPHEUS tasks and identify any stale or incomplete work.",
-			suggest: "Suggest the next best ORPHEUS maintenance or coding action based on the current repo state.",
+			suggest:
+				"Suggest the next best ORPHEUS maintenance or coding action based on the current repo state.",
 			diff: "Review the current ORPHEUS git diff and call out risks, incomplete wiring, and missing tests.",
 			ci: "Run local ORPHEUS CI checks (pre-push gate): typecheck, lint, format-check, and tests. Summarize failures and suggest fixes.",
 			"github-triage":
@@ -169,7 +171,9 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 				/>
 			)}
 
-			{menus.showUrlMenu && <UrlMenu items={urlMenuItems} onClose={() => menus.setShowUrlMenu(false)} />}
+			{menus.showUrlMenu && (
+				<UrlMenu items={urlMenuItems} onClose={() => menus.setShowUrlMenu(false)} />
+			)}
 
 			{menus.showToolsMenu && (
 				<ToolsMenu
@@ -296,7 +300,10 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 			)}
 
 			{menus.showOrpheusMenu && (
-				<OrpheusMenu onClose={() => menus.setShowOrpheusMenu(false)} onSelect={handleOrpheusAction} />
+				<OrpheusMenu
+					onClose={() => menus.setShowOrpheusMenu(false)}
+					onSelect={handleOrpheusAction}
+				/>
 			)}
 
 			{onboarding.onboardingActive && (

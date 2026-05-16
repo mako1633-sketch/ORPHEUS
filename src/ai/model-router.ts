@@ -81,7 +81,9 @@ function matchesAny(text: string, patterns: string[]): boolean {
 
 async function isOllamaOnline(): Promise<boolean> {
 	try {
-		const res = await fetch(`${getOllamaApiBaseUrl()}/api/tags`, { signal: AbortSignal.timeout(2000) });
+		const res = await fetch(`${getOllamaApiBaseUrl()}/api/tags`, {
+			signal: AbortSignal.timeout(2000),
+		});
 		return res.ok;
 	} catch {
 		return false;

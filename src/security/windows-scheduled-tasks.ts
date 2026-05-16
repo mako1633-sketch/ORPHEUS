@@ -3,7 +3,12 @@ export type WindowsSecurityScheduledTaskTemplateId =
 	| "defenderFullScanWeekly"
 	| "securityEventExportDaily";
 
-export type WindowsSecurityScheduledTaskOperation = "create" | "update" | "enable" | "disable" | "delete";
+export type WindowsSecurityScheduledTaskOperation =
+	| "create"
+	| "update"
+	| "enable"
+	| "disable"
+	| "delete";
 
 export interface WindowsSecurityScheduledTaskTemplate {
 	id: WindowsSecurityScheduledTaskTemplateId;
@@ -49,7 +54,8 @@ const WINDOWS_SECURITY_SCHEDULED_TASK_TEMPLATES: Record<
 		defaultTrigger: "Weekly on Sunday at 02:00",
 		actionCommand: "PowerShell.exe",
 		actionArguments: '-NoProfile -WindowStyle Hidden -Command "Start-MpScan -ScanType FullScan"',
-		securityValue: "Adds a deeper periodic malware scan for workstations that can tolerate longer scans.",
+		securityValue:
+			"Adds a deeper periodic malware scan for workstations that can tolerate longer scans.",
 	},
 	securityEventExportDaily: {
 		id: "securityEventExportDaily",
@@ -60,7 +66,8 @@ const WINDOWS_SECURITY_SCHEDULED_TASK_TEMPLATES: Record<
 		actionCommand: "PowerShell.exe",
 		actionArguments:
 			"-NoProfile -WindowStyle Hidden -Command \"$dir=Join-Path $env:ProgramData 'ORPHEUS\\SecurityLogs'; New-Item -ItemType Directory -Force -Path $dir | Out-Null; Get-WinEvent -FilterHashtable @{LogName='Security'; StartTime=(Get-Date).AddDays(-1)} -MaxEvents 500 | Export-Clixml -Path (Join-Path $dir ('security-events-' + (Get-Date -Format yyyyMMdd-HHmmss) + '.xml'))\"",
-		securityValue: "Keeps a local review trail of recent Security log events without sending data anywhere.",
+		securityValue:
+			"Keeps a local review trail of recent Security log events without sending data anywhere.",
 	},
 };
 
@@ -109,7 +116,8 @@ function buildTaskStateCommand(
 			: operation === "disable"
 				? "Disable-ScheduledTask"
 				: "Unregister-ScheduledTask -Confirm:$false";
-	const past = operation === "enable" ? "Enabled" : operation === "disable" ? "Disabled" : "Deleted";
+	const past =
+		operation === "enable" ? "Enabled" : operation === "disable" ? "Disabled" : "Deleted";
 	return [
 		`$taskName=${quotePowerShellString(template.name)}`,
 		`$taskPath=${quotePowerShellString(template.taskPath)}`,

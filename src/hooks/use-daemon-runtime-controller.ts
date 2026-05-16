@@ -98,7 +98,9 @@ export function useDaemonRuntimeController({
 	});
 
 	const hasInteracted =
-		conversationHistory.length > 0 || currentTranscription.length > 0 || currentContentBlocks.length > 0;
+		conversationHistory.length > 0 ||
+		currentTranscription.length > 0 ||
+		currentContentBlocks.length > 0;
 
 	const typing = useTypingMode({
 		daemonState,

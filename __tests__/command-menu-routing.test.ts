@@ -18,15 +18,23 @@ function actionPrompt(label: string): string {
 describe("command menu routing", () => {
 	it("routes executable startup actions away from model-authored fake tool JSON", () => {
 		expect(
-			shouldRunDirectSecurityEvidencePack(actionPrompt("Evidence Pack: client-ready assessment bundle"))
+			shouldRunDirectSecurityEvidencePack(
+				actionPrompt("Evidence Pack: client-ready assessment bundle")
+			)
 		).toBe(true);
 		expect(
-			shouldRunDirectDaemonDoctor(actionPrompt("ORPHEUS Doctor: keys, tools, PowerShell, Signal, search"))
+			shouldRunDirectDaemonDoctor(
+				actionPrompt("ORPHEUS Doctor: keys, tools, PowerShell, Signal, search")
+			)
 		).toBe(true);
 		expect(
-			shouldRunDirectWindowsSecuritySnapshot(actionPrompt("Blackwall Snapshot: score, findings, fix plan"))
+			shouldRunDirectWindowsSecuritySnapshot(
+				actionPrompt("Blackwall Snapshot: score, findings, fix plan")
+			)
 		).toBe(true);
-		expect(shouldRunDirectWindowsQuickPosture(actionPrompt("Quick Scan: posture pulse"))).toBe(true);
+		expect(shouldRunDirectWindowsQuickPosture(actionPrompt("Quick Scan: posture pulse"))).toBe(
+			true
+		);
 		expect(shouldRunDirectWindowsAssessment(actionPrompt("Full Audit: evidence dive"))).toBe(true);
 		expect(
 			shouldRunDirectWindowsSecurityReview(

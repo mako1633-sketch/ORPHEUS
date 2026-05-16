@@ -41,7 +41,9 @@ function getStagedDiff(): string {
 
 function getStagedFiles(): string[] {
 	try {
-		const output = execSync("git diff --cached --name-only --diff-filter=ACM", { encoding: "utf-8" });
+		const output = execSync("git diff --cached --name-only --diff-filter=ACM", {
+			encoding: "utf-8",
+		});
 		return output.split("\n").filter((f) => f.trim().length > 0);
 	} catch {
 		return [];

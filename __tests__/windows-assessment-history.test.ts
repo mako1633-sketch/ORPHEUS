@@ -35,7 +35,10 @@ describe("Windows assessment history", () => {
 		tempDir = await mkdtemp(path.join(tmpdir(), "orpheus-assessment-"));
 		process.env.ORPHEUS_WINDOWS_ASSESSMENT_HISTORY_PATH = path.join(tempDir, "history.json");
 
-		const first = await saveWindowsAssessmentRecord({ playbookId: "quickPosture", findings: [finding("a")] });
+		const first = await saveWindowsAssessmentRecord({
+			playbookId: "quickPosture",
+			findings: [finding("a")],
+		});
 		const second = await saveWindowsAssessmentRecord({
 			playbookId: "quickPosture",
 			findings: [finding("a"), finding("b")],

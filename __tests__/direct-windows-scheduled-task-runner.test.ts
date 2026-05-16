@@ -14,7 +14,9 @@ describe("direct Windows scheduled task runner", () => {
 			)
 		).toBe(true);
 		expect(
-			shouldRunDirectWindowsScheduledTaskSecurity("Modify the security scheduled task for weekly full scan.")
+			shouldRunDirectWindowsScheduledTaskSecurity(
+				"Modify the security scheduled task for weekly full scan."
+			)
 		).toBe(true);
 		expect(shouldRunDirectWindowsScheduledTaskSecurity("What are scheduled tasks?")).toBe(false);
 	});

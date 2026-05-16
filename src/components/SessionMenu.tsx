@@ -25,7 +25,13 @@ function formatTimestamp(value: string): string {
 	return value.replace("T", " ").slice(0, 16);
 }
 
-export function SessionMenu({ items, currentSessionId, onClose, onSelect, onDelete }: SessionMenuProps) {
+export function SessionMenu({
+	items,
+	currentSessionId,
+	onClose,
+	onSelect,
+	onDelete,
+}: SessionMenuProps) {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isSearchFocused, setIsSearchFocused] = useState(false);
 	const searchInputRef = useRef<TextareaRenderable | null>(null);
@@ -34,7 +40,8 @@ export function SessionMenu({ items, currentSessionId, onClose, onSelect, onDele
 		if (!searchQuery) return items;
 		const lowerQuery = searchQuery.toLowerCase();
 		return items.filter(
-			(item) => item.title.toLowerCase().includes(lowerQuery) || item.id.toLowerCase().includes(lowerQuery)
+			(item) =>
+				item.title.toLowerCase().includes(lowerQuery) || item.id.toLowerCase().includes(lowerQuery)
 		);
 	}, [items, searchQuery]);
 

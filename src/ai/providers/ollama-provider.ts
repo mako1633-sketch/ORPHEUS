@@ -63,9 +63,17 @@ async function createDaemonAgent(
 	});
 }
 
-async function streamOllamaResponse(request: ProviderStreamRequest): Promise<ProviderStreamResult | null> {
-	const { userMessage, callbacks, conversationHistory, interactionMode, abortSignal, memoryInjection } =
-		request;
+async function streamOllamaResponse(
+	request: ProviderStreamRequest
+): Promise<ProviderStreamResult | null> {
+	const {
+		userMessage,
+		callbacks,
+		conversationHistory,
+		interactionMode,
+		abortSignal,
+		memoryInjection,
+	} = request;
 
 	const messages: ModelMessage[] = [...conversationHistory];
 	messages.push({ role: "user" as const, content: userMessage });
@@ -117,7 +125,8 @@ async function streamOllamaResponse(request: ProviderStreamRequest): Promise<Pro
 						callbacks.onToolResult?.(part.toolName, part.output, part.toolCallId);
 					} else if (part.type === "tool-error") {
 						hasVisibleOrToolEffects = true;
-						const errorMessage = part.error instanceof Error ? part.error.message : String(part.error);
+						const errorMessage =
+							part.error instanceof Error ? part.error.message : String(part.error);
 						toolDebug.error("tool-error", {
 							toolName: part.toolName,
 							toolCallId: part.toolCallId,

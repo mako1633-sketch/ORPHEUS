@@ -292,7 +292,9 @@ Rules:
 
 		if (sanitizedMessages !== messages) {
 			const truncated = sanitizedMessages.some((message, index) => {
-				return message.role === "user" && messages[index]?.content.length !== message.content.length;
+				return (
+					message.role === "user" && messages[index]?.content.length !== message.content.length
+				);
 			});
 			if (truncated) {
 				memoryDebug.info("memory-add-truncate", {

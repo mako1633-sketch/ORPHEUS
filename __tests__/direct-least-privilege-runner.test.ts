@@ -53,7 +53,9 @@ describe("direct least privilege runner", () => {
 
 		await runDirectLeastPrivilege("What is least privilege?", callbacks);
 
-		expect(final).toContain("give each account, service, app, and network path only the access it needs");
+		expect(final).toContain(
+			"give each account, service, app, and network path only the access it needs"
+		);
 		expect(final).not.toContain('"action"');
 		expect(final).not.toContain("webSearch");
 	});

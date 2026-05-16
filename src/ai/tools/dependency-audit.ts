@@ -76,7 +76,14 @@ export async function runDependencyAudit(projectRoot = process.cwd()): Promise<A
 			directCount: 0,
 			staleCount: 0,
 			vulnerableCount: 0,
-			entries: [{ name: "package.json", current: "missing", isStale: false, error: "No package.json found" }],
+			entries: [
+				{
+					name: "package.json",
+					current: "missing",
+					isStale: false,
+					error: "No package.json found",
+				},
+			],
 		};
 	}
 

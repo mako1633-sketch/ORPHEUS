@@ -7,7 +7,10 @@ describe("ModelHistoryStore", () => {
 
 		store.set([
 			{ role: "user", content: "One" },
-			{ role: "assistant", content: '<tool-input name="runBash">{"command":"Get-Process"}</tool-input>' },
+			{
+				role: "assistant",
+				content: '<tool-input name="runBash">{"command":"Get-Process"}</tool-input>',
+			},
 		]);
 
 		expect(store.get()).toEqual([{ role: "user", content: "One" }]);

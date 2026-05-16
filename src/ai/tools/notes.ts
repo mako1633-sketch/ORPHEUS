@@ -126,7 +126,11 @@ export const notes = tool({
 		}),
 		z.object({
 			action: z.literal("list"),
-			count: z.number().optional().default(10).describe("Maximum number of recent notes to return."),
+			count: z
+				.number()
+				.optional()
+				.default(10)
+				.describe("Maximum number of recent notes to return."),
 		}),
 	]),
 	execute: async (input) => {

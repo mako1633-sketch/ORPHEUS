@@ -81,7 +81,9 @@ async function getMacBatteryStatus(): Promise<SystemStatusResult["battery"]> {
 	if (process.platform !== "darwin") return undefined;
 
 	try {
-		const { stdout } = await execFileAsync("pmset", ["-g", "batt"], { timeout: COMMAND_TIMEOUT_MS });
+		const { stdout } = await execFileAsync("pmset", ["-g", "batt"], {
+			timeout: COMMAND_TIMEOUT_MS,
+		});
 		const percentMatch = stdout.match(/(\d+)%/);
 		const stateMatch = stdout.match(/;\s*([^;]+);/);
 		return {
@@ -107,7 +109,9 @@ async function getOllamaStatus(): Promise<SystemStatusResult["ollama"]> {
 
 		const payload = (await response.json()) as { models?: Array<{ name?: unknown }> };
 		const models = Array.isArray(payload.models)
-			? payload.models.map((model) => model.name).filter((name): name is string => typeof name === "string")
+			? payload.models
+					.map((model) => model.name)
+					.filter((name): name is string => typeof name === "string")
 			: [];
 
 		return {
@@ -127,7 +131,8 @@ async function getOllamaStatus(): Promise<SystemStatusResult["ollama"]> {
 export async function collectSystemStatus(): Promise<SystemStatusResult> {
 	const totalMemory = os.totalmem();
 	const freeMemory = os.freemem();
-	const usedPercent = totalMemory > 0 ? Math.round(((totalMemory - freeMemory) / totalMemory) * 100) : 0;
+	const usedPercent =
+		totalMemory > 0 ? Math.round(((totalMemory - freeMemory) / totalMemory) * 100) : 0;
 
 	const result: SystemStatusResult = {
 		success: true,

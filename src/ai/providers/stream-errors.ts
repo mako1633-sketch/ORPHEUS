@@ -30,7 +30,9 @@ function getProviderErrorDetails(error: unknown): string | undefined {
 	const record = error as Record<string, unknown>;
 	const status = getStringField(record, ["statusCode", "status", "code"]);
 	const statusText = getStringField(record, ["statusText"]);
-	const bodyMessage = getNestedBodyMessage(record.responseBody ?? record.body ?? record.data ?? record.cause);
+	const bodyMessage = getNestedBodyMessage(
+		record.responseBody ?? record.body ?? record.data ?? record.cause
+	);
 
 	const details = [status ? `HTTP ${status}` : undefined, statusText, bodyMessage].filter(
 		(value): value is string => Boolean(value)

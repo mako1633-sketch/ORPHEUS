@@ -46,7 +46,10 @@ describe("security pack index", () => {
 		};
 		const html = await readFile(first.indexPath, "utf8");
 
-		expect(indexJson.entries.map((entry) => entry.assessmentRecordId)).toEqual(["record-2", "record-1"]);
+		expect(indexJson.entries.map((entry) => entry.assessmentRecordId)).toEqual([
+			"record-2",
+			"record-1",
+		]);
 		expect(html).toContain("Acme Evidence Pack Index");
 		expect(html).toContain("portal-2.html");
 		expect(html).toContain("manifest.json");

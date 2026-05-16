@@ -2,7 +2,12 @@ import type { SceneElements } from "../scene/create-scene-elements";
 import type { RigState } from "../state/rig-state";
 import { clamp01 } from "../utils/math";
 
-export function updateCore(elements: SceneElements, state: RigState, dt: number, intensity: number): void {
+export function updateCore(
+	elements: SceneElements,
+	state: RigState,
+	dt: number,
+	intensity: number
+): void {
 	const { phase, audio, reasoning } = state;
 
 	const coreSpeed = 0.1 + intensity * 0.9;

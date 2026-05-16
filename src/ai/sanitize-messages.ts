@@ -16,7 +16,14 @@ const OUTPUT_ONLY_FIELDS = new Set(["providerOptions", "reasoning", "reasoning_d
  * Known content-part type values where we should strip output-only fields
  * from the part object itself (but NOT from nested payloads like tool inputs).
  */
-const KNOWN_CONTENT_PART_TYPES = new Set(["tool-call", "tool-result", "text", "reasoning", "file", "source"]);
+const KNOWN_CONTENT_PART_TYPES = new Set([
+	"tool-call",
+	"tool-result",
+	"text",
+	"reasoning",
+	"file",
+	"source",
+]);
 
 /**
  * Remove output-only metadata from a value, stopping at content-part
@@ -33,7 +40,11 @@ function removeOutputOnlyFieldsShallow(obj: unknown): unknown {
 
 		// If this is a known content-part type, only strip output-only fields
 		// from the part object itself — do not recurse into its nested payloads.
-		if ("type" in record && typeof record.type === "string" && KNOWN_CONTENT_PART_TYPES.has(record.type)) {
+		if (
+			"type" in record &&
+			typeof record.type === "string" &&
+			KNOWN_CONTENT_PART_TYPES.has(record.type)
+		) {
 			const result: Record<string, unknown> = {};
 			for (const [key, value] of Object.entries(record)) {
 				if (OUTPUT_ONLY_FIELDS.has(key)) continue;

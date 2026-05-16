@@ -15,14 +15,17 @@ export interface SessionExportResult {
 /**
  * Export a session as Markdown or JSON.
  */
-export async function exportSession(sessionId: string, options: ExportFormat): Promise<SessionExportResult> {
+export async function exportSession(
+	sessionId: string,
+	options: ExportFormat
+): Promise<SessionExportResult> {
 	const start = Date.now();
 	const { getDb } = await import("./session-store");
 	const db = await getDb();
 
-	const sessionRow = db.prepare("SELECT title, created_at FROM sessions WHERE id = ?").get(sessionId) as
-		| { title: string; created_at: string }
-		| undefined;
+	const sessionRow = db
+		.prepare("SELECT title, created_at FROM sessions WHERE id = ?")
+		.get(sessionId) as { title: string; created_at: string } | undefined;
 
 	const title = options.title ?? sessionRow?.title ?? "ORPHEUS_Session";
 	const createdAt = sessionRow?.created_at ?? new Date().toISOString();
@@ -64,7 +67,14 @@ function buildMarkdown(
 	createdAt: string,
 	messages: Array<{ type: string; role: string; content: string; created_at: string }>
 ): string {
-	const lines: string[] = [`# ${title}`, "", `**Date:** ${new Date(createdAt).toISOString()}`, "", "---", ""];
+	const lines: string[] = [
+		`# ${title}`,
+		"",
+		`**Date:** ${new Date(createdAt).toISOString()}`,
+		"",
+		"---",
+		"",
+	];
 
 	for (const msg of messages) {
 		const role = msg.role === "user" ? "OPERATOR" : "ORPHEUS";

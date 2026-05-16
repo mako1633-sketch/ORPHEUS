@@ -1,5 +1,9 @@
 import type { KeyEvent } from "@opentui/core";
-import { getResponseModelForProvider, setModelProvider, setResponseModel } from "../ai/model-config";
+import {
+	getResponseModelForProvider,
+	setModelProvider,
+	setResponseModel,
+} from "../ai/model-config";
 import { invalidateDaemonToolsCache } from "../ai/tools";
 import { invalidateSubagentToolsCache } from "../ai/tools/subagents";
 import type {
@@ -58,7 +62,12 @@ export function getApiKeyUrl(step: OnboardingStep): string | null {
 }
 
 export function isApiKeyStep(step: OnboardingStep): boolean {
-	return step === "openrouter_key" || step === "copilot_auth" || step === "openai_key" || step === "exa_key";
+	return (
+		step === "openrouter_key" ||
+		step === "copilot_auth" ||
+		step === "openai_key" ||
+		step === "exa_key"
+	);
 }
 
 export interface DetermineNextStepOptions {
@@ -88,7 +97,8 @@ export function determineNextStep(
 	if (currentIndex === -1 || currentStep === "complete") return "complete";
 
 	const isReprompt = preferences?.onboardingCompleted === true;
-	const provider: LlmProvider = options.currentProvider ?? preferences?.modelProvider ?? "openrouter";
+	const provider: LlmProvider =
+		options.currentProvider ?? preferences?.modelProvider ?? "openrouter";
 	const hasCopilotAuth = Boolean(options.copilotAuthenticated);
 
 	const conditions: Array<{
@@ -97,7 +107,10 @@ export function determineNextStep(
 		onboardingOnly?: boolean;
 	}> = [
 		{ step: "provider", enabled: true, onboardingOnly: true },
-		{ step: "openrouter_key", enabled: provider === "openrouter" && !process.env.OPENROUTER_API_KEY },
+		{
+			step: "openrouter_key",
+			enabled: provider === "openrouter" && !process.env.OPENROUTER_API_KEY,
+		},
 		{ step: "copilot_auth", enabled: provider === "copilot" && !hasCopilotAuth },
 		{ step: "openai_key", enabled: !process.env.OPENAI_API_KEY },
 		{ step: "exa_key", enabled: !process.env.EXA_API_KEY },

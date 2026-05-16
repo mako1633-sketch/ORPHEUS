@@ -85,7 +85,9 @@ export function getOpenRouterProviderTag(): string | undefined {
  */
 export function setOpenRouterProviderTag(providerTag: string | undefined): void {
 	const normalized =
-		typeof providerTag === "string" && providerTag.trim().length > 0 ? providerTag.trim() : undefined;
+		typeof providerTag === "string" && providerTag.trim().length > 0
+			? providerTag.trim()
+			: undefined;
 	currentOpenRouterProviderTag = normalized;
 }
 
@@ -160,7 +162,9 @@ export function resolveCopilotCodingModel(
 		return exactRequested.id;
 	}
 
-	const best = [...models].sort((a, b) => scoreCopilotCodingModel(b) - scoreCopilotCodingModel(a))[0];
+	const best = [...models].sort(
+		(a, b) => scoreCopilotCodingModel(b) - scoreCopilotCodingModel(a)
+	)[0];
 	if (best && scoreCopilotCodingModel(best) > 0) {
 		return best.id;
 	}

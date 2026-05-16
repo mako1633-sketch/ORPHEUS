@@ -44,7 +44,13 @@ const CODING_COMPLETION_CLAIM_PATTERN =
 	/\b(done|implemented|fixed|patched|updated|changed|wired|landed|completed|rebuilt|refactored)\b/i;
 const CODING_EVIDENCE_PATTERN =
 	/\b(test(?:ed|s)?|typecheck|lint|format(?:ted|:check)?|check(?:ed)?|verified|validated|readback|passed|failed|could not run|not run|diff|files changed|build(?:s|t)?|compiled|no fixes applied)\b/i;
-const CODING_TOOL_NAMES = new Set(["codingWorkbench", "writeFile", "runBash", "readFile", "projectContext"]);
+const CODING_TOOL_NAMES = new Set([
+	"codingWorkbench",
+	"writeFile",
+	"runBash",
+	"readFile",
+	"projectContext",
+]);
 
 function textFromMessage(message: ModelMessage): string {
 	if (typeof message.content === "string") return message.content;
@@ -214,7 +220,9 @@ function containsToolProtocolJson(text: string): boolean {
 	);
 }
 
-export function detectAssistantResponseLeak(text: string): AssistantResponseGuardResult["reason"] | null {
+export function detectAssistantResponseLeak(
+	text: string
+): AssistantResponseGuardResult["reason"] | null {
 	const trimmed = text.trim();
 	if (!trimmed) return null;
 	if (TOOL_INPUT_TAG_PATTERN.test(trimmed) || containsToolProtocolJson(trimmed)) {
@@ -256,7 +264,9 @@ export function buildAssistantResponseLeakReplacement(
 		return (
 			"I hit a routing glitch and blocked an invalid internal action before it reached the system. " +
 			"No Windows settings, files, Signal messages, todos, or security changes were made from that text. " +
-			(normalizedUserText ? `Continuing plainly: ${normalizedUserText}` : "Continuing plainly from here.")
+			(normalizedUserText
+				? `Continuing plainly: ${normalizedUserText}`
+				: "Continuing plainly from here.")
 		);
 	}
 

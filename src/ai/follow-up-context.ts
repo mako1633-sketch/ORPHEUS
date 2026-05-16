@@ -4,7 +4,8 @@ const SHORT_REPLY_PATTERN =
 	/^(yes|yes please|yeah|yep|sure|please do|do it|continue|go ahead|proceed|please proceed|(please\s+)?proceed with (it|that|this|those|these tasks?|the tasks?)|(please\s+)?run (it|that|this|those|these tasks?|the tasks?)|(please\s+)?start (it|that|this|those|these tasks?|the tasks?)|ok|okay|no|nope|not that|that one|this one|those|these|both|all|both of them|all of them|these tasks?|the tasks?|option\s+\d+|#?\d+(?:\s*(?:,|and)\s*#?\d+)*)$/i;
 const SELECTION_PATTERN = /^(?:option\s+)?#?\d+(?:\s*(?:,|and)\s*(?:option\s+)?#?\d+)*$/i;
 const NUMBERED_PROMPT_PATTERN = /^\s*(\d+)[.)]\s*(.+?)\s*$/gm;
-const SUGGESTED_FOLLOW_UP_SECTION_PATTERN = /##\s*Suggested Follow-up Prompts\s*\n([\s\S]*?)(?=\n##\s+|$)/i;
+const SUGGESTED_FOLLOW_UP_SECTION_PATTERN =
+	/##\s*Suggested Follow-up Prompts\s*\n([\s\S]*?)(?=\n##\s+|$)/i;
 
 function messageContentToText(message: ModelMessage): string {
 	if (typeof message.content === "string") return message.content;
@@ -79,7 +80,9 @@ export function resolveNumberedFollowUpPrompt(
 		options.set(optionNumber, parseNumberedPromptLine(optionText));
 	}
 
-	const selectedPrompts = selectedNumbers.map((number) => options.get(number)).filter((value) => value);
+	const selectedPrompts = selectedNumbers
+		.map((number) => options.get(number))
+		.filter((value) => value);
 	if (selectedPrompts.length === 0) return null;
 
 	return selectedPrompts.join("\n");

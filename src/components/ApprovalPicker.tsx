@@ -94,7 +94,11 @@ export function ApprovalPicker({
 					</span>
 				</text>
 			</box>
-			<box paddingLeft={1} paddingRight={1} backgroundColor={denySelected ? COLORS.STATUS_FAILED : undefined}>
+			<box
+				paddingLeft={1}
+				paddingRight={1}
+				backgroundColor={denySelected ? COLORS.STATUS_FAILED : undefined}
+			>
 				<text>
 					<span
 						fg={denySelected ? COLORS.MENU_BG : COLORS.STATUS_FAILED}

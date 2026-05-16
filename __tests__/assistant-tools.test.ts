@@ -3,7 +3,11 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { loadCodingTaskState, updateCodingTaskState } from "../src/ai/coding-task-state";
-import { addExecutiveItem, buildExecutiveBriefing, updateExecutiveItem } from "../src/ai/executive-state";
+import {
+	addExecutiveItem,
+	buildExecutiveBriefing,
+	updateExecutiveItem,
+} from "../src/ai/executive-state";
 import {
 	appendPersistentContext,
 	formatPersistentContextForPrompt,
@@ -477,7 +481,10 @@ describe("assistant-style local tools", () => {
 			daemonStatus as unknown as {
 				execute: (input: unknown) => Promise<{
 					success: boolean;
-					briefing?: { activeCodingTask?: { goal: string } | null; executive: { openCount: number } };
+					briefing?: {
+						activeCodingTask?: { goal: string } | null;
+						executive: { openCount: number };
+					};
 				}>;
 			}
 		).execute({ scope: "launchBriefing" });
@@ -590,7 +597,9 @@ describe("assistant-style local tools", () => {
 
 		const listed = await (
 			executiveAssistant as unknown as {
-				execute: (input: unknown) => Promise<{ success: boolean; items?: Array<{ title: string }> }>;
+				execute: (
+					input: unknown
+				) => Promise<{ success: boolean; items?: Array<{ title: string }> }>;
 			}
 		).execute({ action: "stackList" });
 		expect(listed.items?.[0]?.title).toContain("Honcho status");

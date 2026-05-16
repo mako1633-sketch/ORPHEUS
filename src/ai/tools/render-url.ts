@@ -79,7 +79,11 @@ async function tryWaitForNonEmptyText(page: Page, timeoutMs: number): Promise<vo
 				}
 
 				const article = doc.querySelector("article");
-				if (article && typeof article.innerText === "string" && article.innerText.trim().length > 200) {
+				if (
+					article &&
+					typeof article.innerText === "string" &&
+					article.innerText.trim().length > 200
+				) {
 					return true;
 				}
 
@@ -211,7 +215,8 @@ export const renderUrl = tool({
 				return {
 					success: false as const,
 					url,
-					error: "Playwright is not installed. Run: npm i -g playwright && npx playwright install chromium",
+					error:
+						"Playwright is not installed. Run: npm i -g playwright && npx playwright install chromium",
 				};
 			}
 

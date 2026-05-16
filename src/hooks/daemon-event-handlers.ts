@@ -51,7 +51,8 @@ export function buildFailedTurnModelMessages(errorMessage: string): ModelMessage
 
 function getToolCategory(toolName: string): ToolCategory | "fast" | undefined {
 	if (toolName === "subagent") return "subagent";
-	if (toolName === "webSearch" || toolName === "fetchUrls" || toolName === "renderUrl") return "web";
+	if (toolName === "webSearch" || toolName === "fetchUrls" || toolName === "renderUrl")
+		return "web";
 	if (toolName === "runBash" || toolName === "getSystemInfo") return "bash";
 	if (
 		toolName === "readFile" ||
@@ -577,7 +578,10 @@ export function createToolInvocationHandler(
  * Create handler for tool approval request events.
  * Updates the tool call status to "awaiting_approval" when approval is needed.
  */
-export function createToolApprovalRequestHandler(refs: EventHandlerRefs, setters: EventHandlerSetters) {
+export function createToolApprovalRequestHandler(
+	refs: EventHandlerRefs,
+	setters: EventHandlerSetters
+) {
 	return (request: ToolApprovalRequest) => {
 		const toolCall = refs.toolCallsByIdRef.current.get(request.toolCallId);
 		if (toolCall) {
@@ -591,7 +595,10 @@ export function createToolApprovalRequestHandler(refs: EventHandlerRefs, setters
  * Create handler for tool approval resolved events.
  * Updates the tool call's approvalResult when user approves/denies.
  */
-export function createToolApprovalResolvedHandler(refs: EventHandlerRefs, setters: EventHandlerSetters) {
+export function createToolApprovalResolvedHandler(
+	refs: EventHandlerRefs,
+	setters: EventHandlerSetters
+) {
 	return (toolCallId: string, approved: boolean) => {
 		const toolCall = refs.toolCallsByIdRef.current.get(toolCallId);
 		if (toolCall) {
@@ -604,7 +611,10 @@ export function createToolApprovalResolvedHandler(refs: EventHandlerRefs, setter
 /**
  * Create handler for subagent tool call events.
  */
-export function createSubagentToolCallHandler(refs: EventHandlerRefs, setters: EventHandlerSetters) {
+export function createSubagentToolCallHandler(
+	refs: EventHandlerRefs,
+	setters: EventHandlerSetters
+) {
 	return (toolCallId: string, toolName: string, input?: unknown) => {
 		const toolCall = refs.toolCallsByIdRef.current.get(toolCallId);
 		if (!toolCall || !toolCall.subagentSteps) return;
@@ -622,7 +632,10 @@ export function createSubagentToolCallHandler(refs: EventHandlerRefs, setters: E
 /**
  * Create handler for subagent tool result events.
  */
-export function createSubagentToolResultHandler(refs: EventHandlerRefs, setters: EventHandlerSetters) {
+export function createSubagentToolResultHandler(
+	refs: EventHandlerRefs,
+	setters: EventHandlerSetters
+) {
 	return (toolCallId: string, toolName: string, success: boolean) => {
 		const toolCall = refs.toolCallsByIdRef.current.get(toolCallId);
 		if (!toolCall || !toolCall.subagentSteps) return;
@@ -646,7 +659,10 @@ export function createSubagentToolResultHandler(refs: EventHandlerRefs, setters:
 /**
  * Create handler for subagent complete events.
  */
-export function createSubagentCompleteHandler(refs: EventHandlerRefs, setters: EventHandlerSetters) {
+export function createSubagentCompleteHandler(
+	refs: EventHandlerRefs,
+	setters: EventHandlerSetters
+) {
 	return (toolCallId: string, success: boolean) => {
 		const toolCall = refs.toolCallsByIdRef.current.get(toolCallId);
 		if (!toolCall) return;
@@ -657,7 +673,9 @@ export function createSubagentCompleteHandler(refs: EventHandlerRefs, setters: E
 
 function mergeTokenUsage(prev: TokenUsage, usage: TokenUsage, isSubagent: boolean): TokenUsage {
 	const currentCost =
-		prev.cost !== undefined || usage.cost !== undefined ? (prev.cost ?? 0) + (usage.cost ?? 0) : undefined;
+		prev.cost !== undefined || usage.cost !== undefined
+			? (prev.cost ?? 0) + (usage.cost ?? 0)
+			: undefined;
 
 	if (isSubagent) {
 		return {
@@ -719,7 +737,9 @@ export function createToolResultHandler(refs: EventHandlerRefs, setters: EventHa
 		// Mark the tool as completed or failed based on the payload.
 		const toolCall =
 			(toolCallId ? refs.toolCallsByIdRef.current.get(toolCallId) : undefined) ??
-			[...refs.toolCallsRef.current].reverse().find((t) => t.name === toolName && t.status === "running");
+			[...refs.toolCallsRef.current]
+				.reverse()
+				.find((t) => t.name === toolName && t.status === "running");
 		if (toolCall) {
 			toolCall.status = isErrorResult ? "failed" : "completed";
 			if (isErrorResult) {
@@ -853,7 +873,9 @@ export function createCancelledHandler(
 
 		const userText = refs.currentUserInputRef.current;
 		const hasBlocks = refs.contentBlocksRef.current.length > 0;
-		const contentBlocks = hasBlocks ? buildInterruptedContentBlocks(refs.contentBlocksRef.current) : [];
+		const contentBlocks = hasBlocks
+			? buildInterruptedContentBlocks(refs.contentBlocksRef.current)
+			: [];
 
 		messageDebug.info("agent-turn-incomplete", {
 			userText,
@@ -942,7 +964,10 @@ export function createErrorHandler(
 				? buildInterruptedContentBlocks(refs.contentBlocksRef.current)
 				: [];
 		const errorText = buildFailedTurnText(err.message);
-		const contentBlocks: ContentBlock[] = [...interruptedBlocks, { type: "text", content: errorText }];
+		const contentBlocks: ContentBlock[] = [
+			...interruptedBlocks,
+			{ type: "text", content: errorText },
+		];
 		const responseMessages = buildFailedTurnModelMessages(err.message);
 		const daemonMessage: ConversationMessage = {
 			id: refs.messageIdRef.current++,

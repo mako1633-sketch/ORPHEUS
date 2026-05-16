@@ -129,7 +129,8 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 		resetNotification,
 		escPendingCancel,
 	} = status;
-	const { showFullReasoning, showToolOutput, reasoningQueue, reasoningDisplay, fullReasoning } = reasoning;
+	const { showFullReasoning, showToolOutput, reasoningQueue, reasoningDisplay, fullReasoning } =
+		reasoning;
 	const { showWorkingSpinner, isToolCalling, responseElapsedMs } = progress;
 	const {
 		typingTextareaRef,
@@ -198,7 +199,9 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 		daemonState === DaemonState.RESPONDING &&
 		(!conversation.currentResponse || !!reasoningDisplay || !!reasoningQueue);
 	const fullReasoningDurationLabel =
-		responseElapsedMs > 0 ? ` :: ${formatElapsedTime(responseElapsedMs, { style: "detailed" })}` : "";
+		responseElapsedMs > 0
+			? ` :: ${formatElapsedTime(responseElapsedMs, { style: "detailed" })}`
+			: "";
 
 	return (
 		<>
@@ -285,8 +288,8 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 								))}
 								<text>
 									<span fg={COLORS.TYPING_PROMPT}>
-										RUN {startupActionRange} OR TYPE {startupActionRange} :: SHIFT+TAB MANUAL INPUT :: SPACE
-										VOX :: ? HELP
+										RUN {startupActionRange} OR TYPE {startupActionRange} :: SHIFT+TAB MANUAL INPUT
+										:: SPACE VOX :: ? HELP
 									</span>
 								</text>
 							</box>
@@ -357,7 +360,10 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 			)}
 
 			{hasInteracted && (
-				<ContextCompactionPrompt contextPercent={contextPercent ?? null} daemonState={daemonState} />
+				<ContextCompactionPrompt
+					contextPercent={contextPercent ?? null}
+					daemonState={daemonState}
+				/>
 			)}
 
 			{hasInteracted && (

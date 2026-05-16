@@ -19,7 +19,8 @@ function formatScripts(pkg: UnknownRecord | null): string {
 
 function formatResult(result: unknown): string[] | null {
 	if (!isRecord(result)) return null;
-	if (result.success === false && typeof result.error === "string") return [`error: ${result.error}`];
+	if (result.success === false && typeof result.error === "string")
+		return [`error: ${result.error}`];
 
 	const pkg = isRecord(result.package) ? result.package : null;
 	const gitStatus = Array.isArray(result.gitStatus) ? result.gitStatus : [];

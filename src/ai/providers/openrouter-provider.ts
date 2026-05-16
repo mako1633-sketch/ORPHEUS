@@ -136,7 +136,8 @@ async function streamOpenRouterResponse(
 						callbacks.onToolResult?.(part.toolName, part.output, part.toolCallId);
 					} else if (part.type === "tool-error") {
 						hasVisibleOrToolEffects = true;
-						const errorMessage = part.error instanceof Error ? part.error.message : String(part.error);
+						const errorMessage =
+							part.error instanceof Error ? part.error.message : String(part.error);
 						toolDebug.error("tool-error", {
 							toolName: part.toolName,
 							toolCallId: part.toolCallId,

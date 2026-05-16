@@ -10,7 +10,12 @@ import {
 	getWindowsSecurityPlaybook,
 } from "../security/windows-security-playbooks";
 import { buildWindowsSecurityReport } from "../security/windows-security-report";
-import type { StreamCallbacks, TokenUsage, ToolApprovalRequest, ToolApprovalResponse } from "../types";
+import type {
+	StreamCallbacks,
+	TokenUsage,
+	ToolApprovalRequest,
+	ToolApprovalResponse,
+} from "../types";
 import { executeLocalShellCommand } from "./tools/run-bash";
 
 export interface DirectSecurityEvidencePackResult {

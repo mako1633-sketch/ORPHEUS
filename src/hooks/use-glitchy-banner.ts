@@ -125,7 +125,10 @@ export function useGlitchyBanner(isActive: boolean): GlitchyBannerState {
 			const lines = DAEMON_BANNER_LINES.map((line, i) => {
 				const lineStartTime = i * LINE_STAGGER_MS;
 				const lineElapsed = Math.max(0, elapsed - lineStartTime);
-				const lineProgress = Math.min(1, lineElapsed / (BANNER_ANIMATION_DURATION - i * LINE_STAGGER_MS));
+				const lineProgress = Math.min(
+					1,
+					lineElapsed / (BANNER_ANIMATION_DURATION - i * LINE_STAGGER_MS)
+				);
 
 				// Reveal from left + glitch effect
 				const revealProgress = Math.pow(lineProgress, 0.7); // Ease out
@@ -136,7 +139,10 @@ export function useGlitchyBanner(isActive: boolean): GlitchyBannerState {
 			const colors = BANNER_GRADIENT.map((color, i) => {
 				const lineStartTime = i * LINE_STAGGER_MS;
 				const lineElapsed = Math.max(0, elapsed - lineStartTime);
-				const lineProgress = Math.min(1, lineElapsed / (BANNER_ANIMATION_DURATION - i * LINE_STAGGER_MS));
+				const lineProgress = Math.min(
+					1,
+					lineElapsed / (BANNER_ANIMATION_DURATION - i * LINE_STAGGER_MS)
+				);
 
 				if (lineProgress < 0.1) {
 					return "#000000";

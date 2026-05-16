@@ -64,7 +64,9 @@ export function HudStatusBar({
 
 	const showTitleSpinner = sessionTitle && isDefaultSessionTitle(sessionTitle);
 	const displayTitle =
-		sessionTitle && !showTitleSpinner ? truncateWithEllipsis(sessionTitle, SESSION_TITLE_MAX_LENGTH) : null;
+		sessionTitle && !showTitleSpinner
+			? truncateWithEllipsis(sessionTitle, SESSION_TITLE_MAX_LENGTH)
+			: null;
 
 	const hudParts: string[] = [];
 	if (gitDirty) hudParts.push(`git:${gitBranch ?? "dirty"}`);
@@ -135,7 +137,13 @@ export function HudStatusBar({
 			</box>
 
 			{errorText && (
-				<box width="100%" flexDirection="row" justifyContent="center" alignItems="center" marginTop={1}>
+				<box
+					width="100%"
+					flexDirection="row"
+					justifyContent="center"
+					alignItems="center"
+					marginTop={1}
+				>
 					<text>
 						<span fg={COLORS.DAEMON_ERROR}>{errorText}</span>
 					</text>

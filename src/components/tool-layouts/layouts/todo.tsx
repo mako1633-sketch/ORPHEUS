@@ -1,6 +1,10 @@
 import { TextAttributes } from "@opentui/core";
 import { COLORS } from "../../../ui/constants";
-import { type FormattedTodoItem, formatTodoDisplayLines, isTodoInput } from "../../../utils/formatters";
+import {
+	type FormattedTodoItem,
+	formatTodoDisplayLines,
+	isTodoInput,
+} from "../../../utils/formatters";
 import { registerToolLayout } from "../registry";
 import type { ToolHeader, ToolLayoutConfig, ToolLayoutRenderProps } from "../types";
 

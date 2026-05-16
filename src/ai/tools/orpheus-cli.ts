@@ -72,7 +72,10 @@ export const orpheusCli = tool({
 			.describe(
 				"Additional arguments for the command (e.g. 'detect' for project, 'summary' for diff, 'capabilities' or 'files' for scan)."
 			),
-		auto: z.boolean().optional().describe("For 'suggest': execute the top suggestion automatically."),
+		auto: z
+			.boolean()
+			.optional()
+			.describe("For 'suggest': execute the top suggestion automatically."),
 	}),
 	execute: async ({ command, args, auto }) => {
 		const cliPath = resolveOrpheusCliPath();

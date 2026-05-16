@@ -154,7 +154,11 @@ export function createSceneElements(
 			mesh: ring,
 			material: mat,
 			speed: 0.3 + i * 0.15,
-			axis: new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize(),
+			axis: new THREE.Vector3(
+				Math.random() - 0.5,
+				Math.random() - 0.5,
+				Math.random() - 0.5
+			).normalize(),
 			phase: Math.random() * Math.PI * 2,
 			wobblePhase: Math.random() * Math.PI * 2,
 		});

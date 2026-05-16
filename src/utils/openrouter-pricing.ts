@@ -1,6 +1,8 @@
 import type { ModelPricing } from "../types";
 
-export function parseOpenRouterPricePerTokenToPerMillion(pricePerToken: unknown): number | undefined {
+export function parseOpenRouterPricePerTokenToPerMillion(
+	pricePerToken: unknown
+): number | undefined {
 	if (typeof pricePerToken !== "string") return undefined;
 	const parsed = Number(pricePerToken);
 	if (!Number.isFinite(parsed)) return undefined;

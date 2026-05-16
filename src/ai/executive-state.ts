@@ -6,7 +6,13 @@ const EXECUTIVE_STATE_FILE = "executive-state.json";
 const MAX_ITEMS = 80;
 const MAX_TEXT_CHARS = 2000;
 
-export type ExecutiveItemKind = "priority" | "follow_up" | "decision" | "waiting_on" | "risk" | "note";
+export type ExecutiveItemKind =
+	| "priority"
+	| "follow_up"
+	| "decision"
+	| "waiting_on"
+	| "risk"
+	| "note";
 export type ExecutiveItemStatus = "open" | "done" | "blocked" | "archived";
 
 export interface ExecutiveItem {
@@ -91,7 +97,9 @@ export async function loadExecutiveState(): Promise<ExecutiveState> {
 	}
 }
 
-async function saveExecutiveState(state: ExecutiveState): Promise<{ path: string; state: ExecutiveState }> {
+async function saveExecutiveState(
+	state: ExecutiveState
+): Promise<{ path: string; state: ExecutiveState }> {
 	const statePath = getExecutiveStatePath();
 	const next = {
 		updatedAt: nowIso(),

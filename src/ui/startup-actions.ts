@@ -14,7 +14,8 @@ const WINDOWS_STARTUP_ACTIONS: StartupAction[] = [
 	},
 	{
 		label: "Blackwall Snapshot: score, findings, fix plan",
-		description: "Neon read-only endpoint audit with cyber-readiness questions and follow-up prompts.",
+		description:
+			"Neon read-only endpoint audit with cyber-readiness questions and follow-up prompts.",
 		prompt:
 			"Run an ORPHEUS Security Snapshot on this Windows device. Use the full read-only assessment, parse the result, score the posture, and produce an executive summary with prioritized fixes, cyber-readiness controls, owner questions, and suggested follow-up prompts.",
 	},
@@ -65,7 +66,8 @@ const WINDOWS_STARTUP_ACTIONS: StartupAction[] = [
 const MAC_STARTUP_ACTIONS: StartupAction[] = [
 	{
 		label: "Mac Checkup: keys, tools, shell, Signal, search",
-		description: "Probe keys, tool relays, shell access, Signal, browser rendering, and search health.",
+		description:
+			"Probe keys, tool relays, shell access, Signal, browser rendering, and search health.",
 		prompt: "Run ORPHEUS doctor and tell me what needs attention on this Mac.",
 	},
 	{
@@ -119,7 +121,9 @@ export function getStartupActionForInput(
 			.replace(/[.!?]+$/g, "") ?? "";
 	if (!normalized) return null;
 
-	const match = /^(?:run|start|execute|select|choose|option)\s+(?:option\s+)?([1-9])$/i.exec(normalized);
+	const match = /^(?:run|start|execute|select|choose|option)\s+(?:option\s+)?([1-9])$/i.exec(
+		normalized
+	);
 	const sequence =
 		match?.[1] ?? (options.allowBareNumber && /^[1-9]$/.test(normalized) ? normalized : undefined);
 	return getStartupActionForKey(sequence);

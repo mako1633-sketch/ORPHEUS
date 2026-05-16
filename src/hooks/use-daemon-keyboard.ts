@@ -384,7 +384,11 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			}
 
 			// '?' key to show hotkeys pane
-			if (key.sequence === "?" && key.eventType === "press" && currentState !== DaemonState.TYPING) {
+			if (
+				key.sequence === "?" &&
+				key.eventType === "press" &&
+				currentState !== DaemonState.TYPING
+			) {
 				closeAllMenus();
 				actions.setShowHotkeysPane(true);
 				key.preventDefault();
@@ -411,7 +415,9 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 					}
 					// Check for OpenAI API key (needed for voice transcription)
 					if (!process.env.OPENAI_API_KEY) {
-						actions.setApiKeyMissingError("Voice input is disabled because OpenAI API key is not set.");
+						actions.setApiKeyMissingError(
+							"Voice input is disabled because OpenAI API key is not set."
+						);
 						key.preventDefault();
 						return;
 					}
@@ -465,7 +471,10 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 				} else if (currentState === DaemonState.SPEAKING) {
 					// Cancel TTS playback immediately with single ESC
 					manager.cancelCurrentAction();
-				} else if (currentState === DaemonState.TRANSCRIBING || currentState === DaemonState.RESPONDING) {
+				} else if (
+					currentState === DaemonState.TRANSCRIBING ||
+					currentState === DaemonState.RESPONDING
+				) {
 					if (escPendingCancel) {
 						manager.cancelCurrentAction();
 						actions.setCurrentTranscription("");
@@ -482,13 +491,22 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			}
 
 			// Enter to submit in typing mode
-			if (key.name === "return" && key.eventType === "press" && currentState === DaemonState.TYPING) {
+			if (
+				key.name === "return" &&
+				key.eventType === "press" &&
+				currentState === DaemonState.TYPING
+			) {
 				// Let the focused <input> handle submit (global handlers run first in OpenTUI).
 				return;
 			}
 
 			// Regular character input in typing mode (handled by <input> component)
-			if (currentState === DaemonState.TYPING && key.eventType === "press" && !key.ctrl && !key.meta) {
+			if (
+				currentState === DaemonState.TYPING &&
+				key.eventType === "press" &&
+				!key.ctrl &&
+				!key.meta
+			) {
 				// Don't prevent default for regular keys so <input> can receive them
 				// except for those that might trigger global actions
 				return;

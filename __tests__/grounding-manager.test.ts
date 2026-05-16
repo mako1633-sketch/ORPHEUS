@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
 
-import { groundingItemsSchema, groundingManagerInputSchema } from "../src/ai/tools/grounding-manager";
+import {
+	groundingItemsSchema,
+	groundingManagerInputSchema,
+} from "../src/ai/tools/grounding-manager";
 
 const groundingItems = [
 	{
@@ -118,7 +121,9 @@ describe("groundingManagerInputSchema", () => {
 		expect(() =>
 			groundingManagerInputSchema.parse({
 				action: "set",
-				items: [{ id: "g1", statement: "Claim", source: { url: "https://example.com", quote: "" } }],
+				items: [
+					{ id: "g1", statement: "Claim", source: { url: "https://example.com", quote: "" } },
+				],
 			})
 		).toThrow();
 

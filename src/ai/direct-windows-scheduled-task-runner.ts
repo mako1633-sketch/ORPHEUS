@@ -6,7 +6,12 @@ import {
 	buildWindowsSecurityScheduledTaskPlan,
 	listWindowsSecurityScheduledTaskTemplates,
 } from "../security/windows-scheduled-tasks";
-import type { StreamCallbacks, TokenUsage, ToolApprovalRequest, ToolApprovalResponse } from "../types";
+import type {
+	StreamCallbacks,
+	TokenUsage,
+	ToolApprovalRequest,
+	ToolApprovalResponse,
+} from "../types";
 import { executeLocalShellCommand } from "./tools/run-bash";
 
 export interface DirectWindowsScheduledTaskResult {
@@ -18,7 +23,8 @@ export interface DirectWindowsScheduledTaskResult {
 
 const SCHEDULED_TASK_SECURITY_PATTERN =
 	/\b(scheduled\s+tasks?|task\s+scheduler|schedule(?:d)?\s+(?:defender|security|scan|event|audit)|recurring\s+(?:defender|security|scan|event|audit))\b/i;
-const MODIFY_PATTERN = /\b(update|modify|change|set|create|add|register|enable|disable|delete|remove)\b/i;
+const MODIFY_PATTERN =
+	/\b(update|modify|change|set|create|add|register|enable|disable|delete|remove)\b/i;
 
 export function shouldRunDirectWindowsScheduledTaskSecurity(userText: string): boolean {
 	const normalized = userText.trim();
@@ -76,7 +82,9 @@ function summarizeOutput(output: string): string {
 
 function buildDeniedText(reason?: string): string {
 	const templates = listWindowsSecurityScheduledTaskTemplates()
-		.map((template) => `- ${template.id}: ${template.description} Default: ${template.defaultTrigger}`)
+		.map(
+			(template) => `- ${template.id}: ${template.description} Default: ${template.defaultTrigger}`
+		)
 		.join("\n");
 
 	return [

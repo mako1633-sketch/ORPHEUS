@@ -2,7 +2,12 @@ import type { SceneElements } from "../scene/create-scene-elements";
 import type { RigState } from "../state/rig-state";
 import { clamp01, lerpColor } from "../utils/math";
 
-export function updateEye(elements: SceneElements, state: RigState, dt: number, intensity: number): void {
+export function updateEye(
+	elements: SceneElements,
+	state: RigState,
+	dt: number,
+	intensity: number
+): void {
 	const { phase, audio, typing, reasoning, tool, theme } = state;
 
 	const eyeSpeed = 1.5 + intensity * 4;
@@ -16,7 +21,8 @@ export function updateEye(elements: SceneElements, state: RigState, dt: number, 
 	const pupilPulseAmount = 0.15 + intensity * 0.35 + typing.pulse * 0.15;
 	const normalPupilBase = 0.8 + Math.sin(phase.pupilPulse) * pupilPulseAmount;
 	const reasoningPupilDilation = 1.4;
-	const pupilBase = normalPupilBase * (1 - reasoning.blend) + reasoningPupilDilation * reasoning.blend;
+	const pupilBase =
+		normalPupilBase * (1 - reasoning.blend) + reasoningPupilDilation * reasoning.blend;
 	elements.pupil.scale.setScalar(pupilBase * (1 + audio.current * 0.08));
 
 	if (tool.flashTimer > 0) {

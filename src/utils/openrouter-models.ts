@@ -84,7 +84,8 @@ function normalizeModels(items: OpenRouterModelItem[]): ModelOption[] {
 		if (!id) continue;
 		if (!supportsToolCalling(item)) continue;
 
-		const name = typeof item.name === "string" && item.name.trim().length > 0 ? item.name.trim() : id;
+		const name =
+			typeof item.name === "string" && item.name.trim().length > 0 ? item.name.trim() : id;
 		const contextLength = typeof item.context_length === "number" ? item.context_length : undefined;
 		const pricing = parsePricing(item.pricing);
 

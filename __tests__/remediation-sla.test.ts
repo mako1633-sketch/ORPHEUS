@@ -30,8 +30,12 @@ function issue(overrides: Partial<RemediationLedgerIssue> = {}): RemediationLedg
 
 describe("remediation SLA", () => {
 	it("assigns default due dates by severity", () => {
-		expect(defaultDueDateForSeverity("high", "2026-05-09T00:00:00.000Z")).toBe("2026-05-16T00:00:00.000Z");
-		expect(defaultDueDateForSeverity("medium", "2026-05-09T00:00:00.000Z")).toBe("2026-06-08T00:00:00.000Z");
+		expect(defaultDueDateForSeverity("high", "2026-05-09T00:00:00.000Z")).toBe(
+			"2026-05-16T00:00:00.000Z"
+		);
+		expect(defaultDueDateForSeverity("medium", "2026-05-09T00:00:00.000Z")).toBe(
+			"2026-06-08T00:00:00.000Z"
+		);
 	});
 
 	it("evaluates overdue and due soon states", () => {

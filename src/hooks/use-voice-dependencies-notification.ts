@@ -7,7 +7,9 @@ export interface UseVoiceDependenciesNotificationParams {
 	enabled: boolean;
 }
 
-export function useVoiceDependenciesNotification(params: UseVoiceDependenciesNotificationParams): void {
+export function useVoiceDependenciesNotification(
+	params: UseVoiceDependenciesNotificationParams
+): void {
 	const { enabled } = params;
 	const hasNotifiedRef = useRef(false);
 	const pendingNotificationRef = useRef<
@@ -32,7 +34,8 @@ export function useVoiceDependenciesNotification(params: UseVoiceDependenciesNot
 
 			if (!deps.sox.available) {
 				const hint =
-					deps.sox.hint ?? (process.platform === "darwin" ? "Run: brew install sox" : "Install sox");
+					deps.sox.hint ??
+					(process.platform === "darwin" ? "Run: brew install sox" : "Install sox");
 				pendingNotificationRef.current = { type: "sox", hint };
 			}
 		})();

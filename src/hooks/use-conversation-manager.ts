@@ -35,7 +35,9 @@ export interface UseConversationManagerReturn {
 	undoLastTurn: () => void;
 }
 
-export function useConversationManager(params: UseConversationManagerParams): UseConversationManagerReturn {
+export function useConversationManager(
+	params: UseConversationManagerParams
+): UseConversationManagerReturn {
 	const {
 		conversationHistory,
 		sessionUsage,
@@ -85,11 +87,19 @@ export function useConversationManager(params: UseConversationManagerParams): Us
 			if (snapshot) {
 				hydrateConversationHistory(snapshot.conversationHistory);
 				setSessionUsage(snapshot.sessionUsage);
-				manager.setConversationHistory(buildModelHistoryFromConversation(snapshot.conversationHistory));
+				manager.setConversationHistory(
+					buildModelHistoryFromConversation(snapshot.conversationHistory)
+				);
 			}
 			setCurrentSessionIdSafe(sessionId);
 		},
-		[clearConversationState, hydrateConversationHistory, setSessionUsage, manager, setCurrentSessionIdSafe]
+		[
+			clearConversationState,
+			hydrateConversationHistory,
+			setSessionUsage,
+			manager,
+			setCurrentSessionIdSafe,
+		]
 	);
 
 	const startNewSession = useCallback(() => {
@@ -140,7 +150,9 @@ export function useConversationManager(params: UseConversationManagerParams): Us
 
 		const actualIdx = conversationHistory.length - 1 - lastDaemonIdx;
 		const userMsgIdx =
-			actualIdx > 0 && conversationHistory[actualIdx - 1]?.type === "user" ? actualIdx - 1 : actualIdx;
+			actualIdx > 0 && conversationHistory[actualIdx - 1]?.type === "user"
+				? actualIdx - 1
+				: actualIdx;
 
 		const newHistory = conversationHistory.slice(0, userMsgIdx);
 		hydrateConversationHistory(newHistory);

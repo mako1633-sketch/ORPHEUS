@@ -227,7 +227,8 @@ export function useAppController({
 		currentUserInputRef: daemon.currentUserInputRef,
 	});
 
-	const { clearConversationState, loadSessionById, startNewSession, undoLastTurn } = conversationManager;
+	const { clearConversationState, loadSessionById, startNewSession, undoLastTurn } =
+		conversationManager;
 
 	const startNewSessionAndReset = useCallback(() => {
 		startNewSession();
@@ -440,7 +441,8 @@ export function useAppController({
 	} = displayState;
 
 	const latestTurnTotal =
-		(daemon.sessionUsage.latestTurnPromptTokens ?? 0) + (daemon.sessionUsage.latestTurnCompletionTokens ?? 0);
+		(daemon.sessionUsage.latestTurnPromptTokens ?? 0) +
+		(daemon.sessionUsage.latestTurnCompletionTokens ?? 0);
 	const contextPercent =
 		daemon.modelMetadata?.contextLength && latestTurnTotal > 0
 			? (latestTurnTotal / daemon.modelMetadata.contextLength) * 100
@@ -596,7 +598,10 @@ export function useAppController({
 			zIndex: isListening && daemon.hasInteracted ? 2 : 0,
 			// Show banner only when idle, not interacted, and terminal is large enough
 			showBanner:
-				onboardingComplete && !daemon.hasInteracted && terminalSize.height >= 30 && terminalSize.width >= 100,
+				onboardingComplete &&
+				!daemon.hasInteracted &&
+				terminalSize.height >= 30 &&
+				terminalSize.width >= 100,
 			animateBanner: startupAnimationActive,
 			startupAnimationActive,
 		},

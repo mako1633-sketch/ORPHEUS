@@ -77,10 +77,17 @@ function getToolLabel(id: ToolToggleId): string {
 
 export function ToolsMenu({ persistPreferences, onClose }: ToolsMenuProps) {
 	const manager = getDaemonManager();
-	const [toggles, setToggles] = useState<ToolToggles>(manager.toolToggles ?? { ...DEFAULT_TOOL_TOGGLES });
-	const [mcpServers, setMcpServers] = useState<McpServerStatus[]>(() => getMcpManager().getServersSnapshot());
+	const [toggles, setToggles] = useState<ToolToggles>(
+		manager.toolToggles ?? { ...DEFAULT_TOOL_TOGGLES }
+	);
+	const [mcpServers, setMcpServers] = useState<McpServerStatus[]>(() =>
+		getMcpManager().getServersSnapshot()
+	);
 
-	const [toolAvailability, setToolAvailability] = useState<Record<ToolToggleId, MenuToolItem> | null>(null);
+	const [toolAvailability, setToolAvailability] = useState<Record<
+		ToolToggleId,
+		MenuToolItem
+	> | null>(null);
 
 	useEffect(() => {
 		const mcp = getMcpManager();
@@ -121,7 +128,9 @@ export function ToolsMenu({ persistPreferences, onClose }: ToolsMenuProps) {
 			}));
 		}
 
-		return order.map((id) => toolAvailability[id]).filter((item): item is MenuToolItem => Boolean(item));
+		return order
+			.map((id) => toolAvailability[id])
+			.filter((item): item is MenuToolItem => Boolean(item));
 	}, [toolAvailability]);
 
 	const { selectedIndex } = useMenuKeyboard({
@@ -218,7 +227,9 @@ export function ToolsMenu({ persistPreferences, onClose }: ToolsMenuProps) {
 				</box>
 				<box marginBottom={1}>
 					<text>
-						<span fg={COLORS.USER_LABEL}>↑/↓ or j/k to navigate, ENTER to toggle, ESC to close</span>
+						<span fg={COLORS.USER_LABEL}>
+							↑/↓ or j/k to navigate, ENTER to toggle, ESC to close
+						</span>
 					</text>
 				</box>
 

@@ -7,8 +7,15 @@ import {
 	buildSecurityControlMappings,
 	summarizeControlMappings,
 } from "./security-control-mapping";
-import type { ClientEngagement, EngagementSyncResult, RemediationLedgerIssue } from "./security-engagements";
-import { type SecurityEvidenceManifest, buildSecurityEvidenceManifest } from "./security-evidence-manifest";
+import type {
+	ClientEngagement,
+	EngagementSyncResult,
+	RemediationLedgerIssue,
+} from "./security-engagements";
+import {
+	type SecurityEvidenceManifest,
+	buildSecurityEvidenceManifest,
+} from "./security-evidence-manifest";
 import { updateSecurityPackIndex } from "./security-pack-index";
 import { buildSecurityPortalHtml } from "./security-portal";
 import type { WindowsAssessmentDiff, WindowsAssessmentRecord } from "./windows-assessment-history";
@@ -32,7 +39,10 @@ export interface SecurityEvidencePackInput {
 	history: { record: WindowsAssessmentRecord; diff: WindowsAssessmentDiff };
 	engagement?: ClientEngagement;
 	ledger?: RemediationLedgerIssue[];
-	ledgerSync?: Pick<EngagementSyncResult, "openedIssueIds" | "verifiedIssueIds" | "unchangedIssueIds">;
+	ledgerSync?: Pick<
+		EngagementSyncResult,
+		"openedIssueIds" | "verifiedIssueIds" | "unchangedIssueIds"
+	>;
 	generatedAt?: Date;
 }
 
@@ -73,7 +83,9 @@ function formatDiff(diff: WindowsAssessmentDiff, currentFindings: AssessmentFind
 	const titles = findingTitleMap(currentFindings);
 	const added = diff.addedFindingIds.map((id) => `- Added: ${titles.get(id) ?? id}`).join("\n");
 	const resolved = diff.resolvedFindingIds.map((id) => `- Resolved: ${id}`).join("\n");
-	const unchanged = diff.unchangedFindingIds.map((id) => `- Unchanged: ${titles.get(id) ?? id}`).join("\n");
+	const unchanged = diff.unchangedFindingIds
+		.map((id) => `- Unchanged: ${titles.get(id) ?? id}`)
+		.join("\n");
 
 	return [
 		`Previous assessment: ${diff.previousId ?? "none"}`,
@@ -174,7 +186,10 @@ function formatControlMappings(mappings: SecurityControlMapping[]): string {
 
 function formatScheduledTaskVerification(): string {
 	const templates = listWindowsSecurityScheduledTaskTemplates()
-		.map((template) => `- ${template.name}: ${template.description} Default: ${template.defaultTrigger}`)
+		.map(
+			(template) =>
+				`- ${template.name}: ${template.description} Default: ${template.defaultTrigger}`
+		)
 		.join("\n");
 	return [
 		"Defensive task templates available:",

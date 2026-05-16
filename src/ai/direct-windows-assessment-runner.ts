@@ -8,7 +8,12 @@ import {
 	getWindowsSecurityPlaybook,
 } from "../security/windows-security-playbooks";
 import { buildWindowsSecurityReport } from "../security/windows-security-report";
-import type { StreamCallbacks, TokenUsage, ToolApprovalRequest, ToolApprovalResponse } from "../types";
+import type {
+	StreamCallbacks,
+	TokenUsage,
+	ToolApprovalRequest,
+	ToolApprovalResponse,
+} from "../types";
 import { getLastAssistantText } from "./follow-up-context";
 import { executeLocalShellCommand } from "./tools/run-bash";
 
@@ -22,7 +27,8 @@ export interface DirectWindowsAssessmentResult {
 const CLEAR_FULL_ASSESSMENT_PATTERN =
 	/\b(full|complete|comprehensive)\b[\s\S]{0,100}\bwindows\b[\s\S]{0,100}\b(security|vulnerability|posture)\b[\s\S]{0,100}\b(assessment|audit|review)\b/i;
 
-const QUICK_POSTURE_PATTERN = /\bquick\b[\s\S]{0,160}\b(windows|security|posture|assessment|playbook)\b/i;
+const QUICK_POSTURE_PATTERN =
+	/\bquick\b[\s\S]{0,160}\b(windows|security|posture|assessment|playbook)\b/i;
 
 const SECURITY_SIGNALS_REVIEW_PATTERN =
 	/\b(defender|firewall)\b[\s\S]{0,180}\b(startup|services?|listening\s+ports?|ports?|logs?|event\s+signals?)\b|\b(startup|services?|listening\s+ports?|ports?|logs?|event\s+signals?)\b[\s\S]{0,180}\b(defender|firewall)\b/i;
@@ -42,7 +48,8 @@ const REMEDIATION_ACTION_PATTERN =
 
 function isActionRequest(userText: string): boolean {
 	return (
-		IMPERATIVE_ASSESSMENT_ACTION_PATTERN.test(userText) || REQUEST_ASSESSMENT_ACTION_PATTERN.test(userText)
+		IMPERATIVE_ASSESSMENT_ACTION_PATTERN.test(userText) ||
+		REQUEST_ASSESSMENT_ACTION_PATTERN.test(userText)
 	);
 }
 
@@ -164,7 +171,11 @@ async function runDirectWindowsPlaybook(
 		},
 	};
 
-	callbacks.onToolCall?.("windowsSecurity", { action: "get", playbook: playbookId }, windowsGetCallId);
+	callbacks.onToolCall?.(
+		"windowsSecurity",
+		{ action: "get", playbook: playbookId },
+		windowsGetCallId
+	);
 	callbacks.onToolResult?.("windowsSecurity", playbookResult, windowsGetCallId);
 
 	const runCallId = `direct-runBash-${randomUUID()}`;
@@ -283,7 +294,12 @@ export async function runDirectWindowsQuickPosture(
 	userText: string,
 	callbacks: StreamCallbacks
 ): Promise<DirectWindowsAssessmentResult> {
-	return runDirectWindowsPlaybook(userText, callbacks, "quickPosture", "Run quick Windows posture check");
+	return runDirectWindowsPlaybook(
+		userText,
+		callbacks,
+		"quickPosture",
+		"Run quick Windows posture check"
+	);
 }
 
 export async function runDirectWindowsSecurityReview(

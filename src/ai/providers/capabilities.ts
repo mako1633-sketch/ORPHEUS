@@ -14,6 +14,8 @@ const PROVIDER_CAPABILITIES: Record<LlmProvider, ProviderCapabilities> = {
 	},
 };
 
-export function getProviderCapabilities(provider: LlmProvider = getModelProvider()): ProviderCapabilities {
+export function getProviderCapabilities(
+	provider: LlmProvider = getModelProvider()
+): ProviderCapabilities {
 	return PROVIDER_CAPABILITIES[provider];
 }

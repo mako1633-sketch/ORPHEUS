@@ -131,7 +131,9 @@ describe("session-store", () => {
 			const row = sessions.find((s: { id: string }) => s.id === session.id);
 			expect(row).toBeTruthy();
 			expect(row?.createdAt).toBe(session.createdAt);
-			expect(new Date(row?.updatedAt ?? 0).getTime()).toBeGreaterThan(new Date(session.updatedAt).getTime());
+			expect(new Date(row?.updatedAt ?? 0).getTime()).toBeGreaterThan(
+				new Date(session.updatedAt).getTime()
+			);
 		} finally {
 			store.closeSessionStore();
 			if (typeof previousDbPath === "string") {
@@ -163,7 +165,9 @@ describe("session-store", () => {
 			const sessions = await store.listSessions();
 			const row = sessions.find((s: { id: string }) => s.id === session.id);
 			expect(row?.title).toBe("Renamed");
-			expect(new Date(row?.updatedAt ?? 0).getTime()).toBeGreaterThan(new Date(session.updatedAt).getTime());
+			expect(new Date(row?.updatedAt ?? 0).getTime()).toBeGreaterThan(
+				new Date(session.updatedAt).getTime()
+			);
 		} finally {
 			store.closeSessionStore();
 			if (typeof previousDbPath === "string") {

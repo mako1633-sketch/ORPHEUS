@@ -77,10 +77,13 @@ export function ToolApprovalProvider({ children }: ToolApprovalProviderProps) {
 	const [pendingApprovals, setPendingApprovals] = useState<Map<string, PendingApproval>>(new Map());
 	const [activeApprovalId, setActiveApprovalId] = useState<string | null>(null);
 
-	const getFirstPendingId = useCallback((approvals: Map<string, PendingApproval>): string | null => {
-		const first = approvals.keys().next();
-		return first.done ? null : first.value;
-	}, []);
+	const getFirstPendingId = useCallback(
+		(approvals: Map<string, PendingApproval>): string | null => {
+			const first = approvals.keys().next();
+			return first.done ? null : first.value;
+		},
+		[]
+	);
 
 	useEffect(() => {
 		const handleAwaitingApprovals = (
@@ -194,7 +197,14 @@ export function ToolApprovalProvider({ children }: ToolApprovalProviderProps) {
 
 	return (
 		<ToolApprovalContext.Provider
-			value={{ pendingApprovals, activeApprovalId, approveRequest, denyRequest, approveAll, denyAll }}
+			value={{
+				pendingApprovals,
+				activeApprovalId,
+				approveRequest,
+				denyRequest,
+				approveAll,
+				denyAll,
+			}}
 		>
 			{children}
 		</ToolApprovalContext.Provider>

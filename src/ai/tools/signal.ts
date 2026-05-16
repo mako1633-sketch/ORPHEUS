@@ -207,7 +207,11 @@ function buildActionArgs(input: {
 	}
 }
 
-export async function detectSignalCli(): Promise<{ available: boolean; reason?: string; version?: string }> {
+export async function detectSignalCli(): Promise<{
+	available: boolean;
+	reason?: string;
+	version?: string;
+}> {
 	const result = await runSignalCli(["--version"], undefined, 5000);
 	if (result.exitCode !== 0) {
 		return {
@@ -235,15 +239,29 @@ export const signal = tool({
 		recipient: z
 			.string()
 			.optional()
-			.describe("Recipient phone number, UUID, PNI: UUID, or u:username. Required for direct sends."),
+			.describe(
+				"Recipient phone number, UUID, PNI: UUID, or u:username. Required for direct sends."
+			),
 		groupId: z.string().optional().describe("Signal group ID for group sends."),
 		message: z.string().optional().describe("Message body for sendMessage."),
 		attachments: z
 			.array(z.string())
 			.optional()
 			.describe("Local attachment file paths for sendMessage. These files are uploaded to Signal."),
-		timeoutSeconds: z.number().int().min(0).max(60).optional().describe("Receive timeout in seconds."),
-		maxMessages: z.number().int().min(1).max(100).optional().describe("Maximum messages to receive."),
+		timeoutSeconds: z
+			.number()
+			.int()
+			.min(0)
+			.max(60)
+			.optional()
+			.describe("Receive timeout in seconds."),
+		maxMessages: z
+			.number()
+			.int()
+			.min(1)
+			.max(100)
+			.optional()
+			.describe("Maximum messages to receive."),
 		ignoreAttachments: z
 			.boolean()
 			.optional()

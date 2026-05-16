@@ -21,7 +21,9 @@ describe("model config", () => {
 		process.env.CODEX_CODING_MODEL = "gpt-5.2-codex";
 
 		expect(getCopilotCodingModel()).toBe("gpt-5.2-codex");
-		expect(resolveCopilotCodingModel([{ id: "gpt-5.2-codex", name: "GPT 5.2 Codex" }])).toBe("gpt-5.2-codex");
+		expect(resolveCopilotCodingModel([{ id: "gpt-5.2-codex", name: "GPT 5.2 Codex" }])).toBe(
+			"gpt-5.2-codex"
+		);
 	});
 
 	it("falls back to the best available Codex-like Copilot model", () => {

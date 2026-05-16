@@ -87,7 +87,9 @@ function GroundingBody({ call }: ToolLayoutRenderProps) {
 
 				const MAX_LEN = 90;
 				const statement =
-					item.statement.length > MAX_LEN ? item.statement.slice(0, MAX_LEN) + "..." : item.statement;
+					item.statement.length > MAX_LEN
+						? item.statement.slice(0, MAX_LEN) + "..."
+						: item.statement;
 
 				return (
 					<box key={idx} flexDirection="column">

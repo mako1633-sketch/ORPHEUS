@@ -48,14 +48,15 @@ export interface UseAppModelReturn {
 export function useAppModel(params: UseAppModelParams): UseAppModelReturn {
 	const { preferencesLoaded, showProviderMenu } = params;
 
-	const [currentModelProvider, setCurrentModelProvider] = useState<LlmProvider>(DEFAULT_MODEL_PROVIDER);
+	const [currentModelProvider, setCurrentModelProvider] =
+		useState<LlmProvider>(DEFAULT_MODEL_PROVIDER);
 	const [openRouterModelId, setOpenRouterModelId] = useState(DEFAULT_MODEL_ID);
 	const [copilotModelId, setCopilotModelId] = useState(DEFAULT_COPILOT_MODEL_ID);
 	const [ollamaModelId, setOllamaModelId] = useState(DEFAULT_OLLAMA_MODEL_ID);
 
-	const [currentOpenRouterProviderTag, setCurrentOpenRouterProviderTag] = useState<string | undefined>(
-		undefined
-	);
+	const [currentOpenRouterProviderTag, setCurrentOpenRouterProviderTag] = useState<
+		string | undefined
+	>(undefined);
 
 	const [openRouterModelsWithPricing, setOpenRouterModelsWithPricing] =
 		useState<ModelOption[]>(AVAILABLE_MODELS);
@@ -120,7 +121,8 @@ export function useAppModel(params: UseAppModelParams): UseAppModelReturn {
 		const pricingCandidates = openRouterProviders
 			.map((p) => p.pricing)
 			.filter((p): p is NonNullable<typeof p> => Boolean(p));
-		const avgPricing = pricingCandidates.length > 0 ? mergePricingAverages(pricingCandidates) : undefined;
+		const avgPricing =
+			pricingCandidates.length > 0 ? mergePricingAverages(pricingCandidates) : undefined;
 
 		const maxContextLength = openRouterProviders.reduce((max, p) => {
 			const value = typeof p.contextLength === "number" ? p.contextLength : 0;

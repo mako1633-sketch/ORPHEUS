@@ -188,7 +188,10 @@ async function searchDuckDuckGo(
 			match = linkRegex.exec(html);
 			if (match === null || results.length >= numResults) break;
 			const url = match[1];
-			const title = (match[2] ?? "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+			const title = (match[2] ?? "")
+				.replace(/&amp;/g, "&")
+				.replace(/&lt;/g, "<")
+				.replace(/&gt;/g, ">");
 			if (url && !url.startsWith("/") && !url.startsWith("javascript:")) {
 				results.push({ title, url, source: "duckduckgo" });
 			}
@@ -232,10 +235,13 @@ export async function checkSearchProviderHealth(): Promise<SearchProviderHealth[
 		});
 	} else {
 		try {
-			const r = await fetch("https://api.search.brave.com/res/v1/web/search?q=healthcheck&count=1", {
-				headers: { Accept: "application/json", "X-Subscription-Token": braveKey },
-				signal: AbortSignal.timeout(5000),
-			});
+			const r = await fetch(
+				"https://api.search.brave.com/res/v1/web/search?q=healthcheck&count=1",
+				{
+					headers: { Accept: "application/json", "X-Subscription-Token": braveKey },
+					signal: AbortSignal.timeout(5000),
+				}
+			);
 			results.push({
 				provider: "brave",
 				healthy: r.ok,
@@ -266,7 +272,9 @@ export const webSearchWithFallback = tool({
 	inputSchema: z.object({
 		query: z.string().describe("The search query."),
 		numResults: z.number().min(1).max(20).default(10).describe("Number of results to return."),
-		recency: RecencyEnum.optional().describe("Filter to recent results. Only honored by EXA and Brave."),
+		recency: RecencyEnum.optional().describe(
+			"Filter to recent results. Only honored by EXA and Brave."
+		),
 		includeDomains: z
 			.array(z.string())
 			.optional()

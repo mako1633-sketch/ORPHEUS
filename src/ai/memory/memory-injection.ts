@@ -8,7 +8,10 @@
 import { getRuntimeContext } from "../../state/runtime-context";
 import type { MemoryContext, MemoryEntry } from "../../types";
 import { debug } from "../../utils/debug-logger";
-import { detectAssistantResponseLeak, isAssistantResponseGuardNotice } from "../assistant-response-guard";
+import {
+	detectAssistantResponseLeak,
+	isAssistantResponseGuardNotice,
+} from "../assistant-response-guard";
 import { loadCodingTaskState } from "../coding-task-state";
 import { buildExecutiveBriefing } from "../executive-state";
 import { formatKnowledgeHits, searchKnowledgeBase } from "../knowledge-base";
@@ -93,8 +96,12 @@ async function formatExecutiveBriefingForPrompt(): Promise<string> {
 	if (totalOpen === 0) return "";
 
 	const attention = [
-		briefing.overdue.length ? `Overdue: ${briefing.overdue.map((item) => item.title).join("; ")}` : "",
-		briefing.upcoming.length ? `Due soon: ${briefing.upcoming.map((item) => item.title).join("; ")}` : "",
+		briefing.overdue.length
+			? `Overdue: ${briefing.overdue.map((item) => item.title).join("; ")}`
+			: "",
+		briefing.upcoming.length
+			? `Due soon: ${briefing.upcoming.map((item) => item.title).join("; ")}`
+			: "",
 		briefing.counts.waiting_on ? `Waiting on: ${briefing.counts.waiting_on}` : "",
 		briefing.counts.risk ? `Risks: ${briefing.counts.risk}` : "",
 		briefing.counts.decision ? `Open decisions: ${briefing.counts.decision}` : "",
@@ -155,7 +162,8 @@ async function formatReflectionContextForPrompt(userMessage: string): Promise<st
 		const lower = userMessage.toLowerCase();
 		let taskType: "coding" | "debug" | "setup" | "security" | "general" = "general";
 		if (lower.includes("code") || lower.includes("program")) taskType = "coding";
-		else if (lower.includes("bug") || lower.includes("error") || lower.includes("fix")) taskType = "debug";
+		else if (lower.includes("bug") || lower.includes("error") || lower.includes("fix"))
+			taskType = "debug";
 		else if (lower.includes("setup") || lower.includes("install") || lower.includes("config"))
 			taskType = "setup";
 		else if (lower.includes("security") || lower.includes("audit") || lower.includes("assessment"))

@@ -1,5 +1,8 @@
 import { debug, memoryDebug } from "../../utils/debug-logger";
-import { detectAssistantResponseLeak, isAssistantResponseGuardNotice } from "../assistant-response-guard";
+import {
+	detectAssistantResponseLeak,
+	isAssistantResponseGuardNotice,
+} from "../assistant-response-guard";
 
 const HONCHO_PACKAGE = "@honcho-ai/sdk";
 const DEFAULT_WORKSPACE_ID = "orpheus";
@@ -131,7 +134,9 @@ function formatContextResult(
 	const openAiMessages = getOpenAiMessages(context, assistantPeer);
 	const openAiText = Array.isArray(openAiMessages) ? textFromOpenAiMessages(openAiMessages) : "";
 
-	const representation = stringifyContextValue(context.representation ?? context.peerRepresentation);
+	const representation = stringifyContextValue(
+		context.representation ?? context.peerRepresentation
+	);
 	const peerCard = stringifyContextValue(context.peerCard ?? context.peer_card);
 	const summary = stringifyContextValue(context.summary);
 
@@ -154,7 +159,10 @@ function isContaminatedMemoryText(text: string): boolean {
 }
 
 async function defaultHonchoFactory(): Promise<HonchoConstructor> {
-	const mod = (await import(HONCHO_PACKAGE)) as { Honcho?: HonchoConstructor; default?: HonchoConstructor };
+	const mod = (await import(HONCHO_PACKAGE)) as {
+		Honcho?: HonchoConstructor;
+		default?: HonchoConstructor;
+	};
 	const ctor = mod.Honcho ?? mod.default;
 	if (!ctor) {
 		throw new Error("Honcho SDK did not export Honcho");
@@ -164,7 +172,9 @@ async function defaultHonchoFactory(): Promise<HonchoConstructor> {
 
 export function isHonchoAvailable(): boolean {
 	return Boolean(
-		readEnv("HONCHO_API_KEY") || readEnv("HONCHO_BASE_URL") || isTruthyEnv(readEnv("HONCHO_ENABLED"))
+		readEnv("HONCHO_API_KEY") ||
+			readEnv("HONCHO_BASE_URL") ||
+			isTruthyEnv(readEnv("HONCHO_ENABLED"))
 	);
 }
 
@@ -253,7 +263,9 @@ export class HonchoManager {
 			if (baseUrl) options.baseURL = baseUrl;
 
 			this.client = new Honcho(options);
-			this.userPeer = await this.client.peer(readEnv("HONCHO_USER_PEER_ID") ?? DEFAULT_USER_PEER_ID);
+			this.userPeer = await this.client.peer(
+				readEnv("HONCHO_USER_PEER_ID") ?? DEFAULT_USER_PEER_ID
+			);
 			this.assistantPeer = await this.client.peer(
 				readEnv("HONCHO_ASSISTANT_PEER_ID") ?? DEFAULT_ASSISTANT_PEER_ID
 			);
@@ -276,7 +288,9 @@ export class HonchoManager {
 		}
 	}
 
-	private async getSession(sessionId: string | null | undefined): Promise<HonchoSessionLike | null> {
+	private async getSession(
+		sessionId: string | null | undefined
+	): Promise<HonchoSessionLike | null> {
 		if (!this.client) return null;
 		return await this.client.session(getSessionId(sessionId));
 	}
@@ -339,7 +353,11 @@ export class HonchoManager {
 		}
 	}
 
-	async buildContext(params: { sessionId?: string | null; query: string; tokens?: number }): Promise<string> {
+	async buildContext(params: {
+		sessionId?: string | null;
+		query: string;
+		tokens?: number;
+	}): Promise<string> {
 		if (!(await this.initialize())) return "";
 		const session = await this.getSession(params.sessionId);
 		if (!session || !this.userPeer || !this.assistantPeer) return "";
@@ -377,7 +395,10 @@ export class HonchoManager {
 						)
 					: "";
 
-			const result = [sessionContext, peerContextText, chatContext].filter(Boolean).join("\n\n").trim();
+			const result = [sessionContext, peerContextText, chatContext]
+				.filter(Boolean)
+				.join("\n\n")
+				.trim();
 			if (isContaminatedMemoryText(result)) {
 				debug.warn("honcho-context-skipped", {
 					message: "Honcho returned contaminated context",

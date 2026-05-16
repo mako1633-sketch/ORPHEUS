@@ -21,7 +21,9 @@ export function ToolHeaderView({ toolName, header, isRunning, toolColor }: ToolH
 				{header?.secondary && (
 					<span
 						fg={COLORS.REASONING_DIM}
-						attributes={header.secondaryStyle === "italic" ? TextAttributes.ITALIC : TextAttributes.NONE}
+						attributes={
+							header.secondaryStyle === "italic" ? TextAttributes.ITALIC : TextAttributes.NONE
+						}
 					>
 						{` ${header.secondary}`}
 					</span>

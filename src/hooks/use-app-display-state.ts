@@ -123,7 +123,9 @@ export function useAppDisplayState(params: UseAppDisplayStateParams): UseAppDisp
 			availableModels.find((model) => model.id === currentModelId) ??
 			curatedModels.find((model) => model.id === currentModelId);
 		if (selectedModel?.name) {
-			return currentModelProvider === "copilot" ? `Copilot: ${selectedModel.name}` : selectedModel.name;
+			return currentModelProvider === "copilot"
+				? `Copilot: ${selectedModel.name}`
+				: selectedModel.name;
 		}
 		if (currentModelProvider === "copilot") {
 			return `Copilot: ${currentModelId}`;
@@ -163,7 +165,8 @@ export function useAppDisplayState(params: UseAppDisplayStateParams): UseAppDisp
 	);
 
 	const frostColor = hasInteracted ? "#090014D8" : COLORS.BACKGROUND;
-	const isListening = daemonState === DaemonState.LISTENING || daemonState === DaemonState.TRANSCRIBING;
+	const isListening =
+		daemonState === DaemonState.LISTENING || daemonState === DaemonState.TRANSCRIBING;
 	const isListeningDim = isListening && hasInteracted;
 
 	return {

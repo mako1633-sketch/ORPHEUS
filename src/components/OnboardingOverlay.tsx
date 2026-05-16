@@ -3,7 +3,13 @@ import { useKeyboard } from "@opentui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { RefObject } from "react";
 import { handleOnboardingKey } from "../hooks/keyboard-handlers";
-import type { AppPreferences, AudioDevice, LlmProvider, ModelOption, OnboardingStep } from "../types";
+import type {
+	AppPreferences,
+	AudioDevice,
+	LlmProvider,
+	ModelOption,
+	OnboardingStep,
+} from "../types";
 import { COLORS } from "../ui/constants";
 import { formatContextWindowK, formatPrice } from "../utils/formatters";
 import { ApiKeyInput } from "./ApiKeyInput";
@@ -277,7 +283,9 @@ export function OnboardingOverlay({
 						</box>
 						<box marginBottom={1}>
 							<text>
-								<span fg={COLORS.REASONING_DIM}>Choose where ORPHEUS should run agent responses.</span>
+								<span fg={COLORS.REASONING_DIM}>
+									Choose where ORPHEUS should run agent responses.
+								</span>
 							</text>
 						</box>
 						<box marginBottom={1}>
@@ -377,7 +385,11 @@ export function OnboardingOverlay({
 				)}
 
 				{step === "exa_key" && (
-					<ApiKeyStep {...API_KEY_CONFIGS.exa_key} onSubmit={onKeySubmit} textareaRef={apiKeyTextareaRef} />
+					<ApiKeyStep
+						{...API_KEY_CONFIGS.exa_key}
+						onSubmit={onKeySubmit}
+						textareaRef={apiKeyTextareaRef}
+					/>
 				)}
 
 				{step === "device" && (
@@ -423,7 +435,9 @@ export function OnboardingOverlay({
 								<box>
 									<text>
 										<span fg={COLORS.USER_LABEL}>
-											{deviceLoadTimedOut ? "No devices found. Press ESC to skip." : "Loading devices..."}
+											{deviceLoadTimedOut
+												? "No devices found. Press ESC to skip."
+												: "Loading devices..."}
 										</span>
 									</text>
 								</box>
@@ -442,12 +456,16 @@ export function OnboardingOverlay({
 										return (
 											<box
 												key={`input-${device.name}`}
-												backgroundColor={idx === inputSelectedIdx ? COLORS.MENU_SELECTED_BG : COLORS.MENU_BG}
+												backgroundColor={
+													idx === inputSelectedIdx ? COLORS.MENU_SELECTED_BG : COLORS.MENU_BG
+												}
 												paddingLeft={1}
 												paddingRight={1}
 											>
 												<text>
-													<span fg={idx === inputSelectedIdx ? COLORS.DAEMON_LABEL : COLORS.MENU_TEXT}>
+													<span
+														fg={idx === inputSelectedIdx ? COLORS.DAEMON_LABEL : COLORS.MENU_TEXT}
+													>
 														{idx === inputSelectedIdx ? "▶ " : "  "}
 														{device.name}
 														{device.name === currentDevice ? " ●" : ""}
@@ -465,16 +483,22 @@ export function OnboardingOverlay({
 								<box flexDirection="column">
 									{devices.map((device, idx) => {
 										const isOutputSection = selectedDeviceIdx >= devices.length;
-										const outputSelectedIdx = isOutputSection ? selectedDeviceIdx - devices.length : -1;
+										const outputSelectedIdx = isOutputSection
+											? selectedDeviceIdx - devices.length
+											: -1;
 										return (
 											<box
 												key={`output-${device.name}`}
-												backgroundColor={idx === outputSelectedIdx ? COLORS.MENU_SELECTED_BG : COLORS.MENU_BG}
+												backgroundColor={
+													idx === outputSelectedIdx ? COLORS.MENU_SELECTED_BG : COLORS.MENU_BG
+												}
 												paddingLeft={1}
 												paddingRight={1}
 											>
 												<text>
-													<span fg={idx === outputSelectedIdx ? COLORS.DAEMON_LABEL : COLORS.MENU_TEXT}>
+													<span
+														fg={idx === outputSelectedIdx ? COLORS.DAEMON_LABEL : COLORS.MENU_TEXT}
+													>
 														{idx === outputSelectedIdx ? "▶ " : "  "}
 														{device.name}
 														{device.name === currentOutputDevice ? " ●" : ""}
@@ -498,7 +522,9 @@ export function OnboardingOverlay({
 						</box>
 						<box marginBottom={1}>
 							<text>
-								<span fg={COLORS.REASONING_DIM}>The model controls response quality, speed and cost.</span>
+								<span fg={COLORS.REASONING_DIM}>
+									The model controls response quality, speed and cost.
+								</span>
 							</text>
 						</box>
 						<box marginBottom={1}>
@@ -530,7 +556,8 @@ export function OnboardingOverlay({
 										<text>
 											<span fg={COLORS.REASONING_DIM}>
 												{"CTX".padStart(MODEL_COL_WIDTH.CTX)} {"IN".padStart(MODEL_COL_WIDTH.IN)}{" "}
-												{"OUT".padStart(MODEL_COL_WIDTH.OUT)} {"CACHE".padStart(MODEL_COL_WIDTH.CACHE)}
+												{"OUT".padStart(MODEL_COL_WIDTH.OUT)}{" "}
+												{"CACHE".padStart(MODEL_COL_WIDTH.CACHE)}
 											</span>
 										</text>
 									</box>
@@ -568,9 +595,12 @@ export function OnboardingOverlay({
 													</span>
 												</text>
 												<text>
-													<span fg={COLORS.MENU_TEXT}>{ctxText.padStart(MODEL_COL_WIDTH.CTX)} </span>
+													<span fg={COLORS.MENU_TEXT}>
+														{ctxText.padStart(MODEL_COL_WIDTH.CTX)}{" "}
+													</span>
 													<span fg={COLORS.TYPING_PROMPT}>
-														{inText.padStart(MODEL_COL_WIDTH.IN)} {outText.padStart(MODEL_COL_WIDTH.OUT)}{" "}
+														{inText.padStart(MODEL_COL_WIDTH.IN)}{" "}
+														{outText.padStart(MODEL_COL_WIDTH.OUT)}{" "}
 													</span>
 													<span fg={supportsCaching ? COLORS.DAEMON_TEXT : COLORS.REASONING_DIM}>
 														{cacheText.padStart(MODEL_COL_WIDTH.CACHE)}
@@ -594,7 +624,9 @@ export function OnboardingOverlay({
 						</box>
 						<box marginBottom={1}>
 							<text>
-								<span fg={COLORS.MENU_TEXT}>You can fine-tune behavior anytime in the Settings menu.</span>
+								<span fg={COLORS.MENU_TEXT}>
+									You can fine-tune behavior anytime in the Settings menu.
+								</span>
 							</text>
 						</box>
 						<box marginBottom={1}>

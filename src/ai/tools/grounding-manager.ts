@@ -112,7 +112,9 @@ export const groundingManagerInputSchema = z.preprocess(
 	z.object({
 		action: z
 			.enum(["set", "append"])
-			.describe("Action to perform: 'set' replaces all groundings, 'append' adds to existing ones."),
+			.describe(
+				"Action to perform: 'set' replaces all groundings, 'append' adds to existing ones."
+			),
 		items: groundingItemsSchema,
 	})
 );

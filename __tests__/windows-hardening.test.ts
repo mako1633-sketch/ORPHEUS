@@ -24,7 +24,9 @@ describe("Windows hardening baselines", () => {
 		expect(profiles.map((profile) => profile.id)).toContain("developerWorkstation");
 		expect(profiles.map((profile) => profile.id)).toContain("highSecurityLaptop");
 		expect(getWindowsHardeningRulesForProfile("developerWorkstation").length).toBeGreaterThan(3);
-		expect(WINDOWS_HARDENING_RULES["defender-realtime-on"]?.rollbackCommand).toContain("Set-MpPreference");
+		expect(WINDOWS_HARDENING_RULES["defender-realtime-on"]?.rollbackCommand).toContain(
+			"Set-MpPreference"
+		);
 	});
 
 	it("builds policy-aware plans with rollback commands", () => {
@@ -48,7 +50,9 @@ describe("Windows hardening baselines", () => {
 
 	it("lists watch and event triage rules", () => {
 		expect(listWindowsWatchRules().map((rule) => rule.id)).toContain("watch-new-local-admin");
-		expect(listWindowsEventTriageQueries().map((query) => query.id)).toContain("defender-detections");
+		expect(listWindowsEventTriageQueries().map((query) => query.id)).toContain(
+			"defender-detections"
+		);
 	});
 
 	it("scores suspicious process signals", () => {

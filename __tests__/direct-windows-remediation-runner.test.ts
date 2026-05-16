@@ -59,7 +59,10 @@ describe("direct Windows remediation runner", () => {
 			},
 		};
 
-		await runDirectWindowsRemediation("Please do both of the remediation plan recommendations", callbacks);
+		await runDirectWindowsRemediation(
+			"Please do both of the remediation plan recommendations",
+			callbacks
+		);
 
 		expect(events).toEqual(["tool:runBash", "approval:runBash", "result:runBash"]);
 	});

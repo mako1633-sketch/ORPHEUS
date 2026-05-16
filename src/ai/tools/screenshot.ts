@@ -47,7 +47,10 @@ export async function captureScreenshot({
 	}
 
 	const screenshotsDir = getScreenshotsDir();
-	const screenshotPath = path.join(screenshotsDir, `${timestampForFilename()}-${slugifyLabel(label)}.png`);
+	const screenshotPath = path.join(
+		screenshotsDir,
+		`${timestampForFilename()}-${slugifyLabel(label)}.png`
+	);
 
 	try {
 		await fs.mkdir(screenshotsDir, { recursive: true });

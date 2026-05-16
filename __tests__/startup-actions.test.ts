@@ -16,7 +16,9 @@ describe("startup common actions", () => {
 		expect(labels).toContain("Shell Probe: approved read-only commands");
 		expect(labels).toContain("Crash Forensics: setup errors and app faults");
 		expect(actions.every((action) => action.prompt.length > 0)).toBe(true);
-		expect(actions.every((action) => action.description && action.description.length > 0)).toBe(true);
+		expect(actions.every((action) => action.description && action.description.length > 0)).toBe(
+			true
+		);
 	});
 
 	it("keeps Windows-focused actions on Windows", () => {
@@ -38,7 +40,9 @@ describe("startup common actions", () => {
 
 	it("maps typed run commands to startup action prompts", () => {
 		expect(getStartupActionForInput("run 3")?.prompt).toBe(STARTUP_COMMON_ACTIONS[2]?.prompt);
-		expect(getStartupActionForInput("Run option 4.")?.prompt).toBe(STARTUP_COMMON_ACTIONS[3]?.prompt);
+		expect(getStartupActionForInput("Run option 4.")?.prompt).toBe(
+			STARTUP_COMMON_ACTIONS[3]?.prompt
+		);
 		expect(getStartupActionForInput("3", { allowBareNumber: true })?.prompt).toBe(
 			STARTUP_COMMON_ACTIONS[2]?.prompt
 		);

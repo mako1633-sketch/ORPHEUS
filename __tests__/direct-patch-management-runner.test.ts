@@ -19,9 +19,9 @@ describe("direct patch management runner", () => {
 			},
 		};
 
-		expect(shouldRunDirectPatchManagement("Help me with patch management. How much can you automate?")).toBe(
-			true
-		);
+		expect(
+			shouldRunDirectPatchManagement("Help me with patch management. How much can you automate?")
+		).toBe(true);
 		await runDirectPatchManagement(
 			"Help me with patch management. How much can you automate?",
 			[],

@@ -36,7 +36,8 @@ function extractFetchUrlsRequests(input: unknown): FetchUrlsRequestInput[] | nul
 		if (!("url" in item) || typeof item.url !== "string") continue;
 		const lineOffset =
 			"lineOffset" in item && typeof item.lineOffset === "number" ? item.lineOffset : undefined;
-		const lineLimit = "lineLimit" in item && typeof item.lineLimit === "number" ? item.lineLimit : undefined;
+		const lineLimit =
+			"lineLimit" in item && typeof item.lineLimit === "number" ? item.lineLimit : undefined;
 		requests.push({ url: item.url, lineOffset, lineLimit });
 	}
 
@@ -50,7 +51,8 @@ function extractRenderUrlInput(input: unknown): FetchUrlsRequestInput | null {
 
 	const lineOffset =
 		"lineOffset" in input && typeof input.lineOffset === "number" ? input.lineOffset : undefined;
-	const lineLimit = "lineLimit" in input && typeof input.lineLimit === "number" ? input.lineLimit : undefined;
+	const lineLimit =
+		"lineLimit" in input && typeof input.lineLimit === "number" ? input.lineLimit : undefined;
 	return { url: input.url, lineOffset, lineLimit };
 }
 
@@ -74,7 +76,8 @@ function mergeFetchUrlsDefaults(
 	if (!result) return input;
 	const lineOffset =
 		input.lineOffset ?? (typeof result.lineOffset === "number" ? result.lineOffset : undefined);
-	const lineLimit = input.lineLimit ?? (typeof result.lineLimit === "number" ? result.lineLimit : undefined);
+	const lineLimit =
+		input.lineLimit ?? (typeof result.lineLimit === "number" ? result.lineLimit : undefined);
 
 	return { ...input, lineOffset, lineLimit };
 }
@@ -95,7 +98,11 @@ function normalizeWhitespace(text: string): string {
 }
 
 function escapeXmlAttribute(value: string): string {
-	return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/"/g, "&quot;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
 }
 
 type ExaLikeItem = {
@@ -148,9 +155,12 @@ function formatFetchUrlsResult(result: unknown): string[] | null {
 		if (!url) continue;
 
 		const attributes: string[] = [`href="${escapeXmlAttribute(url)}"`];
-		if (typeof candidate.lineOffset === "number") attributes.push(`lineOffset="${candidate.lineOffset}"`);
-		if (typeof candidate.lineLimit === "number") attributes.push(`lineLimit="${candidate.lineLimit}"`);
-		if (typeof candidate.totalLines === "number") attributes.push(`totalLines="${candidate.totalLines}"`);
+		if (typeof candidate.lineOffset === "number")
+			attributes.push(`lineOffset="${candidate.lineOffset}"`);
+		if (typeof candidate.lineLimit === "number")
+			attributes.push(`lineLimit="${candidate.lineLimit}"`);
+		if (typeof candidate.totalLines === "number")
+			attributes.push(`totalLines="${candidate.totalLines}"`);
 		if (typeof candidate.remainingLines === "number") {
 			attributes.push(`remainingLines="${candidate.remainingLines}"`);
 		} else if (candidate.remainingLines === null) {
@@ -201,7 +211,9 @@ function formatRenderUrlResult(result: unknown): string[] | null {
 	const rangeParts: string[] = [];
 	if (lineOffset !== undefined) rangeParts.push(`lineOffset=${lineOffset}`);
 	if (lineLimit !== undefined) rangeParts.push(`lineLimit=${lineLimit}`);
-	rangeParts.push(remainingLines === null ? "remainingLines=unknown" : `remainingLines=${remainingLines}`);
+	rangeParts.push(
+		remainingLines === null ? "remainingLines=unknown" : `remainingLines=${remainingLines}`
+	);
 	const remainingSuffix = rangeParts.length > 0 ? ` (${rangeParts.join(", ")})` : "";
 
 	const header = `${url}${remainingSuffix}`;

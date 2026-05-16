@@ -43,7 +43,8 @@ export async function buildDaemonStatusItems(): Promise<StatusItem[]> {
 	const providerCapabilities = getProviderCapabilities();
 	const honchoStatus = getHonchoManager().getStatus();
 	const shellLabel = process.platform === "win32" ? "Windows PowerShell" : "Local shell";
-	const shellDetail = process.platform === "win32" ? powerShellPath : "Using bash for local commands.";
+	const shellDetail =
+		process.platform === "win32" ? powerShellPath : "Using bash for local commands.";
 
 	return [
 		...getKeyHealth().map((item) => ({
@@ -153,7 +154,9 @@ function buildContextBudget(input: {
 				: undefined;
 	const contextLength = input.contextLength;
 	const percentUsed =
-		estimatedTokens && contextLength ? Math.round((estimatedTokens / contextLength) * 100) : undefined;
+		estimatedTokens && contextLength
+			? Math.round((estimatedTokens / contextLength) * 100)
+			: undefined;
 
 	if (percentUsed !== undefined && percentUsed >= 85) {
 		return {

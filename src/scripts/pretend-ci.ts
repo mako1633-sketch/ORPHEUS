@@ -3,6 +3,10 @@
  * ORPHEUS pre-push validation gate.
  * Runs the exact same checks the Ubuntu CI runner runs, but locally.
  * Exit code 0 = all clear, exit code 1 = push blocked.
+ *
+ * Usage:
+ *   bun run pretend-ci              # run CI checks
+ *   bun run pretend-ci --dirty-check # also verify working tree is clean
  */
 
 import { execSync } from "node:child_process";
@@ -38,6 +42,8 @@ const YELLOW = "\x1b[33m";
 const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
 
+const hasFlag = (flag: string): boolean => process.argv.includes(flag);
+
 function log(message: string): void {
 	console.log(message);
 }
@@ -69,8 +75,35 @@ function runStep(step: (typeof CI_STEPS)[number], index: number): boolean {
 	}
 }
 
+function checkDirtyTree(): { dirty: boolean; message?: string } {
+	try {
+		const status = execSync("git status --porcelain", { encoding: "utf-8", stdio: "pipe" });
+		if (status.trim().length > 0) {
+			const lines = status.trim().split("\n");
+			return {
+				dirty: true,
+				message: `${lines.length} uncommitted change(s) in working tree.`,
+			};
+		}
+		return { dirty: false };
+	} catch {
+		return { dirty: false };
+	}
+}
+
 async function main(): Promise<void> {
 	log(`\n${BOLD}ORPHEUS Pre-Push Gate${RESET} — running CI checks locally...\n`);
+
+	if (hasFlag("--dirty-check")) {
+		const { dirty, message } = checkDirtyTree();
+		if (dirty) {
+			log(`${YELLOW}${BOLD}⚠️  WARNING:${RESET} ${YELLOW}${message}${RESET}`);
+			log(`${YELLOW}    Uncommitted fixes will NOT be pushed. Commit them first.${RESET}\n`);
+			log(`${YELLOW}    Run:${RESET} ${BOLD}git add -A && git commit --amend --no-edit${RESET}\n`);
+			debug.error("pretend-ci-dirty-tree", { message });
+			process.exit(1);
+		}
+	}
 
 	const results: boolean[] = [];
 	for (let i = 0; i < CI_STEPS.length; i += 1) {

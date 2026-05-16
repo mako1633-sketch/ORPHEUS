@@ -50,7 +50,10 @@ export const WINDOWS_HARDENING_RULES: Record<string, WindowsHardeningRule> = {
 		title: "Microsoft Defender real-time protection enabled",
 		category: "defender",
 		severity: "high",
-		baselineRefs: ["Microsoft Security Baseline: Defender Antivirus", "CIS Windows: Malware defenses"],
+		baselineRefs: [
+			"Microsoft Security Baseline: Defender Antivirus",
+			"CIS Windows: Malware defenses",
+		],
 		rationale: "Real-time protection catches malicious files and scripts before execution.",
 		checkCommand: "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled,AntivirusEnabled",
 		expectedState: "RealTimeProtectionEnabled=True and AntivirusEnabled=True",
@@ -99,8 +102,10 @@ export const WINDOWS_HARDENING_RULES: Record<string, WindowsHardeningRule> = {
 		rationale: "Block-by-default inbound policy prevents accidental exposure of services.",
 		checkCommand: "Get-NetFirewallProfile | Select-Object Name,DefaultInboundAction",
 		expectedState: "DefaultInboundAction=Block for all active profiles.",
-		remediationCommand: "Set-NetFirewallProfile -Profile Domain,Private,Public -DefaultInboundAction Block",
-		rollbackCommand: "Set-NetFirewallProfile -Profile Domain,Private,Public -DefaultInboundAction Allow",
+		remediationCommand:
+			"Set-NetFirewallProfile -Profile Domain,Private,Public -DefaultInboundAction Block",
+		rollbackCommand:
+			"Set-NetFirewallProfile -Profile Domain,Private,Public -DefaultInboundAction Allow",
 		policyCheckCommand:
 			"Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\WindowsFirewall' -ErrorAction SilentlyContinue",
 		stages: ["quick-win", "needs-admin", "usability-tradeoff"],
@@ -115,7 +120,8 @@ export const WINDOWS_HARDENING_RULES: Record<string, WindowsHardeningRule> = {
 		checkCommand:
 			"Get-LocalGroupMember -Group Administrators | Select-Object Name,ObjectClass,PrincipalSource",
 		expectedState: "Only expected named administrators and managed groups are present.",
-		remediationCommand: "Remove-LocalGroupMember -Group Administrators -Member '<member-to-remove>'",
+		remediationCommand:
+			"Remove-LocalGroupMember -Group Administrators -Member '<member-to-remove>'",
 		rollbackCommand: "Add-LocalGroupMember -Group Administrators -Member '<member-to-restore>'",
 		policyCheckCommand:
 			"Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Group Policy' -ErrorAction SilentlyContinue",
@@ -130,7 +136,8 @@ export const WINDOWS_HARDENING_RULES: Record<string, WindowsHardeningRule> = {
 		rationale: "Reliable update policy reduces exposure to known vulnerabilities.",
 		checkCommand:
 			"Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU' -ErrorAction SilentlyContinue",
-		expectedState: "Automatic update policy is configured intentionally or local defaults are acceptable.",
+		expectedState:
+			"Automatic update policy is configured intentionally or local defaults are acceptable.",
 		remediationCommand:
 			"Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU' -Name NoAutoUpdate -Value 0",
 		rollbackCommand:
@@ -177,7 +184,10 @@ export const WINDOWS_HARDENING_RULES: Record<string, WindowsHardeningRule> = {
 	},
 };
 
-export const WINDOWS_HARDENING_PROFILES: Record<WindowsHardeningProfileId, WindowsHardeningProfile> = {
+export const WINDOWS_HARDENING_PROFILES: Record<
+	WindowsHardeningProfileId,
+	WindowsHardeningProfile
+> = {
 	homeWorkstation: {
 		id: "homeWorkstation",
 		title: "Home workstation",
@@ -193,7 +203,8 @@ export const WINDOWS_HARDENING_PROFILES: Record<WindowsHardeningProfileId, Windo
 	developerWorkstation: {
 		id: "developerWorkstation",
 		title: "Developer workstation",
-		description: "Protects a dev machine while acknowledging local servers, tooling, and test workflows.",
+		description:
+			"Protects a dev machine while acknowledging local servers, tooling, and test workflows.",
 		ruleIds: [
 			"defender-realtime-on",
 			"defender-cloud-on",
@@ -246,7 +257,9 @@ export function getWindowsHardeningProfile(id: WindowsHardeningProfileId): Windo
 	return WINDOWS_HARDENING_PROFILES[id];
 }
 
-export function getWindowsHardeningRulesForProfile(id: WindowsHardeningProfileId): WindowsHardeningRule[] {
+export function getWindowsHardeningRulesForProfile(
+	id: WindowsHardeningProfileId
+): WindowsHardeningRule[] {
 	return getWindowsHardeningProfile(id).ruleIds.flatMap((ruleId) => {
 		const rule = WINDOWS_HARDENING_RULES[ruleId];
 		return rule ? [rule] : [];

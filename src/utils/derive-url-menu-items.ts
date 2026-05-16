@@ -73,7 +73,8 @@ function parseFetchUrlsXml(result: string): {
 			lineLimit: Number.isFinite(lineLimit) ? lineLimit : undefined,
 			totalLines: Number.isFinite(totalLines) ? totalLines : undefined,
 			remainingLines:
-				remainingLines === null || (typeof remainingLines === "number" && Number.isFinite(remainingLines))
+				remainingLines === null ||
+				(typeof remainingLines === "number" && Number.isFinite(remainingLines))
 					? remainingLines
 					: undefined,
 			error,
@@ -85,7 +86,10 @@ function parseFetchUrlsXml(result: string): {
 	return { items, error };
 }
 
-function computeCoveragePercent(intervals: Array<[number, number]>, totalLines: number): number | undefined {
+function computeCoveragePercent(
+	intervals: Array<[number, number]>,
+	totalLines: number
+): number | undefined {
 	if (!Number.isFinite(totalLines) || totalLines <= 0) return undefined;
 	if (intervals.length === 0) return undefined;
 
@@ -131,7 +135,9 @@ export function deriveUrlMenuItems(params: {
 		if (block.type !== "tool") continue;
 		if (block.call.name !== "fetchUrls" && block.call.name !== "renderUrl") continue;
 
-		const input = block.call.input as { url?: string; requests?: Array<{ url?: string }> } | undefined;
+		const input = block.call.input as
+			| { url?: string; requests?: Array<{ url?: string }> }
+			| undefined;
 		const urls: string[] = [];
 		if (input?.url && typeof input.url === "string") {
 			urls.push(input.url);
@@ -216,14 +222,22 @@ export function deriveUrlMenuItems(params: {
 				const itemUrl = typeof item.url === "string" ? item.url : null;
 				if (!itemUrl) continue;
 
-				if (item.success === false && typeof item.error === "string" && item.error.trim().length > 0) {
+				if (
+					item.success === false &&
+					typeof item.error === "string" &&
+					item.error.trim().length > 0
+				) {
 					statusByUrl.set(itemUrl, "error");
 					errorByUrl.set(itemUrl, item.error.trim());
 				} else if (item.success === true) {
 					statusByUrl.set(itemUrl, "ok");
 				}
 
-				if (typeof item.totalLines === "number" && Number.isFinite(item.totalLines) && item.totalLines > 0) {
+				if (
+					typeof item.totalLines === "number" &&
+					Number.isFinite(item.totalLines) &&
+					item.totalLines > 0
+				) {
 					const prev = totalLinesByUrl.get(itemUrl) ?? 0;
 					totalLinesByUrl.set(itemUrl, Math.max(prev, item.totalLines));
 				}
@@ -299,7 +313,8 @@ export function deriveUrlMenuItems(params: {
 		const groundedCount = lookupGroundedCount(url);
 		const totalLines = totalLinesByUrl.get(url);
 		const intervals = intervalsByUrl.get(url) ?? [];
-		const readPercent = totalLines !== undefined ? computeCoveragePercent(intervals, totalLines) : undefined;
+		const readPercent =
+			totalLines !== undefined ? computeCoveragePercent(intervals, totalLines) : undefined;
 		const error = errorByUrl.get(url);
 		const status = statusByUrl.get(url) ?? (error ? "error" : "ok");
 		const lastSeenIndex = lastSeenIndexByUrl.get(url) ?? 0;

@@ -11,7 +11,8 @@ const history: ModelMessage[] = [
 	{ role: "user", content: "Does that look secure?" },
 	{
 		role: "assistant",
-		content: "I can investigate further and provide more information on what you can do to tighten security.",
+		content:
+			"I can investigate further and provide more information on what you can do to tighten security.",
 	},
 ];
 
@@ -23,7 +24,9 @@ describe("follow-up context", () => {
 		expect(isShortContextualReply("both")).toBe(true);
 		expect(isShortContextualReply("Please proceed with these tasks.")).toBe(true);
 		expect(isShortContextualReply("Run those")).toBe(true);
-		expect(isShortContextualReply("Please write a detailed audit plan for my Windows host")).toBe(false);
+		expect(isShortContextualReply("Please write a detailed audit plan for my Windows host")).toBe(
+			false
+		);
 	});
 
 	it("wraps yes replies with previous assistant context", () => {
@@ -79,7 +82,9 @@ describe("follow-up context", () => {
 			},
 		]);
 
-		expect(result).toBe("After I make changes, run a follow-up Security Snapshot and compare before/after.");
+		expect(result).toBe(
+			"After I make changes, run a follow-up Security Snapshot and compare before/after."
+		);
 	});
 
 	it("uses selected prompt context instead of passing a bare number to the model", () => {

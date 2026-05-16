@@ -221,8 +221,8 @@ export function GroundingMenu({
 					<box flexGrow={1} />
 					<text>
 						<span fg={COLORS.USER_LABEL}>
-							<span fg={COLORS.DAEMON_LABEL}>ENTER</span> open · <span fg={COLORS.DAEMON_LABEL}>ESC</span>{" "}
-							close
+							<span fg={COLORS.DAEMON_LABEL}>ENTER</span> open ·{" "}
+							<span fg={COLORS.DAEMON_LABEL}>ESC</span> close
 						</span>
 					</text>
 				</box>

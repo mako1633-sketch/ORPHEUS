@@ -44,7 +44,9 @@ export function useHudData(): HudData {
 				}
 
 				const activeTasks = tasks.items.filter((t) => t.status === "active").length;
-				const queuedTasks = tasks.items.filter((t) => t.status === "queued" || t.status === "blocked").length;
+				const queuedTasks = tasks.items.filter(
+					(t) => t.status === "queued" || t.status === "blocked"
+				).length;
 
 				setData({ gitDirty, gitBranch, activeTasks, queuedTasks });
 			} catch {

@@ -56,7 +56,10 @@ function cleanText(value: string): string {
 function redactSensitiveText(value: string): string {
 	return value
 		.replace(/\b(sk-[A-Za-z0-9_-]{10,})\b/g, "[redacted-token]")
-		.replace(/\b(api[_-]?key|token|password|secret)\s*[:=]\s*("[^"]+"|'[^']+'|[^\s,;]+)/gi, "$1=[redacted]");
+		.replace(
+			/\b(api[_-]?key|token|password|secret)\s*[:=]\s*("[^"]+"|'[^']+'|[^\s,;]+)/gi,
+			"$1=[redacted]"
+		);
 }
 
 function buildLongTermLearning(entry: ReflectionEntry): string {
@@ -66,8 +69,12 @@ function buildLongTermLearning(entry: ReflectionEntry): string {
 		entry.validationThatCaught.length
 			? `Validation that caught issues: ${entry.validationThatCaught.join("; ")}.`
 			: "",
-		entry.validationThatMissed.length ? `Validation gaps: ${entry.validationThatMissed.join("; ")}.` : "",
-		entry.keyAssumptions.length ? `Assumptions to recheck: ${entry.keyAssumptions.join("; ")}.` : "",
+		entry.validationThatMissed.length
+			? `Validation gaps: ${entry.validationThatMissed.join("; ")}.`
+			: "",
+		entry.keyAssumptions.length
+			? `Assumptions to recheck: ${entry.keyAssumptions.join("; ")}.`
+			: "",
 		entry.risksSurfaced.length ? `Risks surfaced: ${entry.risksSurfaced.join("; ")}.` : "",
 	].filter(Boolean);
 
@@ -88,7 +95,9 @@ export async function loadReflections(): Promise<ReflectionState> {
 	};
 }
 
-export async function saveReflections(state: ReflectionState): Promise<{ path: string; success: boolean }> {
+export async function saveReflections(
+	state: ReflectionState
+): Promise<{ path: string; success: boolean }> {
 	return persistState(getReflectionPath(), {
 		updatedAt: new Date().toISOString(),
 		entries: state.entries.slice(-MAX_REFLECTIONS),
@@ -143,7 +152,9 @@ export async function searchReflections(query: {
 	const limit = Math.max(1, Math.min(query.limit ?? 5, MAX_REFLECTIONS));
 	return state.entries
 		.filter((e) => !query.taskType || e.taskType === query.taskType)
-		.filter((e) => !query.project || (e.project ?? "").toLowerCase().includes(query.project.toLowerCase()))
+		.filter(
+			(e) => !query.project || (e.project ?? "").toLowerCase().includes(query.project.toLowerCase())
+		)
 		.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 		.slice(0, limit);
 }

@@ -54,7 +54,8 @@ let cachedGitSslCaInfo: string | null = null;
 function parseBooleanFlag(value: string | undefined, fallback: boolean): boolean {
 	if (!value) return fallback;
 	const normalized = value.trim().toLowerCase();
-	if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on") return true;
+	if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on")
+		return true;
 	if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off")
 		return false;
 	return fallback;
@@ -161,7 +162,8 @@ function normalizeSessionConfigForModel(
 		return normalizedConfig;
 	}
 
-	const normalizedModelId = typeof normalizedConfig.model === "string" ? normalizedConfig.model.trim() : "";
+	const normalizedModelId =
+		typeof normalizedConfig.model === "string" ? normalizedConfig.model.trim() : "";
 	if (!normalizedModelId) {
 		return normalizedConfig;
 	}
@@ -195,7 +197,9 @@ const denyCopilotPermissionRequest: PermissionHandler = (request, invocation) =>
 	};
 };
 
-function ensurePermissionHandler(config: Omit<SessionConfig, "sessionId">): Omit<SessionConfig, "sessionId"> {
+function ensurePermissionHandler(
+	config: Omit<SessionConfig, "sessionId">
+): Omit<SessionConfig, "sessionId"> {
 	if (config.onPermissionRequest) {
 		return config;
 	}
@@ -321,7 +325,9 @@ function buildCopilotChildEnv(
 		const existingNodeOptions = env.NODE_OPTIONS?.trim();
 		const hasSystemCaFlag = Boolean(existingNodeOptions?.split(/\s+/).includes("--use-system-ca"));
 		if (!hasSystemCaFlag) {
-			env.NODE_OPTIONS = existingNodeOptions ? `${existingNodeOptions} --use-system-ca` : "--use-system-ca";
+			env.NODE_OPTIONS = existingNodeOptions
+				? `${existingNodeOptions} --use-system-ca`
+				: "--use-system-ca";
 		}
 	}
 
@@ -464,7 +470,10 @@ async function ensureClient(): Promise<CopilotClient> {
 		try {
 			await withTimeout(
 				client.start(),
-				parseTimeoutMs(process.env.COPILOT_CLIENT_START_TIMEOUT_MS, DEFAULT_CLIENT_START_TIMEOUT_MS),
+				parseTimeoutMs(
+					process.env.COPILOT_CLIENT_START_TIMEOUT_MS,
+					DEFAULT_CLIENT_START_TIMEOUT_MS
+				),
 				"Timed out while starting Copilot client."
 			);
 		} catch (error) {
@@ -495,9 +504,14 @@ export async function resetCopilotClient(): Promise<void> {
 	await stopRuntimeClientIfPresent();
 }
 
-export async function getCopilotAuthStatusSafe(): Promise<GetAuthStatusResponse & { error?: string }> {
+export async function getCopilotAuthStatusSafe(): Promise<
+	GetAuthStatusResponse & { error?: string }
+> {
 	try {
-		const timeoutMs = parseTimeoutMs(process.env.COPILOT_AUTH_TIMEOUT_MS, DEFAULT_AUTH_STATUS_TIMEOUT_MS);
+		const timeoutMs = parseTimeoutMs(
+			process.env.COPILOT_AUTH_TIMEOUT_MS,
+			DEFAULT_AUTH_STATUS_TIMEOUT_MS
+		);
 		const client = await withTimeout(
 			ensureClient(),
 			timeoutMs,
@@ -535,7 +549,10 @@ export async function getCopilotAuthStatusSafe(): Promise<GetAuthStatusResponse 
 }
 
 export async function listCopilotModelsSafe(): Promise<ModelInfo[]> {
-	const timeoutMs = parseTimeoutMs(process.env.COPILOT_MODELS_TIMEOUT_MS, DEFAULT_MODEL_LIST_TIMEOUT_MS);
+	const timeoutMs = parseTimeoutMs(
+		process.env.COPILOT_MODELS_TIMEOUT_MS,
+		DEFAULT_MODEL_LIST_TIMEOUT_MS
+	);
 
 	let lastError: Error | null = null;
 	for (let attempt = 0; attempt < 2; attempt++) {
@@ -561,7 +578,11 @@ export async function listCopilotModelsSafe(): Promise<ModelInfo[]> {
 				);
 			}
 
-			return await withTimeout(client.listModels(), timeoutMs, "Timed out while listing Copilot models.");
+			return await withTimeout(
+				client.listModels(),
+				timeoutMs,
+				"Timed out while listing Copilot models."
+			);
 		} catch (error) {
 			const err = error instanceof Error ? error : new Error(String(error));
 			lastError = err;
@@ -589,13 +610,20 @@ export async function getOrCreateCopilotSession(
 			? normalizedConfig.model.trim()
 			: undefined;
 
-	const timeoutMs = parseTimeoutMs(process.env.COPILOT_SESSION_TIMEOUT_MS, DEFAULT_SESSION_TIMEOUT_MS);
+	const timeoutMs = parseTimeoutMs(
+		process.env.COPILOT_SESSION_TIMEOUT_MS,
+		DEFAULT_SESSION_TIMEOUT_MS
+	);
 	const scopedSessionId = resolveModelScopedSessionId(sessionId, requestedModelId);
 	const normalizedSessionId = normalizeCopilotSessionId(scopedSessionId);
 
 	let lastError: Error | null = null;
 	for (let attempt = 0; attempt < 2; attempt++) {
-		const client = await withTimeout(ensureClient(), timeoutMs, "Timed out while preparing Copilot session.");
+		const client = await withTimeout(
+			ensureClient(),
+			timeoutMs,
+			"Timed out while preparing Copilot session."
+		);
 		let resumeError: Error | null = null;
 
 		try {
@@ -622,7 +650,9 @@ export async function getOrCreateCopilotSession(
 		}
 
 		const resumeFailure = resumeError ?? new Error("Unknown Copilot session resume failure.");
-		const fallbackSessionId = resumeFailure.message.includes("Timed out while resuming Copilot session.")
+		const fallbackSessionId = resumeFailure.message.includes(
+			"Timed out while resuming Copilot session."
+		)
 			? randomUUID()
 			: normalizedSessionId;
 
@@ -756,13 +786,18 @@ async function parseToolInput(
 	return { ok: true, value: input };
 }
 
-export function convertToolSetToCopilotTools(tools: ToolSet, callbacks: StreamCallbacks): CopilotTool[] {
+export function convertToolSetToCopilotTools(
+	tools: ToolSet,
+	callbacks: StreamCallbacks
+): CopilotTool[] {
 	return Object.entries(tools).map(([name, tool]) => {
 		const inputSchema = (tool as { inputSchema?: unknown }).inputSchema;
-		const execute = (tool as { execute?: (input: unknown, context?: unknown) => Promise<unknown> | unknown })
-			.execute;
-		const needsApproval = (tool as { needsApproval?: (input: unknown) => Promise<boolean> | boolean })
-			.needsApproval;
+		const execute = (
+			tool as { execute?: (input: unknown, context?: unknown) => Promise<unknown> | unknown }
+		).execute;
+		const needsApproval = (
+			tool as { needsApproval?: (input: unknown) => Promise<boolean> | boolean }
+		).needsApproval;
 
 		return defineTool(name, {
 			description: (tool as { description?: string }).description,

@@ -8,7 +8,10 @@
 
 import type { ModelPricing } from "../types";
 import { debug } from "./debug-logger";
-import { mergePricingAverages, parseOpenRouterPricePerTokenToPerMillion } from "./openrouter-pricing";
+import {
+	mergePricingAverages,
+	parseOpenRouterPricePerTokenToPerMillion,
+} from "./openrouter-pricing";
 
 export interface OpenRouterInferenceProvider {
 	/** Provider routing slug (matches OpenRouter `provider.order` entries), e.g. "openai" */
@@ -94,7 +97,9 @@ function endpointSupportsReasoning(endpoint: OpenRouterEndpointsEndpoint): boole
 	return params.includes("reasoning") || params.includes("reasoning_effort");
 }
 
-async function fetchModelEndpointsMetadata(modelId: string): Promise<OpenRouterModelEndpointsMetadata> {
+async function fetchModelEndpointsMetadata(
+	modelId: string
+): Promise<OpenRouterModelEndpointsMetadata> {
 	const encodedPath = encodeModelIdForEndpointsPath(modelId);
 	const url = `https://openrouter.ai/api/v1/models/${encodedPath}/endpoints`;
 
@@ -127,7 +132,8 @@ async function fetchModelEndpointsMetadata(modelId: string): Promise<OpenRouterM
 
 		const existing = byTag.get(tag);
 		if (existing) {
-			const contextLength = typeof endpoint.context_length === "number" ? endpoint.context_length : undefined;
+			const contextLength =
+				typeof endpoint.context_length === "number" ? endpoint.context_length : undefined;
 			if (contextLength !== undefined) {
 				existing.contextLength = Math.max(existing.contextLength ?? 0, contextLength);
 			}
@@ -139,7 +145,8 @@ async function fetchModelEndpointsMetadata(modelId: string): Promise<OpenRouterM
 		}
 
 		if (!existing) {
-			const contextLength = typeof endpoint.context_length === "number" ? endpoint.context_length : undefined;
+			const contextLength =
+				typeof endpoint.context_length === "number" ? endpoint.context_length : undefined;
 			byTag.set(tag, {
 				tag,
 				providerName,
@@ -186,7 +193,9 @@ async function fetchModelEndpointsMetadata(modelId: string): Promise<OpenRouterM
  * Get the list of inference providers available for a given model.
  * Results are cached in-memory for a day.
  */
-export async function getOpenRouterModelProviders(modelId: string): Promise<OpenRouterInferenceProvider[]> {
+export async function getOpenRouterModelProviders(
+	modelId: string
+): Promise<OpenRouterInferenceProvider[]> {
 	const metadata = await getOpenRouterModelEndpointsMetadata(modelId);
 	return metadata?.providers ?? [];
 }

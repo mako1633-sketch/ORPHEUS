@@ -189,7 +189,9 @@ export function MemoryMenu({ onClose }: MemoryMenuProps) {
 
 				<box marginBottom={1}>
 					<text>
-						<span fg={COLORS.REASONING_DIM}>↑/↓ j/k navigate · X delete · / search · ESC close</span>
+						<span fg={COLORS.REASONING_DIM}>
+							↑/↓ j/k navigate · X delete · / search · ESC close
+						</span>
 					</text>
 				</box>
 
@@ -297,7 +299,8 @@ export function MemoryMenu({ onClose }: MemoryMenuProps) {
 								const isSelected = idx === selectedIndex;
 								const labelColor = isSelected ? COLORS.DAEMON_LABEL : COLORS.MENU_TEXT;
 								const detailColor = COLORS.REASONING_DIM;
-								const scoreText = memory.score !== undefined ? ` (${(memory.score * 100).toFixed(0)}%)` : "";
+								const scoreText =
+									memory.score !== undefined ? ` (${(memory.score * 100).toFixed(0)}%)` : "";
 								const dateText = formatTimestamp(memory.createdAt || memory.updatedAt);
 
 								return (

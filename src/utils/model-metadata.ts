@@ -54,7 +54,8 @@ async function fetchModelMetadata(modelId: string): Promise<ModelMetadata | null
 			.map((p) => p.pricing)
 			.filter((p): p is ModelPricing => Boolean(p));
 
-		const pricing = pricingCandidates.length > 0 ? mergePricingAverages(pricingCandidates) : undefined;
+		const pricing =
+			pricingCandidates.length > 0 ? mergePricingAverages(pricingCandidates) : undefined;
 
 		const supportsCaching = endpoints.providers.some((p) => p.supportsCaching);
 

@@ -2,7 +2,11 @@ import { fileURLToPath } from "node:url";
 import { memo, useCallback, useEffect, useRef } from "react";
 import type { RefObject } from "react";
 import type { DaemonAvatarRenderable } from "../../avatar/DaemonAvatarRenderable";
-import { BANNER_GRADIENT, DAEMON_BANNER_LINES, useGlitchyBanner } from "../../hooks/use-glitchy-banner";
+import {
+	BANNER_GRADIENT,
+	DAEMON_BANNER_LINES,
+	useGlitchyBanner,
+} from "../../hooks/use-glitchy-banner";
 import { DaemonState } from "../../types";
 
 const DAEMON_HOME_GIF_PATH = fileURLToPath(new URL("../../../img/daemon.gif", import.meta.url));
@@ -44,7 +48,10 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 	const bannerWidth = Math.max(...DAEMON_BANNER_LINES.map((line) => line.length));
 	const showHomeGif = showBanner;
 	const gifWidth = Math.max(56, Math.min(96, Math.floor(width * 0.56)));
-	const gifHeight = Math.max(16, Math.min(30, Math.floor(gifWidth / DAEMON_GIF_ASPECT / 2), height));
+	const gifHeight = Math.max(
+		16,
+		Math.min(30, Math.floor(gifWidth / DAEMON_GIF_ASPECT / 2), height)
+	);
 	const gifTop = Math.max(0, Math.floor((viewportHeight - gifHeight) / 2));
 
 	// Keep a stable callback ref so we don't detach/reattach on daemonState changes.

@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import type { ModelMessage } from "ai";
-import type { StreamCallbacks, TokenUsage, ToolApprovalRequest, ToolApprovalResponse } from "../types";
+import type {
+	StreamCallbacks,
+	TokenUsage,
+	ToolApprovalRequest,
+	ToolApprovalResponse,
+} from "../types";
 import { getLastAssistantText } from "./follow-up-context";
 import { executeLocalShellCommand } from "./tools/run-bash";
 
@@ -43,10 +48,14 @@ function describeRemediationRequest(userText: string): string {
 		.trim()
 		.replace(/\s+/g, " ")
 		.replace(/[.!?]+$/g, "");
-	if (/^(both|all|both of them|all of them|these|those|these tasks?|the tasks?)$/i.test(normalized)) {
+	if (
+		/^(both|all|both of them|all of them|these|those|these tasks?|the tasks?)$/i.test(normalized)
+	) {
 		return "all remediation recommendations from the previous plan";
 	}
-	if (/^(yes|yes please|please do|do it|continue|go ahead|proceed|please proceed)$/i.test(normalized)) {
+	if (
+		/^(yes|yes please|please do|do it|continue|go ahead|proceed|please proceed)$/i.test(normalized)
+	) {
 		return "the remediation recommendations just proposed";
 	}
 	const numbers = normalized.match(/\d+/g);

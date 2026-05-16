@@ -32,7 +32,8 @@ export const persistentContextLayout: ToolLayoutConfig = {
 
 	formatResult: (result) => {
 		if (!isRecord(result)) return null;
-		if (result.success === false && typeof result.error === "string") return [`error: ${result.error}`];
+		if (result.success === false && typeof result.error === "string")
+			return [`error: ${result.error}`];
 		if (result.action === "read") {
 			const content = typeof result.content === "string" ? result.content.trim() : "";
 			if (!content) return ["persistent context is empty"];

@@ -14,7 +14,10 @@ import type { AssessmentFinding } from "../src/security/windows-assessment-parse
 const ORIGINAL_ENV = { ...process.env };
 let tempDir: string | null = null;
 
-const finding = (id: string, severity: AssessmentFinding["severity"] = "medium"): AssessmentFinding => ({
+const finding = (
+	id: string,
+	severity: AssessmentFinding["severity"] = "medium"
+): AssessmentFinding => ({
 	id,
 	title: id,
 	severity,

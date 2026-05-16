@@ -7,7 +7,10 @@ export interface MicLevelOptions {
  * Compute a normalized mic level (0..1) from a PCM16 LE audio chunk.
  * Returns `null` if the chunk is too small to analyze.
  */
-export function computeMicLevelFromPcm16Chunk(chunk: Buffer, options: MicLevelOptions = {}): number | null {
+export function computeMicLevelFromPcm16Chunk(
+	chunk: Buffer,
+	options: MicLevelOptions = {}
+): number | null {
 	if (chunk.length < 2) return null;
 
 	const sampleCount = Math.floor(chunk.length / 2);

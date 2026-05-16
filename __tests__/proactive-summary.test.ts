@@ -93,7 +93,10 @@ describe("proactive summary", () => {
 			const history = makeHistory([
 				{ user: "What can you do", assistant: "I can help with security and coding." },
 				{ user: "How about tests", assistant: "I run bun test or bun run test:watch." },
-				{ user: "Any other features", assistant: "I have a diff review, project doctor, and more." },
+				{
+					user: "Any other features",
+					assistant: "I have a diff review, project doctor, and more.",
+				},
 				{ user: "Nice. Let's start coding", assistant: "Ready when you are. What do you need?" },
 				{ user: "What time is it", assistant: "It's currently afternoon." },
 			]);

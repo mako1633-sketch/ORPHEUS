@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { getDaemonManager } from "../state/daemon-state";
-import type { BashApprovalLevel, ReasoningEffort, SpeechSpeed, VoiceInteractionType } from "../types";
+import type {
+	BashApprovalLevel,
+	ReasoningEffort,
+	SpeechSpeed,
+	VoiceInteractionType,
+} from "../types";
 
 export interface UseAppSettingsReturn {
 	interactionMode: "text" | "voice";

@@ -38,7 +38,9 @@ export function getLocalShellCommand(command: string, platform = process.platfor
 	};
 }
 
-export function buildNonInteractiveShellEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+export function buildNonInteractiveShellEnv(
+	env: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
 	return {
 		...env,
 		CI: env.CI ?? "1",

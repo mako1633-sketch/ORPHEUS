@@ -47,7 +47,8 @@ export function useAppAudioDevicesLoader(params: UseAppAudioDevicesLoaderParams)
 				if (devs.length === 0) setDeviceLoadTimedOut(true);
 
 				const explicitDeviceName = getCurrentDeviceName();
-				const systemDefaultDeviceName = explicitDeviceName ?? (await getSystemDefaultInputDeviceName());
+				const systemDefaultDeviceName =
+					explicitDeviceName ?? (await getSystemDefaultInputDeviceName());
 				if (cancelled) return;
 
 				setCurrentDevice(systemDefaultDeviceName);

@@ -7,7 +7,8 @@ import { DaemonState } from "../types";
 
 // Status text displayed for each ORPHEUS state.
 export const STATUS_TEXT: Record<DaemonState, string> = {
-	[DaemonState.IDLE]: "BLACKWALL IDLE :: SPACE VOX :: SHIFT+TAB CONSOLE :: M MODELS :: S CONFIG :: ? HELP",
+	[DaemonState.IDLE]:
+		"BLACKWALL IDLE :: SPACE VOX :: SHIFT+TAB CONSOLE :: M MODELS :: S CONFIG :: ? HELP",
 	[DaemonState.LISTENING]: "MIC HOT :: SPACE CUT FEED :: ESC ABORT",
 	[DaemonState.TRANSCRIBING]: "VOICEPRINT PARSE :: ESC ABORT",
 	[DaemonState.RESPONDING]: "ORPHEUS ONLINE :: ESC ABORT :: R TRACE",

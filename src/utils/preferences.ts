@@ -60,7 +60,8 @@ export function parsePreferences(raw: unknown): AppPreferences | null {
 	const version = typeof raw.version === "number" ? raw.version : PREFERENCES_VERSION;
 	const createdAt = typeof raw.createdAt === "string" ? raw.createdAt : new Date().toISOString();
 	const updatedAt = typeof raw.updatedAt === "string" ? raw.updatedAt : createdAt;
-	const onboardingCompleted = typeof raw.onboardingCompleted === "boolean" ? raw.onboardingCompleted : false;
+	const onboardingCompleted =
+		typeof raw.onboardingCompleted === "boolean" ? raw.onboardingCompleted : false;
 
 	const prefs: AppPreferences = {
 		version,
@@ -105,7 +106,11 @@ export function parsePreferences(raw: unknown): AppPreferences | null {
 	) {
 		prefs.speechSpeed = raw.speechSpeed;
 	}
-	if (raw.reasoningEffort === "low" || raw.reasoningEffort === "medium" || raw.reasoningEffort === "high") {
+	if (
+		raw.reasoningEffort === "low" ||
+		raw.reasoningEffort === "medium" ||
+		raw.reasoningEffort === "high"
+	) {
 		prefs.reasoningEffort = raw.reasoningEffort;
 	}
 	if (typeof raw.openRouterApiKey === "string") {
@@ -144,7 +149,9 @@ export function parsePreferences(raw: unknown): AppPreferences | null {
 		prefs.bashApprovalLevel = raw.bashApprovalLevel;
 	}
 	if (Array.isArray(raw.inputHistory)) {
-		const validHistory = raw.inputHistory.filter((item): item is string => typeof item === "string");
+		const validHistory = raw.inputHistory.filter(
+			(item): item is string => typeof item === "string"
+		);
 		prefs.inputHistory = validHistory.slice(0, 20);
 	}
 
@@ -199,7 +206,11 @@ async function restrictFileOnWindows(filePath: string): Promise<void> {
 	} catch {}
 }
 
-async function writeJsonFile(filePath: string, data: Record<string, unknown>, mode?: number): Promise<void> {
+async function writeJsonFile(
+	filePath: string,
+	data: Record<string, unknown>,
+	mode?: number
+): Promise<void> {
 	const dir = path.dirname(filePath);
 	await fs.mkdir(dir, { recursive: true });
 

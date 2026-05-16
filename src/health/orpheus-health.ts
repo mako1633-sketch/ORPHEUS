@@ -1,4 +1,7 @@
-import { detectAssistantResponseLeak, isAssistantResponseGuardNotice } from "../ai/assistant-response-guard";
+import {
+	detectAssistantResponseLeak,
+	isAssistantResponseGuardNotice,
+} from "../ai/assistant-response-guard";
 import { isHonchoAvailable } from "../ai/memory/honcho-manager";
 import { buildDaemonStatusItems } from "../ai/tools/daemon-status";
 import type { ConversationMessage } from "../types";
@@ -45,7 +48,10 @@ function rank(level: HealthLevel): number {
 }
 
 function worstLevel(levels: HealthLevel[]): HealthLevel {
-	return levels.reduce((worst, level) => (rank(level) > rank(worst) ? level : worst), "ok" as HealthLevel);
+	return levels.reduce(
+		(worst, level) => (rank(level) > rank(worst) ? level : worst),
+		"ok" as HealthLevel
+	);
 }
 
 function mapStatus(status: "ok" | "missing" | "invalid" | "unavailable"): HealthLevel {
@@ -139,7 +145,9 @@ function buildModelCheck(statusItems: DaemonStatusItem[]): HealthCheck {
 			id: "model",
 			label: "Model",
 			level: "ok",
-			summary: openRouterUsable ? "OpenRouter model route available." : "Local/Ollama model route available.",
+			summary: openRouterUsable
+				? "OpenRouter model route available."
+				: "Local/Ollama model route available.",
 			action: "No action needed.",
 		};
 	}
@@ -184,7 +192,8 @@ function buildToolsCheck(statusItems: DaemonStatusItem[]): HealthCheck {
 			unavailable.length === 0
 				? "Optional tools available."
 				: `Optional tools disabled: ${unavailable.map((item) => item.label).join(", ")}.`,
-		action: unavailable.length === 0 ? "No action needed." : "Configure only the optional tools you use.",
+		action:
+			unavailable.length === 0 ? "No action needed." : "Configure only the optional tools you use.",
 	};
 }
 
@@ -204,7 +213,11 @@ function buildMemoryCheck(statusItems: DaemonStatusItem[]): HealthCheck {
 	return {
 		id: "memory",
 		label: "Memory",
-		level: failing.some((item) => item.status === "invalid") ? "repair" : failing.length > 0 ? "watch" : "ok",
+		level: failing.some((item) => item.status === "invalid")
+			? "repair"
+			: failing.length > 0
+				? "watch"
+				: "ok",
 		summary:
 			failing.length === 0
 				? "OpenAI-backed memory prerequisites available."
@@ -233,7 +246,9 @@ function buildCheckFromItems(
 		label,
 		level,
 		summary:
-			failing.length === 0 ? okSummary : failing.map((item) => `${item.label}: ${item.detail}`).join(" "),
+			failing.length === 0
+				? okSummary
+				: failing.map((item) => `${item.label}: ${item.detail}`).join(" "),
 		action: failing.length === 0 ? "No action needed." : action,
 	};
 }
@@ -278,6 +293,8 @@ export async function buildOrpheusHealthSnapshot(
 
 export function formatHealthSnapshot(snapshot: HealthSnapshot): string {
 	return snapshot.checks
-		.map((check) => `[${check.level.toUpperCase()}] ${check.label}: ${check.summary} ${check.action}`)
+		.map(
+			(check) => `[${check.level.toUpperCase()}] ${check.label}: ${check.summary} ${check.action}`
+		)
 		.join("\n");
 }

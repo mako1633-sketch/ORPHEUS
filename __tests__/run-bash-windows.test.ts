@@ -61,7 +61,9 @@ describe("Windows command safety policy", () => {
 
 	it("flags Windows credential and browser data paths", () => {
 		expect(
-			isSensitivePathAccess("Get-Content ~\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cookies")
+			isSensitivePathAccess(
+				"Get-Content ~\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cookies"
+			)
 		).toBe(true);
 	});
 
@@ -85,20 +87,26 @@ describe("Windows command safety policy", () => {
 
 	it("blocks Windows credential dumping patterns", () => {
 		expect(
-			getBlockedCommandReason("rundll32.exe C:\\Windows\\System32\\comsvcs.dll, MiniDump 123 lsass.dmp full")
+			getBlockedCommandReason(
+				"rundll32.exe C:\\Windows\\System32\\comsvcs.dll, MiniDump 123 lsass.dmp full"
+			)
 		).toBeString();
 		expect(getBlockedCommandReason("reg save HKLM\\SAM C:\\Temp\\sam.save")).toBeString();
 		expect(isSensitivePathAccess("Get-Content C:\\Windows\\System32\\config\\SAM")).toBe(true);
 	});
 
 	it("blocks attempts to weaken Windows protections", () => {
-		expect(getBlockedCommandReason("Set-MpPreference -DisableRealtimeMonitoring $true")).toBeString();
+		expect(
+			getBlockedCommandReason("Set-MpPreference -DisableRealtimeMonitoring $true")
+		).toBeString();
 		expect(getBlockedCommandReason("netsh advfirewall set allprofiles state off")).toBeString();
 		expect(getBlockedCommandReason("powershell.exe -EncodedCommand SQBFAFgA")).toBeString();
 	});
 
 	it("allows approved remediation commands that re-enable Windows protections", () => {
-		expect(getBlockedCommandReason("Set-MpPreference -DisableRealtimeMonitoring $false")).toBeNull();
+		expect(
+			getBlockedCommandReason("Set-MpPreference -DisableRealtimeMonitoring $false")
+		).toBeNull();
 		expect(
 			getBlockedCommandReason("Set-NetFirewallProfile -Profile Domain,Private,Public -Enabled True")
 		).toBeNull();
@@ -108,7 +116,9 @@ describe("Windows command safety policy", () => {
 		expect(classifyCommandRisk("Get-MpComputerStatus").level).toBe("read-only");
 		expect(classifyCommandRisk("Get-ChildItem Env:").level).toBe("modifies-system");
 		expect(
-			classifyCommandRisk("Get-Content ~\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cookies").level
+			classifyCommandRisk(
+				"Get-Content ~\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cookies"
+			).level
 		).toBe("sensitive-read");
 		expect(classifyCommandRisk("Stop-Process -Name powershell -Force").level).toBe("blocked");
 	});

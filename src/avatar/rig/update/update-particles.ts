@@ -43,7 +43,9 @@ export function updateParticles(
 	elements.particlePos.needsUpdate = true;
 
 	const idleParticleBoost = particlePulse.brightness * 0.4;
-	elements.particleMat.opacity = clamp01(0.3 + intensity * 0.4 + audio.current * 0.25 + idleParticleBoost);
+	elements.particleMat.opacity = clamp01(
+		0.3 + intensity * 0.4 + audio.current * 0.25 + idleParticleBoost
+	);
 	elements.particleMat.size =
 		0.02 + intensity * 0.015 + audio.current * 0.01 + particlePulse.brightness * 0.02;
 }

@@ -14,8 +14,14 @@ import {
 	runDirectImplementationAdvice,
 	shouldRunDirectImplementationAdvice,
 } from "./direct-implementation-advice-runner";
-import { runDirectLeastPrivilege, shouldRunDirectLeastPrivilege } from "./direct-least-privilege-runner";
-import { runDirectPatchManagement, shouldRunDirectPatchManagement } from "./direct-patch-management-runner";
+import {
+	runDirectLeastPrivilege,
+	shouldRunDirectLeastPrivilege,
+} from "./direct-least-privilege-runner";
+import {
+	runDirectPatchManagement,
+	shouldRunDirectPatchManagement,
+} from "./direct-patch-management-runner";
 import {
 	runDirectSecurityEvidencePack,
 	shouldRunDirectSecurityEvidencePack,
@@ -24,7 +30,10 @@ import {
 	runDirectSecurityReportFollowUp,
 	shouldRunDirectSecurityReportFollowUp,
 } from "./direct-security-report-followup-runner";
-import { runDirectTurnExplanation, shouldRunDirectTurnExplanation } from "./direct-turn-explanation-runner";
+import {
+	runDirectTurnExplanation,
+	shouldRunDirectTurnExplanation,
+} from "./direct-turn-explanation-runner";
 import {
 	runDirectWindowsAssessment,
 	runDirectWindowsQuickPosture,
@@ -43,7 +52,10 @@ import {
 	runDirectWindowsScheduledTaskSecurity,
 	shouldRunDirectWindowsScheduledTaskSecurity,
 } from "./direct-windows-scheduled-task-runner";
-import { buildUserMessageWithFollowUpContext, resolveNumberedFollowUpPrompt } from "./follow-up-context";
+import {
+	buildUserMessageWithFollowUpContext,
+	resolveNumberedFollowUpPrompt,
+} from "./follow-up-context";
 import { applyRouterDecision, routeTask } from "./model-router";
 import { isVisionRequest } from "./vision-reasoning";
 import { buildUserMessageWithWindowsAssessmentContext } from "./windows-assessment-context";
@@ -158,7 +170,12 @@ export class AgentTurnRunner {
 					usage,
 					finalText: guarded.finalText,
 				};
-				callbacks.onComplete?.(guarded.fullText, guarded.responseMessages, usage, guarded.finalText);
+				callbacks.onComplete?.(
+					guarded.fullText,
+					guarded.responseMessages,
+					usage,
+					guarded.finalText
+				);
 			},
 			onError: (err) => {
 				if (!isActive()) return;
@@ -169,7 +186,8 @@ export class AgentTurnRunner {
 
 		try {
 			const routedUserText =
-				resolveNumberedFollowUpPrompt(params.userText, params.conversationHistory) ?? params.userText;
+				resolveNumberedFollowUpPrompt(params.userText, params.conversationHistory) ??
+				params.userText;
 			const platform = params.platform ?? process.platform;
 			const windowsDirectActionsAvailable = platform === "win32";
 
@@ -195,7 +213,11 @@ export class AgentTurnRunner {
 			}
 
 			if (shouldRunDirectSecurityReportFollowUp(routedUserText, params.conversationHistory)) {
-				result = await runDirectSecurityReportFollowUp(routedUserText, params.conversationHistory, wrapped);
+				result = await runDirectSecurityReportFollowUp(
+					routedUserText,
+					params.conversationHistory,
+					wrapped
+				);
 				return result;
 			}
 
@@ -203,7 +225,11 @@ export class AgentTurnRunner {
 				windowsDirectActionsAvailable &&
 				shouldRunDirectPatchManagement(routedUserText, params.conversationHistory)
 			) {
-				result = await runDirectPatchManagement(routedUserText, params.conversationHistory, wrapped);
+				result = await runDirectPatchManagement(
+					routedUserText,
+					params.conversationHistory,
+					wrapped
+				);
 				return result;
 			}
 
@@ -228,7 +254,10 @@ export class AgentTurnRunner {
 				return result;
 			}
 
-			if (windowsDirectActionsAvailable && shouldRunDirectWindowsScheduledTaskSecurity(routedUserText)) {
+			if (
+				windowsDirectActionsAvailable &&
+				shouldRunDirectWindowsScheduledTaskSecurity(routedUserText)
+			) {
 				result = await runDirectWindowsScheduledTaskSecurity(routedUserText, wrapped);
 				return result;
 			}
@@ -256,7 +285,10 @@ export class AgentTurnRunner {
 				return result;
 			}
 
-			const continuityText = buildUserMessageWithFollowUpContext(params.userText, params.conversationHistory);
+			const continuityText = buildUserMessageWithFollowUpContext(
+				params.userText,
+				params.conversationHistory
+			);
 			const modelUserText =
 				buildUserMessageWithWindowsAssessmentContext(continuityText, platform) + visionContext;
 			await generateResponse(

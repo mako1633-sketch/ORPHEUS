@@ -19,12 +19,16 @@ export function shouldRunDirectDaemonDoctor(userText: string): boolean {
 	return DAEMON_DOCTOR_PATTERN.test(normalized);
 }
 
-function formatStatusLine(item: Awaited<ReturnType<typeof buildDaemonStatusItems>>[number]): string {
+function formatStatusLine(
+	item: Awaited<ReturnType<typeof buildDaemonStatusItems>>[number]
+): string {
 	const label = item.status.toUpperCase().padEnd(11);
 	return `- ${label} ${item.label}: ${item.detail}`;
 }
 
-export async function runDirectDaemonDoctor(callbacks: StreamCallbacks): Promise<DirectDaemonDoctorResult> {
+export async function runDirectDaemonDoctor(
+	callbacks: StreamCallbacks
+): Promise<DirectDaemonDoctorResult> {
 	const toolCallId = `direct-daemonStatus-${randomUUID()}`;
 	callbacks.onToolCall?.("daemonStatus", { scope: "all" }, toolCallId);
 
@@ -46,7 +50,8 @@ export async function runDirectDaemonDoctor(callbacks: StreamCallbacks): Promise
 		"**Status**\n" +
 		items.map(formatStatusLine).join("\n") +
 		(needsAttention.length > 0
-			? "\n\n**Next**\n" + needsAttention.map((item) => `- Fix ${item.label}: ${item.detail}`).join("\n")
+			? "\n\n**Next**\n" +
+				needsAttention.map((item) => `- Fix ${item.label}: ${item.detail}`).join("\n")
 			: "\n\nAll checked capabilities are available.");
 
 	callbacks.onToken?.(finalText);

@@ -58,8 +58,12 @@ export function useReasoningAnimation(): UseReasoningAnimationReturn {
 				const remainingQueue = queue.slice(charsToMove);
 
 				const terminalWidth =
-					typeof process !== "undefined" && process.stdout?.columns ? process.stdout.columns : undefined;
-				const maxWidth = terminalWidth ? Math.max(20, terminalWidth - 14) : REASONING_ANIMATION.LINE_WIDTH;
+					typeof process !== "undefined" && process.stdout?.columns
+						? process.stdout.columns
+						: undefined;
+				const maxWidth = terminalWidth
+					? Math.max(20, terminalWidth - 14)
+					: REASONING_ANIMATION.LINE_WIDTH;
 				const lineWidth = Math.min(REASONING_ANIMATION.LINE_WIDTH, maxWidth);
 
 				// Add to display, restart when reaching the line width

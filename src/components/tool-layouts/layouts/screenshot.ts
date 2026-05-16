@@ -12,7 +12,8 @@ export const screenshotLayout: ToolLayoutConfig = {
 
 	getHeader: (input): ToolHeader | null => {
 		if (!isRecord(input)) return { primary: "desktop capture" };
-		const label = typeof input.label === "string" && input.label.trim() ? input.label.trim() : "desktop";
+		const label =
+			typeof input.label === "string" && input.label.trim() ? input.label.trim() : "desktop";
 		return {
 			primary: label,
 			secondary: input.includeCursor === true ? "with cursor" : undefined,

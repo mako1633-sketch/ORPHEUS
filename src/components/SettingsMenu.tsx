@@ -170,7 +170,12 @@ export function SettingsMenu({
 		{
 			id: "model-provider",
 			label: "Model Provider",
-			value: modelProvider === "copilot" ? "COPILOT" : modelProvider === "ollama" ? "OLLAMA" : "OPENROUTER",
+			value:
+				modelProvider === "copilot"
+					? "COPILOT"
+					: modelProvider === "ollama"
+						? "OLLAMA"
+						: "OPENROUTER",
 			description:
 				!copilotAvailable && modelProvider === "openrouter"
 					? "OpenRouter API with provider routing (Copilot: run `gh auth login` + `copilot login`)"

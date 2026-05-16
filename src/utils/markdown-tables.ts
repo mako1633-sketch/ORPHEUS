@@ -10,7 +10,10 @@ export interface MarkdownTableFormatOptions {
 	maxWidth?: number;
 }
 
-export function formatMarkdownTables(text: string, options: MarkdownTableFormatOptions = {}): string {
+export function formatMarkdownTables(
+	text: string,
+	options: MarkdownTableFormatOptions = {}
+): string {
 	const lines = text.split("\n");
 	const result: string[] = [];
 	let i = 0;
@@ -119,7 +122,10 @@ function formatTable(lines: string[], options: MarkdownTableFormatOptions): stri
 	}
 
 	const totalWidth =
-		2 + colWidths.reduce((sum, width) => sum + width, 0) + (colCount > 1 ? 3 * (colCount - 1) : 0) + 2;
+		2 +
+		colWidths.reduce((sum, width) => sum + width, 0) +
+		(colCount > 1 ? 3 * (colCount - 1) : 0) +
+		2;
 
 	if (options.maxWidth && totalWidth > options.maxWidth) {
 		return lines;

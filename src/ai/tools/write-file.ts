@@ -76,13 +76,17 @@ export const writeFile = tool({
 	inputSchema: z.object({
 		path: z
 			.string()
-			.describe("Path to the file to write. Can be absolute or relative to the current working directory."),
+			.describe(
+				"Path to the file to write. Can be absolute or relative to the current working directory."
+			),
 		content: z.string().describe("The content to write to the file."),
 		append: z
 			.boolean()
 			.optional()
 			.default(false)
-			.describe("If true, append to the file instead of overwriting. Creates the file if it doesn't exist."),
+			.describe(
+				"If true, append to the file instead of overwriting. Creates the file if it doesn't exist."
+			),
 	}),
 	needsApproval: async ({ path: filePath }) => {
 		const resolvedPath = path.resolve(filePath);

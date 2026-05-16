@@ -103,9 +103,13 @@ async function checkGitDirty(baseDir = process.cwd()): Promise<SystemAlert[]> {
 		for (const gitDir of repos.slice(0, DEEP_MONITOR ? 20 : 1)) {
 			const repoDir = path.dirname(gitDir);
 			try {
-				const { stdout: status } = await execFileAsync("git", ["-C", repoDir, "status", "--porcelain"], {
-					timeout: MONITOR_COMMAND_TIMEOUT_MS,
-				});
+				const { stdout: status } = await execFileAsync(
+					"git",
+					["-C", repoDir, "status", "--porcelain"],
+					{
+						timeout: MONITOR_COMMAND_TIMEOUT_MS,
+					}
+				);
 				if (status.trim().length > 0) {
 					dirtyRepos.push(path.basename(repoDir));
 				}
@@ -182,7 +186,8 @@ export function formatMonitorReport(report: MonitorReport): string {
 		return "<system-health>All proactive checks passed. System is healthy.</system-health>";
 	}
 	const lines = report.alerts.map((a) => {
-		const label = a.severity === "critical" ? "CRITICAL" : a.severity === "warning" ? "WARNING" : "INFO";
+		const label =
+			a.severity === "critical" ? "CRITICAL" : a.severity === "warning" ? "WARNING" : "INFO";
 		return `[${label}] [${a.category}] ${a.message}${a.recommendedAction ? ` -> ${a.recommendedAction}` : ""}`;
 	});
 	return `<system-health>\nProactive monitor alerts:\n\n${lines.join("\n")}\n</system-health>`;

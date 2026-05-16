@@ -47,10 +47,18 @@ export const githubTriage = tool({
 		action: z
 			.enum(["latest", "by-sha", "logs", "annotations"])
 			.default("latest")
-			.describe("What to fetch: latest run on default branch, a specific commit, raw logs, or annotations."),
+			.describe(
+				"What to fetch: latest run on default branch, a specific commit, raw logs, or annotations."
+			),
 		sha: z.string().optional().describe("Commit SHA to triage (required for by-sha)."),
-		repo: z.string().optional().describe("owner/repo override. Auto-detected from git remote if omitted."),
-		workflowName: z.string().optional().describe("Filter to a specific workflow file name, e.g. ci.yml"),
+		repo: z
+			.string()
+			.optional()
+			.describe("owner/repo override. Auto-detected from git remote if omitted."),
+		workflowName: z
+			.string()
+			.optional()
+			.describe("Filter to a specific workflow file name, e.g. ci.yml"),
 	}),
 	execute: async ({ action, sha, repo, workflowName }) => {
 		const token = getToken();
@@ -161,7 +169,9 @@ export const githubTriage = tool({
 					status: j.status,
 					conclusion: j.conclusion,
 					duration: j.completed_at
-						? Math.round((new Date(j.completed_at).getTime() - new Date(j.started_at).getTime()) / 1000)
+						? Math.round(
+								(new Date(j.completed_at).getTime() - new Date(j.started_at).getTime()) / 1000
+							)
 						: undefined,
 				})),
 				failedJobs: failedJobs.map((j) => ({
@@ -193,7 +203,9 @@ export const githubTriage = tool({
 				diagnosis.failedJobs.length > 0
 					? `Failed jobs: ${diagnosis.failedJobs.map((j) => j.name).join(", ")}`
 					: "All jobs passed.",
-				!diagnosis.tokenAvailable ? "⚠️ No GITHUB_TOKEN found — some details may be incomplete." : "",
+				!diagnosis.tokenAvailable
+					? "⚠️ No GITHUB_TOKEN found — some details may be incomplete."
+					: "",
 			]
 				.filter(Boolean)
 				.join("\n");

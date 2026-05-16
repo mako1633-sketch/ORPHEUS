@@ -48,7 +48,8 @@ function makeId(): string {
 }
 
 function normalizeStatus(value: string | undefined): TaskStackStatus {
-	if (value === "active" || value === "blocked" || value === "done" || value === "archived") return value;
+	if (value === "active" || value === "blocked" || value === "done" || value === "archived")
+		return value;
 	return "queued";
 }
 
@@ -108,7 +109,9 @@ export async function loadTaskStack(): Promise<TaskStackState> {
 	}
 }
 
-async function saveTaskStack(items: TaskStackItem[]): Promise<{ path: string; state: TaskStackState }> {
+async function saveTaskStack(
+	items: TaskStackItem[]
+): Promise<{ path: string; state: TaskStackState }> {
 	const state = {
 		updatedAt: nowIso(),
 		items: sortTasks(items).slice(0, MAX_TASKS),
@@ -183,7 +186,9 @@ export async function popNextTaskStackItem(): Promise<{
 	state: TaskStackState;
 }> {
 	const state = await loadTaskStack();
-	const next = sortTasks(state.items).find((item) => item.status === "queued" || item.status === "blocked");
+	const next = sortTasks(state.items).find(
+		(item) => item.status === "queued" || item.status === "blocked"
+	);
 	if (!next) {
 		const saved = await saveTaskStack(state.items);
 		return { ...saved, item: undefined };

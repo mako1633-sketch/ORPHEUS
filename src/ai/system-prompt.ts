@@ -65,7 +65,12 @@ export function buildDaemonSystemPrompt(options: SystemPromptOptions = {}): stri
 	const memorySection = memoryInjection ? buildMemorySection(memoryInjection) : "";
 
 	if (mode === "voice") {
-		return buildVoiceSystemPrompt(currentDateString, toolDefinitions, workspaceSection, memorySection);
+		return buildVoiceSystemPrompt(
+			currentDateString,
+			toolDefinitions,
+			workspaceSection,
+			memorySection
+		);
 	}
 
 	return buildTextSystemPrompt(

@@ -92,7 +92,9 @@ export const bashLayout: ToolLayoutConfig = {
 		if (isMultiLine) {
 			const firstLine = lines[0]?.trimEnd() ?? "";
 			const truncatedFirst =
-				firstLine.length > MAX_DISPLAY_LENGTH ? `${firstLine.slice(0, MAX_DISPLAY_LENGTH - 1)}…` : firstLine;
+				firstLine.length > MAX_DISPLAY_LENGTH
+					? `${firstLine.slice(0, MAX_DISPLAY_LENGTH - 1)}…`
+					: firstLine;
 			displayText = `${truncatedFirst} (+${lines.length - 1} more lines)`;
 		} else if (command.length > MAX_DISPLAY_LENGTH) {
 			displayText = `${command.slice(0, MAX_DISPLAY_LENGTH - 1)}…`;

@@ -28,11 +28,15 @@ export function getCodingTaskStatePath(): string {
 
 function cleanText(value: string): string {
 	const normalized = value.trim();
-	return normalized.length > MAX_TEXT_CHARS ? normalized.slice(0, MAX_TEXT_CHARS).trim() : normalized;
+	return normalized.length > MAX_TEXT_CHARS
+		? normalized.slice(0, MAX_TEXT_CHARS).trim()
+		: normalized;
 }
 
 function cleanList(values?: string[]): string[] {
-	return [...new Set((values ?? []).map((value) => cleanText(value)).filter(Boolean))].slice(-MAX_ENTRIES);
+	return [...new Set((values ?? []).map((value) => cleanText(value)).filter(Boolean))].slice(
+		-MAX_ENTRIES
+	);
 }
 
 export async function loadCodingTaskState(): Promise<CodingTaskState | null> {
@@ -91,7 +95,9 @@ export async function saveCodingTaskState(input: {
 	return { path: statePath, state };
 }
 
-export async function updateCodingTaskState(input: Partial<Omit<CodingTaskState, "updatedAt">>): Promise<{
+export async function updateCodingTaskState(
+	input: Partial<Omit<CodingTaskState, "updatedAt">>
+): Promise<{
 	path: string;
 	state: CodingTaskState;
 }> {
@@ -100,7 +106,10 @@ export async function updateCodingTaskState(input: Partial<Omit<CodingTaskState,
 	return saveCodingTaskState({
 		goal,
 		status: input.status ?? existing?.status ?? "in_progress",
-		filesInspected: cleanList([...(existing?.filesInspected ?? []), ...(input.filesInspected ?? [])]),
+		filesInspected: cleanList([
+			...(existing?.filesInspected ?? []),
+			...(input.filesInspected ?? []),
+		]),
 		filesChanged: cleanList([...(existing?.filesChanged ?? []), ...(input.filesChanged ?? [])]),
 		checksRun: cleanList([...(existing?.checksRun ?? []), ...(input.checksRun ?? [])]),
 		failures: cleanList([...(existing?.failures ?? []), ...(input.failures ?? [])]),

@@ -27,7 +27,12 @@ export const WINDOWS_EVENT_TRIAGE_QUERIES: EventTriageQuery[] = [
 	securityQuery("failed-logons", "Failed logons", [4625], "medium"),
 	securityQuery("privileged-logons", "Privileged logons", [4672, 4648], "medium"),
 	securityQuery("admin-group-changes", "Administrator group changes", [4728, 4732, 4756], "high"),
-	securityQuery("account-created-or-enabled", "Account creation or enablement", [4720, 4722], "high"),
+	securityQuery(
+		"account-created-or-enabled",
+		"Account creation or enablement",
+		[4720, 4722],
+		"high"
+	),
 	{
 		id: "service-installs",
 		title: "New service installations",

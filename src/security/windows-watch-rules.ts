@@ -33,7 +33,8 @@ export const WINDOWS_WATCH_RULES: WindowsWatchRule[] = [
 		id: "watch-new-listening-port",
 		title: "New listening TCP port",
 		severity: "medium",
-		checkCommand: "Get-NetTCPConnection -State Listen | Select-Object LocalAddress,LocalPort,OwningProcess",
+		checkCommand:
+			"Get-NetTCPConnection -State Listen | Select-Object LocalAddress,LocalPort,OwningProcess",
 		trigger: "Listening port differs from previous baseline",
 	},
 	{

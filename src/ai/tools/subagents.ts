@@ -131,7 +131,9 @@ Provide a concise summary for display and a very specific task description (espe
 		summary: z
 			.string()
 			.describe("A concise summary with a bit of detail (not just a title). Shown in the UI."),
-		task: z.string().describe("A specific, scoped description of what the subagent should accomplish."),
+		task: z
+			.string()
+			.describe("A specific, scoped description of what the subagent should accomplish."),
 	}),
 	execute: async ({ summary, task }, { toolCallId }) => {
 		try {

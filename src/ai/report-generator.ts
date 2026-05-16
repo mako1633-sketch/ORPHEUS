@@ -91,7 +91,8 @@ function extractArray(data: unknown, key?: string): any[] {
 	if (key && typeof data === "object") {
 		const nested = (data as Record<string, unknown>)[key];
 		if (Array.isArray(nested)) return nested;
-		if (nested && typeof nested === "object") return Object.values(nested as Record<string, unknown>);
+		if (nested && typeof nested === "object")
+			return Object.values(nested as Record<string, unknown>);
 	}
 	if (typeof data === "object") return Object.values(data as Record<string, unknown>);
 	return [];
@@ -159,7 +160,9 @@ function walkDirectories(
 
 function walkFiles(root: string, options: { maxDepth: number; extensions?: string[] }): string[] {
 	const files: string[] = [];
-	const extensions = options.extensions ? new Set(options.extensions.map((ext) => ext.toLowerCase())) : null;
+	const extensions = options.extensions
+		? new Set(options.extensions.map((ext) => ext.toLowerCase()))
+		: null;
 
 	function visit(target: string, depth: number): void {
 		if (depth > options.maxDepth) return;
@@ -248,13 +251,21 @@ async function aggregateVelocity() {
 	let gitCommits30d = 0;
 	let codeChurn = 0;
 	try {
-		const { stdout: c7 } = await execFileAsync("git", ["rev-list", "--count", "HEAD", "--since=7.days"], {
-			timeout: REPORT_COMMAND_TIMEOUT_MS,
-		});
+		const { stdout: c7 } = await execFileAsync(
+			"git",
+			["rev-list", "--count", "HEAD", "--since=7.days"],
+			{
+				timeout: REPORT_COMMAND_TIMEOUT_MS,
+			}
+		);
 		gitCommits7d = Number.parseInt(c7.trim(), 10) || 0;
-		const { stdout: c30 } = await execFileAsync("git", ["rev-list", "--count", "HEAD", "--since=30.days"], {
-			timeout: REPORT_COMMAND_TIMEOUT_MS,
-		});
+		const { stdout: c30 } = await execFileAsync(
+			"git",
+			["rev-list", "--count", "HEAD", "--since=30.days"],
+			{
+				timeout: REPORT_COMMAND_TIMEOUT_MS,
+			}
+		);
 		gitCommits30d = Number.parseInt(c30.trim(), 10) || 0;
 		const { stdout: diff } = await execFileAsync("git", ["diff", "--stat", "HEAD~7..HEAD"], {
 			timeout: REPORT_COMMAND_TIMEOUT_MS,
@@ -274,7 +285,11 @@ async function aggregateVelocity() {
 }
 
 /** Run live security scan using spawn (handles large output + non-zero exit). Skips in test mode. */
-async function runLiveSecurityScan(): Promise<{ critical: number; warnings: number; info: number }> {
+async function runLiveSecurityScan(): Promise<{
+	critical: number;
+	warnings: number;
+	info: number;
+}> {
 	if (process.env.ORPHEUS_TEST) return { critical: 0, warnings: 0, info: 0 };
 	if (!REPORT_DEEP_MODE) return { critical: 0, warnings: 0, info: 0 };
 	const scanScript = path.join(
@@ -369,10 +384,13 @@ async function aggregateRisk() {
 	}
 
 	const criticalRisks: string[] = [];
-	if (uncommittedRepos > 3) criticalRisks.push(`${uncommittedRepos} repos with uncommitted changes`);
+	if (uncommittedRepos > 3)
+		criticalRisks.push(`${uncommittedRepos} repos with uncommitted changes`);
 	if (outdatedDependencies > 5) criticalRisks.push(`${outdatedDependencies} outdated dependencies`);
 	if (securityCritical > 0)
-		criticalRisks.push(`${securityCritical} critical security finding${securityCritical > 1 ? "s" : ""}`);
+		criticalRisks.push(
+			`${securityCritical} critical security finding${securityCritical > 1 ? "s" : ""}`
+		);
 	if (securityWarnings > 0)
 		criticalRisks.push(`${securityWarnings} security warning${securityWarnings > 1 ? "s" : ""}`);
 
@@ -391,11 +409,17 @@ async function aggregateArchitecture() {
 	let totalFilesIndexed = 0;
 	const hotspots: { file: string; references: number }[] = [];
 	try {
-		totalFilesIndexed = walkFiles(DEFAULT_ORPHEUS_SRC, { maxDepth: 12, extensions: [".ts", ".tsx"] }).length;
+		totalFilesIndexed = walkFiles(DEFAULT_ORPHEUS_SRC, {
+			maxDepth: 12,
+			extensions: [".ts", ".tsx"],
+		}).length;
 	} catch {}
 	try {
 		const counts = new Map<string, number>();
-		const sourceFiles = walkFiles(DEFAULT_ORPHEUS_SRC, { maxDepth: 12, extensions: [".ts", ".tsx"] });
+		const sourceFiles = walkFiles(DEFAULT_ORPHEUS_SRC, {
+			maxDepth: 12,
+			extensions: [".ts", ".tsx"],
+		});
 		for (const file of sourceFiles) {
 			const source = readFileSync(file, "utf8");
 			const imports = source.matchAll(/from ['"]([^'"]+)['"]/g);
@@ -418,7 +442,10 @@ async function aggregateReflections() {
 		.reverse()
 		.map((r: any) => ({
 			date: new Date(r?.createdAt ?? r?.completedAt ?? r?.date ?? Date.now()).toLocaleDateString(),
-			lesson: r?.lessonLearned ?? r?.lesson ?? String(r?.whatWorked?.[0] ?? r?.goal ?? "No lesson recorded"),
+			lesson:
+				r?.lessonLearned ??
+				r?.lesson ??
+				String(r?.whatWorked?.[0] ?? r?.goal ?? "No lesson recorded"),
 			taskType: r?.taskType ?? "general",
 		}));
 	const problemCounts = new Map<string, number>();
@@ -445,7 +472,9 @@ async function aggregateRoi() {
 	).length;
 	const autonomous = tasks.filter(
 		(t: any) =>
-			(t?.status === "completed" || t?.state === "completed") && !t?.children?.length && !t?.subtasks?.length
+			(t?.status === "completed" || t?.state === "completed") &&
+			!t?.children?.length &&
+			!t?.subtasks?.length
 	).length;
 	const handholding = tasks.filter(
 		(t: any) =>
@@ -456,7 +485,9 @@ async function aggregateRoi() {
 		(t: any) => (t?.status === "completed" || t?.state === "completed") && t?.wasBlocked
 	).length;
 	const recoveryRate =
-		autonomous + handholding > 0 ? Math.round((blockedThenCompleted / (autonomous + handholding)) * 100) : 0;
+		autonomous + handholding > 0
+			? Math.round((blockedThenCompleted / (autonomous + handholding)) * 100)
+			: 0;
 	let avgTime = 0;
 	const completedWithTime = tasks.filter(
 		(t: any) =>
@@ -467,7 +498,11 @@ async function aggregateRoi() {
 	if (completedWithTime.length > 0) {
 		const totalMs = completedWithTime.reduce(
 			(sum: number, t: any) =>
-				sum + Math.max(0, new Date(t.completedAt ?? t.updatedAt).getTime() - new Date(t.startedAt).getTime()),
+				sum +
+				Math.max(
+					0,
+					new Date(t.completedAt ?? t.updatedAt).getTime() - new Date(t.startedAt).getTime()
+				),
 			0
 		);
 		avgTime = Math.round(totalMs / completedWithTime.length / 36e5);
@@ -493,7 +528,9 @@ function renderReport(data: ReportData): string {
 		.join("\n");
 	const riskList =
 		risk.criticalRisks.length > 0
-			? risk.criticalRisks.map((r: string) => `<li class="risk">[risk] ${escapeHtml(r)}</li>`).join("\n")
+			? risk.criticalRisks
+					.map((r: string) => `<li class="risk">[risk] ${escapeHtml(r)}</li>`)
+					.join("\n")
 			: '<li class="ok">[ok] No critical risks</li>';
 	const hotspots = architecture.hotspots
 		.slice(0, 8)
@@ -644,7 +681,8 @@ export async function generateReport(outputPath?: string): Promise<string> {
 	};
 	const html = renderReport(data);
 	const out =
-		outputPath ?? path.join(getDesktopDir(), `orpheus-report-${new Date().toISOString().split("T")[0]}.html`);
+		outputPath ??
+		path.join(getDesktopDir(), `orpheus-report-${new Date().toISOString().split("T")[0]}.html`);
 	mkdirSync(path.dirname(out), { recursive: true });
 	writeFileSync(out, html, "utf8");
 	return out;

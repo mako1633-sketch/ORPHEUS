@@ -144,7 +144,9 @@ export function ToolCallView({ call, result, showOutput = true }: ToolCallViewPr
 		return formatGenericToolOutputPreview(result);
 	}, [result, showOutput, layout, mcpMeta]);
 
-	const hasResultPreview = Boolean(showOutput && resultPreviewLines && resultPreviewLines.length > 0);
+	const hasResultPreview = Boolean(
+		showOutput && resultPreviewLines && resultPreviewLines.length > 0
+	);
 
 	const toolColor =
 		call.status === "completed"
@@ -170,7 +172,12 @@ export function ToolCallView({ call, result, showOutput = true }: ToolCallViewPr
 			width="100%"
 		>
 			<box flexDirection="row" alignItems="center" justifyContent="space-between" width="100%">
-				<ToolHeaderView toolName={toolName} header={header} isRunning={isRunning} toolColor={toolColor} />
+				<ToolHeaderView
+					toolName={toolName}
+					header={header}
+					isRunning={isRunning}
+					toolColor={toolColor}
+				/>
 				<box marginLeft={1}>
 					<StatusChip status={call.status} />
 				</box>

@@ -125,8 +125,8 @@ export function UrlMenu({ items, onClose }: UrlMenuProps) {
 					<box flexGrow={1} />
 					<text>
 						<span fg={COLORS.USER_LABEL}>
-							<span fg={COLORS.DAEMON_LABEL}>j/k</span> scroll · <span fg={COLORS.DAEMON_LABEL}>ESC</span>{" "}
-							close
+							<span fg={COLORS.DAEMON_LABEL}>j/k</span> scroll ·{" "}
+							<span fg={COLORS.DAEMON_LABEL}>ESC</span> close
 						</span>
 					</text>
 				</box>
@@ -163,7 +163,9 @@ export function UrlMenu({ items, onClose }: UrlMenuProps) {
 										<span fg={COLORS.REASONING_DIM}> </span>
 										<span fg={COLORS.REASONING_DIM}>{readLabel.padStart(4, " ")}</span>
 										<span fg={COLORS.REASONING_DIM}> </span>
-										<span fg={item.status === "error" ? COLORS.ERROR : COLORS.DAEMON_LABEL}>{origin}</span>
+										<span fg={item.status === "error" ? COLORS.ERROR : COLORS.DAEMON_LABEL}>
+											{origin}
+										</span>
 										<span fg={COLORS.REASONING_DIM}>{path}</span>
 									</text>
 								</box>

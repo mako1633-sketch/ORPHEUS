@@ -7,7 +7,12 @@ import type { AssessmentFinding } from "./windows-assessment-parser";
 
 export type EngagementRiskTier = "unknown" | "low" | "medium" | "high";
 export type EngagementStatus = "active" | "paused" | "closed";
-export type RemediationLedgerStatus = "open" | "accepted-risk" | "in-progress" | "fixed" | "verified";
+export type RemediationLedgerStatus =
+	| "open"
+	| "accepted-risk"
+	| "in-progress"
+	| "fixed"
+	| "verified";
 
 export interface ClientEngagement {
 	id: string;
@@ -101,7 +106,9 @@ export async function listClientEngagements(): Promise<ClientEngagement[]> {
 	return (await readStore()).clients;
 }
 
-export async function listRemediationLedger(clientName?: string): Promise<RemediationLedgerIssue[]> {
+export async function listRemediationLedger(
+	clientName?: string
+): Promise<RemediationLedgerIssue[]> {
 	const store = await readStore();
 	if (!clientName) return store.ledger;
 	const slug = slugifyClientName(clientName);

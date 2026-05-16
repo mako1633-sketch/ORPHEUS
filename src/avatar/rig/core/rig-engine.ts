@@ -14,7 +14,12 @@ import { updateMainAnchor } from "../update/update-main-anchor";
 import { updateParticles } from "../update/update-particles";
 import { updateRings } from "../update/update-rings";
 import { updateSigils } from "../update/update-sigils";
-import { advanceSpawn, applySpawn, resetSpawnState, skipSpawnAnimation } from "../update/update-spawn";
+import {
+	advanceSpawn,
+	applySpawn,
+	resetSpawnState,
+	skipSpawnAnimation,
+} from "../update/update-spawn";
 import { clamp01 } from "../utils/math";
 import type { RigEngineOptions, RigEvent } from "./rig-types";
 

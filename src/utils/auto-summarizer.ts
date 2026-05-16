@@ -167,7 +167,9 @@ function generateHeuristicSummary(text: string, count: number): string {
 	parts.push(`Summary of ${count} turns:`);
 
 	if (questions.length > 0) {
-		parts.push(`Key topics: ${questions.map((q) => q.trim().replace(/^\[.*?\]\s*/, "")).join("; ")}`);
+		parts.push(
+			`Key topics: ${questions.map((q) => q.trim().replace(/^\[.*?\]\s*/, "")).join("; ")}`
+		);
 	} else {
 		parts.push("Topics: general discussion and code work.");
 	}

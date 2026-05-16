@@ -58,7 +58,10 @@ async function detectSox(): Promise<VoiceCapability> {
 	return {
 		available: false,
 		reason: "sox is not installed.",
-		hint: process.platform === "darwin" ? "Run: brew install sox" : "Install sox using your package manager.",
+		hint:
+			process.platform === "darwin"
+				? "Run: brew install sox"
+				: "Install sox using your package manager.",
 	};
 }
 

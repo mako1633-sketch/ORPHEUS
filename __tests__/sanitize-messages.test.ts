@@ -31,7 +31,9 @@ describe("sanitizeMessagesForInput", () => {
 
 		const contentPart = (sanitized[0]?.content as unknown[])[0] as Record<string, unknown>;
 		expect(contentPart.providerOptions).toBeUndefined();
-		expect((contentPart.input as Record<string, unknown>).providerOptions).toEqual({ shouldPreserve: true });
+		expect((contentPart.input as Record<string, unknown>).providerOptions).toEqual({
+			shouldPreserve: true,
+		});
 
 		// Message-level providerOptions should be removed
 		expect((sanitized[0] as Record<string, unknown>).providerOptions).toBeUndefined();

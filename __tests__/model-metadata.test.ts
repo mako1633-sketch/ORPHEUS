@@ -112,14 +112,27 @@ describe("formatContextUsage", () => {
 
 describe("resolveOpenRouterProviderPricing", () => {
 	it("resolves pricing by provider tag", () => {
-		const providers = [{ tag: "openai", providerName: "OpenAI", pricing: { prompt: 5, completion: 10 } }];
-		expect(resolveOpenRouterProviderPricing(providers, "openai")).toEqual({ prompt: 5, completion: 10 });
+		const providers = [
+			{ tag: "openai", providerName: "OpenAI", pricing: { prompt: 5, completion: 10 } },
+		];
+		expect(resolveOpenRouterProviderPricing(providers, "openai")).toEqual({
+			prompt: 5,
+			completion: 10,
+		});
 	});
 
 	it("resolves pricing by provider name (case-insensitive)", () => {
-		const providers = [{ tag: "openai", providerName: "OpenAI", pricing: { prompt: 5, completion: 10 } }];
-		expect(resolveOpenRouterProviderPricing(providers, "OpenAI")).toEqual({ prompt: 5, completion: 10 });
-		expect(resolveOpenRouterProviderPricing(providers, "openai")).toEqual({ prompt: 5, completion: 10 });
+		const providers = [
+			{ tag: "openai", providerName: "OpenAI", pricing: { prompt: 5, completion: 10 } },
+		];
+		expect(resolveOpenRouterProviderPricing(providers, "OpenAI")).toEqual({
+			prompt: 5,
+			completion: 10,
+		});
+		expect(resolveOpenRouterProviderPricing(providers, "openai")).toEqual({
+			prompt: 5,
+			completion: 10,
+		});
 	});
 
 	it("returns undefined when no pricing is available", () => {

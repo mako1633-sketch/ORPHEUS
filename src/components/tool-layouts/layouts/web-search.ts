@@ -17,7 +17,8 @@ function extractSearchInput(input: unknown): SearchInput | null {
 	if (!isRecord(input)) return null;
 	if (!("query" in input) || typeof input.query !== "string") return null;
 
-	const recency = "recency" in input && typeof input.recency === "string" ? input.recency : undefined;
+	const recency =
+		"recency" in input && typeof input.recency === "string" ? input.recency : undefined;
 	const includeDomains =
 		"includeDomains" in input && Array.isArray(input.includeDomains)
 			? (input.includeDomains.filter((d) => typeof d === "string") as string[])

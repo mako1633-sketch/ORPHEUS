@@ -174,7 +174,9 @@ async function getDb(): Promise<Database | null> {
 }
 
 async function tryEmbed(baseUrl: string, text: string, model: string): Promise<number[] | null> {
-	const url = baseUrl.endsWith("/api/embeddings") ? baseUrl : `${baseUrl.replace(/\/$/, "")}/api/embeddings`;
+	const url = baseUrl.endsWith("/api/embeddings")
+		? baseUrl
+		: `${baseUrl.replace(/\/$/, "")}/api/embeddings`;
 	try {
 		const res = await fetch(url, {
 			method: "POST",
@@ -261,7 +263,9 @@ async function* walkDir(dir: string): AsyncGenerator<string> {
  * Index a directory tree into the knowledge base.
  * Re-indexes existing files (deletes old chunks first).
  */
-export async function indexDirectory(dirPath: string): Promise<{ indexed: number; errors: number }> {
+export async function indexDirectory(
+	dirPath: string
+): Promise<{ indexed: number; errors: number }> {
 	const database = await getDb();
 	if (!database) return { indexed: 0, errors: 0 };
 
@@ -358,7 +362,9 @@ export async function searchKnowledgeBase(query: string, limit = 5): Promise<Kno
 	}
 
 	try {
-		const rows = database.prepare("SELECT chunk_id, embedding FROM chunk_embeddings").all() as Array<{
+		const rows = database
+			.prepare("SELECT chunk_id, embedding FROM chunk_embeddings")
+			.all() as Array<{
 			chunk_id: string;
 			embedding: Buffer;
 		}>;

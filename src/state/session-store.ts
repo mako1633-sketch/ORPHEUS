@@ -50,7 +50,9 @@ function getSessionDbPath(): string {
 }
 
 function getUserVersion(database: Database): number {
-	const row = database.prepare("PRAGMA user_version").get() as { user_version?: number } | undefined;
+	const row = database.prepare("PRAGMA user_version").get() as
+		| { user_version?: number }
+		| undefined;
 	return typeof row?.user_version === "number" ? row.user_version : 0;
 }
 
@@ -94,7 +96,9 @@ export async function getDb(): Promise<Database> {
 			await fs.mkdir(path.dirname(dbPath), { recursive: true });
 		}
 		const database = new Database(dbPath);
-		database.exec(process.platform === "win32" ? "PRAGMA journal_mode=DELETE;" : "PRAGMA journal_mode=WAL;");
+		database.exec(
+			process.platform === "win32" ? "PRAGMA journal_mode=DELETE;" : "PRAGMA journal_mode=WAL;"
+		);
 		database.exec("PRAGMA foreign_keys=ON;");
 		runMigrations(database);
 		db = database;
@@ -152,17 +156,25 @@ function parseSessionUsage(raw: string): TokenUsage {
 			promptTokens: typeof parsed.promptTokens === "number" ? parsed.promptTokens : 0,
 			completionTokens: typeof parsed.completionTokens === "number" ? parsed.completionTokens : 0,
 			totalTokens: typeof parsed.totalTokens === "number" ? parsed.totalTokens : 0,
-			reasoningTokens: typeof parsed.reasoningTokens === "number" ? parsed.reasoningTokens : undefined,
-			cachedInputTokens: typeof parsed.cachedInputTokens === "number" ? parsed.cachedInputTokens : undefined,
+			reasoningTokens:
+				typeof parsed.reasoningTokens === "number" ? parsed.reasoningTokens : undefined,
+			cachedInputTokens:
+				typeof parsed.cachedInputTokens === "number" ? parsed.cachedInputTokens : undefined,
 			cost: typeof parsed.cost === "number" ? parsed.cost : undefined,
-			subagentTotalTokens: typeof parsed.subagentTotalTokens === "number" ? parsed.subagentTotalTokens : 0,
-			subagentPromptTokens: typeof parsed.subagentPromptTokens === "number" ? parsed.subagentPromptTokens : 0,
+			subagentTotalTokens:
+				typeof parsed.subagentTotalTokens === "number" ? parsed.subagentTotalTokens : 0,
+			subagentPromptTokens:
+				typeof parsed.subagentPromptTokens === "number" ? parsed.subagentPromptTokens : 0,
 			subagentCompletionTokens:
 				typeof parsed.subagentCompletionTokens === "number" ? parsed.subagentCompletionTokens : 0,
 			latestTurnPromptTokens:
-				typeof parsed.latestTurnPromptTokens === "number" ? parsed.latestTurnPromptTokens : undefined,
+				typeof parsed.latestTurnPromptTokens === "number"
+					? parsed.latestTurnPromptTokens
+					: undefined,
 			latestTurnCompletionTokens:
-				typeof parsed.latestTurnCompletionTokens === "number" ? parsed.latestTurnCompletionTokens : undefined,
+				typeof parsed.latestTurnCompletionTokens === "number"
+					? parsed.latestTurnCompletionTokens
+					: undefined,
 		};
 	} catch (error) {
 		debug.error("session-usage-parse-failed", {
@@ -217,7 +229,14 @@ export async function createSession(title?: string): Promise<SessionInfo> {
 		.prepare(
 			"INSERT INTO sessions (id, title, created_at, updated_at, history_json, usage_json) VALUES (?, ?, ?, ?, ?, ?)"
 		)
-		.run(sessionId, sessionTitle, now, now, JSON.stringify([]), JSON.stringify(DEFAULT_SESSION_USAGE));
+		.run(
+			sessionId,
+			sessionTitle,
+			now,
+			now,
+			JSON.stringify([]),
+			JSON.stringify(DEFAULT_SESSION_USAGE)
+		);
 
 	await ensureWorkspaceExists(sessionId);
 
@@ -246,13 +265,16 @@ export async function loadSessionSnapshot(sessionId: string): Promise<SessionSna
 	}
 }
 
-export async function saveSessionSnapshot(snapshot: SessionSnapshot, sessionId: string): Promise<void> {
+export async function saveSessionSnapshot(
+	snapshot: SessionSnapshot,
+	sessionId: string
+): Promise<void> {
 	try {
 		const database = await getDb();
 		const now = new Date().toISOString();
-		const existing = database.prepare("SELECT created_at, title FROM sessions WHERE id = ?").get(sessionId) as
-			| { created_at?: string }
-			| undefined;
+		const existing = database
+			.prepare("SELECT created_at, title FROM sessions WHERE id = ?")
+			.get(sessionId) as { created_at?: string } | undefined;
 		const createdAt = existing?.created_at ?? now;
 		const title =
 			(existing as { title?: string } | undefined)?.title?.trim() || formatSessionTitle(createdAt);
@@ -291,7 +313,9 @@ export async function updateSessionTitle(sessionId: string, title: string): Prom
 	try {
 		const database = await getDb();
 		const now = new Date().toISOString();
-		database.prepare("UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?").run(title, now, sessionId);
+		database
+			.prepare("UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?")
+			.run(title, now, sessionId);
 	} catch (error) {
 		const err = error instanceof Error ? error : new Error(String(error));
 		debug.error("session-title-update-failed", { message: err.message });
@@ -413,7 +437,9 @@ export async function saveTodoList(sessionId: string, items: TodoItem[]): Promis
 		const itemsJson = JSON.stringify(items);
 
 		database
-			.prepare("INSERT INTO todo_lists (id, session_id, created_at, items_json) VALUES (?, ?, ?, ?)")
+			.prepare(
+				"INSERT INTO todo_lists (id, session_id, created_at, items_json) VALUES (?, ?, ?, ?)"
+			)
 			.run(id, sessionId, now, itemsJson);
 	} catch (error) {
 		const err = error instanceof Error ? error : new Error(String(error));
@@ -425,7 +451,9 @@ export async function loadLatestTodoList(sessionId: string): Promise<TodoItem[]>
 	try {
 		const database = await getDb();
 		const row = database
-			.prepare("SELECT items_json FROM todo_lists WHERE session_id = ? ORDER BY created_at DESC LIMIT 1")
+			.prepare(
+				"SELECT items_json FROM todo_lists WHERE session_id = ? ORDER BY created_at DESC LIMIT 1"
+			)
 			.get(sessionId) as { items_json: string } | undefined;
 
 		if (!row) return [];

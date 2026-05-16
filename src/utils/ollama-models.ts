@@ -31,7 +31,8 @@ function normalizeOllamaModels(items: OllamaApiModelItem[]): ModelOption[] {
 		if (seen.has(id)) continue;
 		seen.add(id);
 
-		const name = typeof item.name === "string" && item.name.trim().length > 0 ? item.name.trim() : id;
+		const name =
+			typeof item.name === "string" && item.name.trim().length > 0 ? item.name.trim() : id;
 
 		models.push({ id, name });
 	}

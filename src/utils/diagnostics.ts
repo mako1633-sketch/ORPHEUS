@@ -155,7 +155,9 @@ export function formatDiagnosticReport(report: DiagnosticReport): string {
 	const k = report.probes.keyboard;
 	lines.push(`Keyboard  ${k.success ? "OK" : "FAIL"}  ${k.responseTimeMs}ms`);
 	if (k.data) {
-		lines.push(`  → TTY stdin=${k.data.stdinIsTTY} stdout=${k.data.stdoutIsTTY} platform=${k.data.platform}`);
+		lines.push(
+			`  → TTY stdin=${k.data.stdinIsTTY} stdout=${k.data.stdoutIsTTY} platform=${k.data.platform}`
+		);
 	}
 	lines.push("");
 

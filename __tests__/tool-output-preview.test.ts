@@ -91,7 +91,9 @@ describe("formatToolOutputPreview", () => {
 				error: "EXA_API_KEY is invalid. Update it, then restart or re-enter the key.",
 			};
 			const output = formatToolOutputPreview("webSearch", result);
-			expect(output).toEqual(["error: EXA_API_KEY is invalid. Update it, then restart or re-enter the key."]);
+			expect(output).toEqual([
+				"error: EXA_API_KEY is invalid. Update it, then restart or re-enter the key.",
+			]);
 		});
 
 		it("handles null web search result", () => {

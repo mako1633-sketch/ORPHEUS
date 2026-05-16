@@ -1,15 +1,22 @@
 import { describe, expect, it } from "bun:test";
 import type { AssessmentFinding } from "../src/security/windows-assessment-parser";
 import { buildWindowsRemediationPlan } from "../src/security/windows-remediation";
-import { buildWindowsSecurityReport, categoryForFinding } from "../src/security/windows-security-report";
+import {
+	buildWindowsSecurityReport,
+	categoryForFinding,
+} from "../src/security/windows-security-report";
 
 describe("Windows security report", () => {
 	it("categorizes findings for score breakdowns", () => {
-		expect(categoryForFinding({ id: "defender-disabled", title: "Defender disabled" })).toBe("Defender");
-		expect(categoryForFinding({ id: "firewall-inbound-allow", title: "Inbound allows traffic" })).toBe(
-			"Firewall"
+		expect(categoryForFinding({ id: "defender-disabled", title: "Defender disabled" })).toBe(
+			"Defender"
 		);
-		expect(categoryForFinding({ id: "admin-membership-review", title: "Local admins" })).toBe("Accounts");
+		expect(
+			categoryForFinding({ id: "firewall-inbound-allow", title: "Inbound allows traffic" })
+		).toBe("Firewall");
+		expect(categoryForFinding({ id: "admin-membership-review", title: "Local admins" })).toBe(
+			"Accounts"
+		);
 	});
 
 	it("builds a marketable snapshot report with score, controls, questions, and prompts", () => {
@@ -41,7 +48,9 @@ describe("Windows security report", () => {
 		expect(report.breakdown.some((item) => item.category === "Defender")).toBe(true);
 		expect(report.cyberReadinessControls.some((control) => control.id === "mfa")).toBe(true);
 		expect(report.questionnairePrompts.length).toBeGreaterThan(0);
-		expect(report.promptSuggestions.some((suggestion) => suggestion.label === "Client email")).toBe(true);
+		expect(report.promptSuggestions.some((suggestion) => suggestion.label === "Client email")).toBe(
+			true
+		);
 		expect(report.markdown).toContain("ORPHEUS Security Snapshot");
 		expect(report.markdown).toContain("Cyber Readiness Controls");
 	});

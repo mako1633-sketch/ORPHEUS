@@ -64,7 +64,9 @@ export function isVisionRequest(userMessage: string): boolean {
  * The actual image-to-text analysis happens in the agent turn runner when it sees
  * a screenshot tool result paired with a vision-capable model.
  */
-export async function performVisionAnalysis(request: VisionAnalysisRequest): Promise<VisionAnalysisResult> {
+export async function performVisionAnalysis(
+	request: VisionAnalysisRequest
+): Promise<VisionAnalysisResult> {
 	const screenshot = await captureScreenshot({
 		label: request.label ?? "vision-analysis",
 		includeCursor: request.includeCursor ?? false,
@@ -94,7 +96,11 @@ export const visionReasoningTool = tool({
 	inputSchema: z.object({
 		userMessage: z.string().describe("The user's message that triggered vision analysis."),
 		label: z.string().optional().describe("Optional label for the screenshot filename."),
-		includeCursor: z.boolean().optional().default(false).describe("Whether to include the mouse cursor."),
+		includeCursor: z
+			.boolean()
+			.optional()
+			.default(false)
+			.describe("Whether to include the mouse cursor."),
 	}),
 	needsApproval: async () => true,
 	execute: async ({ userMessage, label, includeCursor }) => {

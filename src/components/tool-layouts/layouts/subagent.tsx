@@ -35,7 +35,9 @@ function extractUrl(input: unknown): string | null {
 		return input.url;
 	}
 	if ("requests" in input && Array.isArray(input.requests)) {
-		const first = input.requests.find((item: unknown) => isRecord(item) && typeof item.url === "string");
+		const first = input.requests.find(
+			(item: unknown) => isRecord(item) && typeof item.url === "string"
+		);
 		if (isRecord(first) && typeof first.url === "string") {
 			return first.url;
 		}
@@ -94,7 +96,11 @@ function formatStepLabel(step: { toolName: string; input?: unknown }): string {
 
 	if (step.toolName === "fetchUrls" || step.toolName === "renderUrl") {
 		const url = extractUrl(step.input);
-		if (step.toolName === "fetchUrls" && isRecord(step.input) && Array.isArray(step.input.requests)) {
+		if (
+			step.toolName === "fetchUrls" &&
+			isRecord(step.input) &&
+			Array.isArray(step.input.requests)
+		) {
 			const count = step.input.requests.filter(
 				(item: unknown) => isRecord(item) && typeof item.url === "string"
 			).length;

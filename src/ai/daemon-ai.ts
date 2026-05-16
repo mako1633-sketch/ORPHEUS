@@ -132,14 +132,21 @@ export async function generateResponse(
 			return;
 		}
 
-		callbacks.onComplete?.(result.fullText, result.responseMessages, result.usage, result.finalText);
+		callbacks.onComplete?.(
+			result.fullText,
+			result.responseMessages,
+			result.usage,
+			result.finalText
+		);
 
 		const assistantTextForMemory = getAssistantTextForMemory(result, userMessageForMemory);
 		if (assistantTextForMemory) {
-			void persistConversationMemory(userMessageForMemory, assistantTextForMemory).then((preview) => {
-				if (!preview) return;
-				callbacks.onMemorySaved?.(preview);
-			});
+			void persistConversationMemory(userMessageForMemory, assistantTextForMemory).then(
+				(preview) => {
+					if (!preview) return;
+					callbacks.onMemorySaved?.(preview);
+				}
+			);
 		}
 	} catch (error) {
 		if (abortSignal?.aborted) {
@@ -177,7 +184,8 @@ function getAssistantTextForMemory(
 
 	const guardedText = (guarded.finalText ?? guarded.fullText).trim();
 	if (!guardedText) return null;
-	if (detectAssistantResponseLeak(guardedText) || isAssistantResponseGuardNotice(guardedText)) return null;
+	if (detectAssistantResponseLeak(guardedText) || isAssistantResponseGuardNotice(guardedText))
+		return null;
 	return guardedText;
 }
 

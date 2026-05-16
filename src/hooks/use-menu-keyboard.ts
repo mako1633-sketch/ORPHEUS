@@ -89,7 +89,16 @@ export function useMenuKeyboard({
 
 			key.preventDefault();
 		},
-		[itemCount, selectedIndex, onClose, onSelect, enableViKeys, closeOnSelect, ignoreEscape, disabled]
+		[
+			itemCount,
+			selectedIndex,
+			onClose,
+			onSelect,
+			enableViKeys,
+			closeOnSelect,
+			ignoreEscape,
+			disabled,
+		]
 	);
 
 	useKeyboard(handleKeyPress);

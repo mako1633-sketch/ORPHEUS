@@ -5,7 +5,10 @@ export interface MarkdownRenderOptions {
 	streaming?: boolean;
 }
 
-export async function renderMarkdown(text: string, options: MarkdownRenderOptions = {}): Promise<string> {
+export async function renderMarkdown(
+	text: string,
+	options: MarkdownRenderOptions = {}
+): Promise<string> {
 	const trimmed = options.streaming ? text : text.trimEnd();
 	if (options.streaming) {
 		return trimmed;

@@ -21,7 +21,12 @@ function messageContentToText(message: ModelMessage): string {
 	return message.content
 		.map((part) => {
 			if (!part || typeof part !== "object") return "";
-			if ("type" in part && part.type === "text" && "text" in part && typeof part.text === "string") {
+			if (
+				"type" in part &&
+				part.type === "text" &&
+				"text" in part &&
+				typeof part.text === "string"
+			) {
 				return part.text;
 			}
 			return "";
@@ -80,7 +85,8 @@ function buildPatchManagementText(): string {
 
 function buildShortFollowUpText(conversationHistory: ModelMessage[]): string {
 	const lastAssistantText = getLastAssistantText(conversationHistory) ?? "";
-	if (!lastAssistantText || !PATCH_CONTEXT_PATTERN.test(lastAssistantText)) return buildPatchManagementText();
+	if (!lastAssistantText || !PATCH_CONTEXT_PATTERN.test(lastAssistantText))
+		return buildPatchManagementText();
 
 	return [
 		"Concrete answer: I can automate the assessment and reporting almost completely; remediation is approval-gated.",

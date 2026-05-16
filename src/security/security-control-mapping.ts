@@ -129,7 +129,8 @@ export function buildSecurityControlMappings(
 			id: "nist-pr-ac-access-control",
 			framework: "NIST CSF",
 			title: "Identity management and access control",
-			status: admins.status === "confirmed" && mfa?.status !== "questionnaire" ? "confirmed" : "partial",
+			status:
+				admins.status === "confirmed" && mfa?.status !== "questionnaire" ? "confirmed" : "partial",
 			evidence: "Local administrator evidence is paired with owner-confirmed MFA questions.",
 			gaps: [
 				...(admins.gaps ?? []),
@@ -151,7 +152,8 @@ export function buildSecurityControlMappings(
 			framework: "Cyber Insurance",
 			title: "Encrypted, segregated backups and restore tests",
 			status: "unknown",
-			evidence: backups?.note ?? "Backup architecture cannot be verified from local Windows evidence.",
+			evidence:
+				backups?.note ?? "Backup architecture cannot be verified from local Windows evidence.",
 			gaps: ["Owner attestation, backup policy, or restore-test evidence required."],
 			relatedFindingIds: [],
 		},
@@ -160,7 +162,8 @@ export function buildSecurityControlMappings(
 			framework: "Cyber Insurance",
 			title: "Incident response and recovery plan",
 			status: "unknown",
-			evidence: ir?.note ?? "Incident response process cannot be verified from local Windows evidence.",
+			evidence:
+				ir?.note ?? "Incident response process cannot be verified from local Windows evidence.",
 			gaps: ["Owner attestation or written plan required."],
 			relatedFindingIds: [],
 		},
@@ -175,6 +178,9 @@ export function summarizeControlMappings(
 			summary[mapping.status] += 1;
 			return summary;
 		},
-		{ confirmed: 0, partial: 0, unknown: 0, failed: 0 } satisfies Record<SecurityControlStatus, number>
+		{ confirmed: 0, partial: 0, unknown: 0, failed: 0 } satisfies Record<
+			SecurityControlStatus,
+			number
+		>
 	);
 }

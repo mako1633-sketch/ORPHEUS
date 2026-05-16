@@ -89,22 +89,42 @@ function classifyChangedFile(file: string): string[] {
 	const normalized = file.replace(/\\/g, "/").toLowerCase();
 	const risks: string[] = [];
 
-	if (/(^|\/)(package\.json|package-lock\.json|bun\.lock|pnpm-lock\.yaml|yarn\.lock)$/.test(normalized)) {
+	if (
+		/(^|\/)(package\.json|package-lock\.json|bun\.lock|pnpm-lock\.yaml|yarn\.lock)$/.test(
+			normalized
+		)
+	) {
 		risks.push("dependency-or-script-change");
 	}
 	if (/(^|\/)(\.env|\.env\..*|.*secret.*|.*credential.*)$/.test(normalized)) {
 		risks.push("secret-or-environment-change");
 	}
-	if (normalized.includes("/auth") || normalized.includes("auth-") || normalized.includes("security")) {
+	if (
+		normalized.includes("/auth") ||
+		normalized.includes("auth-") ||
+		normalized.includes("security")
+	) {
 		risks.push("auth-or-security-surface");
 	}
-	if (normalized.includes("/api/") || normalized.includes("provider") || normalized.includes("client")) {
+	if (
+		normalized.includes("/api/") ||
+		normalized.includes("provider") ||
+		normalized.includes("client")
+	) {
 		risks.push("api-or-provider-contract");
 	}
-	if (normalized.includes("context") || normalized.includes("prompt") || normalized.includes("memory")) {
+	if (
+		normalized.includes("context") ||
+		normalized.includes("prompt") ||
+		normalized.includes("memory")
+	) {
 		risks.push("context-or-memory-behavior");
 	}
-	if (normalized.includes("tool") || normalized.includes("write-file") || normalized.includes("run-bash")) {
+	if (
+		normalized.includes("tool") ||
+		normalized.includes("write-file") ||
+		normalized.includes("run-bash")
+	) {
 		risks.push("tool-execution-surface");
 	}
 	if (
@@ -150,7 +170,9 @@ function buildRiskReview(input: {
 	const validationScripts = input.validationScripts ?? [];
 	const riskTags = unique(changedFiles.flatMap(classifyChangedFile));
 
-	if (/writefile|write-file|filesystem|fs\.|writefilesync|appendfilesync|unlink|rename/i.test(diff)) {
+	if (
+		/writefile|write-file|filesystem|fs\.|writefilesync|appendfilesync|unlink|rename/i.test(diff)
+	) {
 		riskTags.push("filesystem-side-effect");
 	}
 	if (/timeout|abort|retry|stream|async|promise|spawn|exec/i.test(diff)) {
@@ -203,7 +225,9 @@ function buildRiskReview(input: {
 		changedFiles.some((file) => /\.(ts|tsx|js|jsx|json|md|css)$/.test(file)) ? "format:check" : "",
 	]);
 
-	const missingChecks = recommendedChecks.filter((check) => !checksRun.some((ran) => ran.includes(check)));
+	const missingChecks = recommendedChecks.filter(
+		(check) => !checksRun.some((ran) => ran.includes(check))
+	);
 	const completionGate = unique([
 		"Confirm the final answer separates observed evidence from inference.",
 		"Inspect the final diff and verify only intended files changed.",
@@ -227,7 +251,9 @@ function buildRiskReview(input: {
 			failures.length > 0 ? `Failures observed: ${failures.join("; ")}` : "",
 		]),
 		inferences: unique([
-			riskTags.length > 0 ? `Risk tags inferred from filenames/diff: ${unique(riskTags).join(", ")}` : "",
+			riskTags.length > 0
+				? `Risk tags inferred from filenames/diff: ${unique(riskTags).join(", ")}`
+				: "",
 			diff
 				? "Diff text was provided for review."
 				: "No diff text was provided; risk review is based on filenames and recorded checks.",
@@ -244,7 +270,10 @@ function buildRiskReview(input: {
 	};
 }
 
-function scriptCommand(manager: string | undefined, script: string): { command: string; args: string[] } {
+function scriptCommand(
+	manager: string | undefined,
+	script: string
+): { command: string; args: string[] } {
 	switch (manager) {
 		case "bun":
 			return { command: "bun", args: ["run", script] };
@@ -302,7 +331,9 @@ async function runCommand(params: {
 				exitCode: killed ? null : code,
 				stdout: truncate(stdout.trim()),
 				stderr: truncate(stderr.trim()),
-				error: killed ? `Command timed out after ${params.timeout ?? DEFAULT_TIMEOUT_MS}ms` : undefined,
+				error: killed
+					? `Command timed out after ${params.timeout ?? DEFAULT_TIMEOUT_MS}ms`
+					: undefined,
 			});
 		});
 
@@ -346,7 +377,8 @@ function explainFailure(
 		return {
 			command,
 			likelyCause: "A test assertion or snapshot no longer matches behavior.",
-			nextStep: "Inspect the failing test and implementation together; update behavior before snapshots.",
+			nextStep:
+				"Inspect the failing test and implementation together; update behavior before snapshots.",
 			signals,
 		};
 	}
@@ -414,13 +446,21 @@ function codingModeProfile(profile: string): {
 					"Check secrets/auth/input paths",
 					"Prefer read-only evidence",
 				],
-				validationBias: ["negative-path tests", "dependency/config review", "secret exposure check"],
+				validationBias: [
+					"negative-path tests",
+					"dependency/config review",
+					"secret exposure check",
+				],
 				outputStyle: "Findings first, severity and evidence, no exploit details.",
 			};
 		case "releasePrep":
 			return {
 				profile,
-				defaultLoop: ["Check git status", "Run full validation", "Inspect docs/version/build artifacts"],
+				defaultLoop: [
+					"Check git status",
+					"Run full validation",
+					"Inspect docs/version/build artifacts",
+				],
 				validationBias: ["check", "build", "test", "README/release notes"],
 				outputStyle: "Ship-readiness summary with blockers and commands run.",
 			};
@@ -451,7 +491,9 @@ async function projectDoctor(root: string): Promise<{
 			success: false,
 			root,
 			summary: [],
-			checks: [{ id: "project", status: "repair", detail: project.error ?? "Project inspection failed." }],
+			checks: [
+				{ id: "project", status: "repair", detail: project.error ?? "Project inspection failed." },
+			],
 			recommendedNextActions: ["Fix the project path or permissions, then rerun project doctor."],
 		};
 	}
@@ -490,7 +532,9 @@ async function projectDoctor(root: string): Promise<{
 		{
 			id: "git",
 			status: git.success ? ("ok" as const) : ("watch" as const),
-			detail: git.success ? (git.stdout.split(/\r?\n/)[0] ?? "Git repository detected.") : "Not a git repo.",
+			detail: git.success
+				? (git.stdout.split(/\r?\n/)[0] ?? "Git repository detected.")
+				: "Not a git repo.",
 			fix: git.success ? undefined : "Initialize git before publishing or release prep.",
 		},
 		{
@@ -547,11 +591,18 @@ function githubPublishPlan(
 			"Confirm .gitignore covers local config and build artifacts.",
 		],
 		verification: [
-			remote.success && remote.stdout ? `Existing remotes: ${remote.stdout}` : "No existing remote detected.",
+			remote.success && remote.stdout
+				? `Existing remotes: ${remote.stdout}`
+				: "No existing remote detected.",
 			status.success ? `Current status: ${status.stdout || "clean"}` : "Git status unavailable.",
 			"After push, run git remote -v and git status --short --branch.",
 		],
-		requiresApproval: ["Creating a GitHub repo", "Committing files", "Pushing to GitHub", "Changing remotes"],
+		requiresApproval: [
+			"Creating a GitHub repo",
+			"Committing files",
+			"Pushing to GitHub",
+			"Changing remotes",
+		],
 	};
 }
 
@@ -577,7 +628,9 @@ function failureRecovery(input: { command?: string; output: string }): {
 		);
 	const timedOut = /\b(timed out|timeout|aborted|signal sigterm|signal sigkill)\b/i.test(output);
 	const contextTooLarge =
-		/\b(context length|prompt too long|maximum context|token limit|too many tokens)\b/i.test(output);
+		/\b(context length|prompt too long|maximum context|token limit|too many tokens)\b/i.test(
+			output
+		);
 	const deterministic =
 		failure.signals.some((signal) =>
 			["module-resolution", "typescript", "test-assertion", "formatting"].includes(signal)
@@ -619,7 +672,9 @@ function failureRecovery(input: { command?: string; output: string }): {
 			contextTooLarge
 				? "Compact the working context to goal, touched files, evidence, failures, and next step."
 				: "",
-			timedOut ? "Replace the broad command with the smallest targeted script or file-level check." : "",
+			timedOut
+				? "Replace the broad command with the smallest targeted script or file-level check."
+				: "",
 			failure.signals.includes("module-resolution")
 				? "Inspect the import path, package manager lockfile, generated files, and tsconfig/module aliases."
 				: "",
@@ -632,14 +687,18 @@ function failureRecovery(input: { command?: string; output: string }): {
 			failure.signals.includes("formatting")
 				? "Run the formatter or apply the formatter output before rerunning broader validation."
 				: "",
-			needsUser ? "Pause mutation and ask for the specific approval or authentication step required." : "",
+			needsUser
+				? "Pause mutation and ask for the specific approval or authentication step required."
+				: "",
 			isTransient
 				? "Retry once after a short wait, then pivot to diagnostics if the same failure repeats."
 				: "",
 			"After the pivot, rerun only the narrowest command that proves the new hypothesis.",
 		]),
 		alternateRoutes: unique([
-			contextTooLarge ? "Use git diff plus targeted file reads instead of sending whole files." : "",
+			contextTooLarge
+				? "Use git diff plus targeted file reads instead of sending whole files."
+				: "",
 			timedOut
 				? "Run a focused test file, typecheck subset, or package script with a longer timeout only if needed."
 				: "",
@@ -680,8 +739,12 @@ function completionGate(input: {
 	const changedFiles = input.changedFiles ?? [];
 	const checksRun = input.checksRun ?? [];
 	const failures = input.failures ?? [];
-	const hasRuntimeChange = changedFiles.some((file) => /\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go)$/.test(file));
-	const hasTestChange = changedFiles.some((file) => file.includes("__tests__") || /\.test\./.test(file));
+	const hasRuntimeChange = changedFiles.some((file) =>
+		/\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go)$/.test(file)
+	);
+	const hasTestChange = changedFiles.some(
+		(file) => file.includes("__tests__") || /\.test\./.test(file)
+	);
 	const hasPromptOrMemoryChange = changedFiles.some((file) =>
 		/prompt|memory|context|provider|tool/i.test(file)
 	);
@@ -704,16 +767,22 @@ function completionGate(input: {
 	]);
 
 	const requiredEvidence = unique([
-		input.goal ? `Goal matched: ${input.goal}` : "User goal restated and matched to the final diff.",
+		input.goal
+			? `Goal matched: ${input.goal}`
+			: "User goal restated and matched to the final diff.",
 		"Final diff inspected for unrelated churn.",
 		"Changed files listed in the final response.",
 		"Validation commands and outcomes listed in the final response.",
-		hasRuntimeChange ? "Type/runtime validation has passed or the gap is explicitly disclosed." : "",
+		hasRuntimeChange
+			? "Type/runtime validation has passed or the gap is explicitly disclosed."
+			: "",
 		hasPromptOrMemoryChange ? "A regression test covers the changed agent behavior." : "",
 	]);
 
 	const recommendedNextActions = unique([
-		blockers.includes("No changed files were recorded.") ? "Record changed files before completion." : "",
+		blockers.includes("No changed files were recorded.")
+			? "Record changed files before completion."
+			: "",
 		hasRuntimeChange && !hasTypecheck ? "Run the repo typecheck/check script." : "",
 		hasTestChange && !hasTest ? "Run the relevant test command." : "",
 		!hasLintOrFormat ? "Run lint or format check if the repo provides one." : "",
@@ -850,7 +919,8 @@ export const codingWorkbench = tool({
 				return { success: true, ...(await clearCodingTaskState()) };
 			}
 			if (input.mode === "save") {
-				if (!input.goal) return { success: false, error: "goal is required when saving task state." };
+				if (!input.goal)
+					return { success: false, error: "goal is required when saving task state." };
 				const result = await saveCodingTaskState(input as { goal: string });
 				// Self-reflection: write a retrospective when a coding task completes
 				if (result.state.status === "completed") {

@@ -47,7 +47,10 @@ export function scoreWindowsProcess(input: ProcessSignalInput): ProcessScore {
 		score += 10;
 		reasons.push("Binary or process metadata appears recently created.");
 	}
-	if (input.parentProcess && /winword|excel|outlook|browser|chrome|edge|firefox/i.test(input.parentProcess)) {
+	if (
+		input.parentProcess &&
+		/winword|excel|outlook|browser|chrome|edge|firefox/i.test(input.parentProcess)
+	) {
 		score += 15;
 		reasons.push(`Parent process ${input.parentProcess} is unusual for a persistent process.`);
 	}

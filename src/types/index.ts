@@ -15,7 +15,10 @@ export type ToolResultOutput =
 	| { type: "text"; value: string }
 	| { type: "json"; value: Record<string, unknown> | unknown[] | string | number | boolean | null }
 	| { type: "error-text"; value: string }
-	| { type: "error-json"; value: Record<string, unknown> | unknown[] | string | number | boolean | null };
+	| {
+			type: "error-json";
+			value: Record<string, unknown> | unknown[] | string | number | boolean | null;
+	  };
 
 /**
  * ORPHEUS operational states
@@ -232,7 +235,12 @@ export const REASONING_EFFORT_LABELS: Record<ReasoningEffort, string> = {
 
 /** Ordered list of reasoning effort levels for cycling */
 export const REASONING_EFFORT_LEVELS: ReasoningEffort[] = ["low", "medium", "high"];
-export const REASONING_EFFORT_LEVELS_WITH_XHIGH: ReasoningEffort[] = ["low", "medium", "high", "xhigh"];
+export const REASONING_EFFORT_LEVELS_WITH_XHIGH: ReasoningEffort[] = [
+	"low",
+	"medium",
+	"high",
+	"xhigh",
+];
 
 export function getReasoningEffortLevels(includeXHigh: boolean): ReasoningEffort[] {
 	return includeXHigh ? REASONING_EFFORT_LEVELS_WITH_XHIGH : REASONING_EFFORT_LEVELS;

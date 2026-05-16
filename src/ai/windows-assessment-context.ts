@@ -13,7 +13,8 @@ function shouldInjectWindowsAssessmentContext(userText: string): boolean {
 
 	return (
 		FULL_ASSESSMENT_PATTERN.test(normalized) ||
-		(LOCAL_ASSESSMENT_PATTERN.test(normalized) && /\b(full|complete|comprehensive)\b/i.test(normalized))
+		(LOCAL_ASSESSMENT_PATTERN.test(normalized) &&
+			/\b(full|complete|comprehensive)\b/i.test(normalized))
 	);
 }
 

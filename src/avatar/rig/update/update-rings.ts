@@ -2,7 +2,12 @@ import type { SceneElements } from "../scene/create-scene-elements";
 import type { RigState } from "../state/rig-state";
 import { clamp01 } from "../utils/math";
 
-export function updateRings(elements: SceneElements, state: RigState, dt: number, intensity: number): void {
+export function updateRings(
+	elements: SceneElements,
+	state: RigState,
+	dt: number,
+	intensity: number
+): void {
 	const { audio, intensity: intensityState } = state;
 
 	const orbitScale = 0.75 + intensity * 0.4;
@@ -10,7 +15,8 @@ export function updateRings(elements: SceneElements, state: RigState, dt: number
 
 	elements.rings.forEach((ring, i) => {
 		const ringIntensity = Math.pow(intensity, 1.35);
-		const ringSpeed = ring.speed * (0.4 + ringIntensity * 1.5) + intensityState.spinBoost * (1 + i * 0.2);
+		const ringSpeed =
+			ring.speed * (0.4 + ringIntensity * 1.5) + intensityState.spinBoost * (1 + i * 0.2);
 		ring.mesh.rotateOnAxis(ring.axis, dt * ringSpeed);
 
 		const wobbleSpeed = 3 + i * 0.5;

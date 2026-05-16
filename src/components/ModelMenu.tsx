@@ -62,7 +62,10 @@ export function ModelMenu({
 		});
 	}, [curatedModels, isCopilotProvider, isOllamaProvider]);
 
-	const curatedIdSet = useMemo(() => new Set(sortedCurated.map((model) => model.id)), [sortedCurated]);
+	const curatedIdSet = useMemo(
+		() => new Set(sortedCurated.map((model) => model.id)),
+		[sortedCurated]
+	);
 
 	const allModelsWithFallback = useMemo(() => {
 		if (!currentModelId) return allModels;
@@ -100,7 +103,8 @@ export function ModelMenu({
 		const query = searchQuery.trim().toLowerCase();
 		const matching = query
 			? allModelsWithFallback.filter(
-					(model) => model.name.toLowerCase().includes(query) || model.id.toLowerCase().includes(query)
+					(model) =>
+						model.name.toLowerCase().includes(query) || model.id.toLowerCase().includes(query)
 				)
 			: allModelsWithFallback;
 		return [...matching].sort((a, b) => a.name.localeCompare(b.name));
@@ -111,7 +115,8 @@ export function ModelMenu({
 		const query = searchQuery.trim().toLowerCase();
 		const matching = query
 			? allModelsWithFallback.filter(
-					(model) => model.name.toLowerCase().includes(query) || model.id.toLowerCase().includes(query)
+					(model) =>
+						model.name.toLowerCase().includes(query) || model.id.toLowerCase().includes(query)
 				)
 			: allModelsWithFallback;
 		return [...matching].sort((a, b) => a.name.localeCompare(b.name));
@@ -214,7 +219,8 @@ export function ModelMenu({
 	}, [allSelectedIndex, isAllSectionSelected, scrollModels.length]);
 
 	const updatedAtLabel = formatUpdatedAt(allModelsUpdatedAt);
-	const needsSearchHint = !isSingleListProvider && searchQuery.trim().length < MIN_ALL_MODEL_QUERY_LENGTH;
+	const needsSearchHint =
+		!isSingleListProvider && searchQuery.trim().length < MIN_ALL_MODEL_QUERY_LENGTH;
 
 	const renderModelRow = (model: ModelOption, isSelected: boolean, isCurrent: boolean) => {
 		const pricing = model.pricing;

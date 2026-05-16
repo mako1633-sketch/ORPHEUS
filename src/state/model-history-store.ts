@@ -1,5 +1,9 @@
 import { sanitizeAssistantMessagesForModelHistory } from "../ai/assistant-response-guard";
-import { applyProactiveSummary, createTurnCounter, type TurnCounter } from "../ai/proactive-summary";
+import {
+	applyProactiveSummary,
+	createTurnCounter,
+	type TurnCounter,
+} from "../ai/proactive-summary";
 import { compactModelHistoryForContext } from "../ai/context-compaction";
 import type { ModelMessage } from "../types";
 

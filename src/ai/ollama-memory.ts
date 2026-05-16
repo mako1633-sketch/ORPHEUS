@@ -169,13 +169,25 @@ export async function ollamaAddMemory(
 
 	try {
 		database
-			.prepare("INSERT INTO memories (id, memory, metadata, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
+			.prepare(
+				"INSERT INTO memories (id, memory, metadata, created_at, updated_at) VALUES (?, ?, ?, ?, ?)"
+			)
 			.run(id, memory.slice(0, MAX_MEMORY_CHARS), metaJson, now, now);
 		database
 			.prepare("INSERT INTO embeddings (memory_id, embedding) VALUES (?, ?)")
 			.run(id, Buffer.from(new Float32Array(embedding).buffer));
-		debug.info("ollama-memory", { message: "Memory added", id, memoryPreview: memory.slice(0, 60) });
-		return { id, memory: memory.slice(0, MAX_MEMORY_CHARS), metadata, createdAt: now, updatedAt: now };
+		debug.info("ollama-memory", {
+			message: "Memory added",
+			id,
+			memoryPreview: memory.slice(0, 60),
+		});
+		return {
+			id,
+			memory: memory.slice(0, MAX_MEMORY_CHARS),
+			metadata,
+			createdAt: now,
+			updatedAt: now,
+		};
 	} catch (error) {
 		debug.error("ollama-memory-add", {
 			message: "Failed to add memory",

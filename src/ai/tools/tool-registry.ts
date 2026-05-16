@@ -61,8 +61,18 @@ const TOOL_REGISTRY: ToolEntry[] = [
 	{ id: "readFile", toggleKey: "readFile", tool: readFile },
 	{ id: "writeFile", toggleKey: "writeFile", tool: writeFile },
 	{ id: "runBash", toggleKey: "runBash", tool: runBash },
-	{ id: "windowsSecurity", toggleKey: "windowsSecurity", tool: windowsSecurity, gate: gateWindowsTool },
-	{ id: "windowsHardening", toggleKey: "windowsHardening", tool: windowsHardening, gate: gateWindowsTool },
+	{
+		id: "windowsSecurity",
+		toggleKey: "windowsSecurity",
+		tool: windowsSecurity,
+		gate: gateWindowsTool,
+	},
+	{
+		id: "windowsHardening",
+		toggleKey: "windowsHardening",
+		tool: windowsHardening,
+		gate: gateWindowsTool,
+	},
 	{ id: "daemonStatus", toggleKey: "daemonStatus", tool: daemonStatus },
 	{ id: "webSearch", toggleKey: "webSearch", tool: webSearch, gate: gateExa },
 	{ id: "fetchUrls", toggleKey: "fetchUrls", tool: fetchUrls, gate: gateExa },
@@ -127,7 +137,9 @@ function gateScreenshot(): Promise<ToolGateResult> {
 	const isMac = process.platform === "darwin";
 	return Promise.resolve({
 		envAvailable: isMac,
-		disabledReason: isMac ? undefined : "Screenshot capture currently requires macOS screencapture.",
+		disabledReason: isMac
+			? undefined
+			: "Screenshot capture currently requires macOS screencapture.",
 	});
 }
 
@@ -211,12 +223,16 @@ export async function resolveToolAvailability(
 	options: BuildToolsOptions = {}
 ): Promise<ToolAvailabilityMap> {
 	const normalizedToggles = normalizeToggles(toggles);
-	const entries = options.only ? selectRegistryTools(options.only) : omitRegistryTools(options.omit ?? null);
+	const entries = options.only
+		? selectRegistryTools(options.only)
+		: omitRegistryTools(options.omit ?? null);
 	const results: ToolAvailabilityMap = {} as ToolAvailabilityMap;
 
 	for (const entry of entries) {
 		const toggleEnabled = Boolean(normalizedToggles[entry.toggleKey]);
-		const gateResult = entry.gate ? await entry.gate({ toggles: normalizedToggles }) : { envAvailable: true };
+		const gateResult = entry.gate
+			? await entry.gate({ toggles: normalizedToggles })
+			: { envAvailable: true };
 		results[entry.id] = {
 			enabled: toggleEnabled && gateResult.envAvailable,
 			envAvailable: gateResult.envAvailable,
@@ -264,7 +280,9 @@ export async function buildToolSet(
 	options: BuildToolsOptions = {}
 ): Promise<{ tools: ToolSet; availability: ToolAvailabilityMap }> {
 	const availability = await resolveToolAvailability(toggles, options);
-	const entries = options.only ? selectRegistryTools(options.only) : omitRegistryTools(options.omit ?? null);
+	const entries = options.only
+		? selectRegistryTools(options.only)
+		: omitRegistryTools(options.omit ?? null);
 	const tools: ToolSet = {};
 
 	for (const entry of entries) {
@@ -336,7 +354,9 @@ export function getDefaultToolOrder(): ToolId[] {
 	];
 }
 
-export function createToolAvailabilitySnapshot(availability: ToolAvailabilityMap): Record<ToolId, boolean> {
+export function createToolAvailabilitySnapshot(
+	availability: ToolAvailabilityMap
+): Record<ToolId, boolean> {
 	return {
 		readFile: availability.readFile?.enabled ?? false,
 		writeFile: availability.writeFile?.enabled ?? false,
