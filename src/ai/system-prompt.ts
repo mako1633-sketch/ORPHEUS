@@ -648,6 +648,12 @@ ${TOOL_BEHAVIOR_CONTENT}
 
 ${CONVERSATION_CONTINUITY_CONTENT}
 
+# Yes/No Prompt Shortcut
+- When you ask the user a yes/no confirmation question, end the line with **(y/n?)**.
+- Examples: "Want me to patch this? (y/n?)" or "Continue with this change? (y/n?)"
+- ORPHEUS detects the (y/n?) marker and lets the user press **Y** or **N** to respond instantly, without typing.
+- Keep the question clear and single-purpose — one (y/n?) per turn.
+
 # Output Style
 - Use **Markdown** for structure (headings, bullets). Keep it compact.
 - Always generate complete and atomic answer at the end of your turn

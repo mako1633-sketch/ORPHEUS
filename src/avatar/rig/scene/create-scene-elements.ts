@@ -74,9 +74,9 @@ export function createSceneElements(
 	const coreGeo = trackGeo(new THREE.IcosahedronGeometry(0.35, 0));
 	const coreMat = trackMat(
 		new THREE.MeshBasicMaterial({
-			color: 0x000000,
+			color: 0x25304a,
 			transparent: true,
-			opacity: 0.95,
+			opacity: 0.58,
 		})
 	);
 	const coreMesh = new THREE.Mesh(coreGeo, coreMat);

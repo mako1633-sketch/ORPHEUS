@@ -10,6 +10,7 @@ import {
 const DEFAULT_TIMEOUT_MS = 30000;
 const MAX_OUTPUT_LENGTH = 50000;
 const DISABLED_ASKPASS = "/usr/bin/false";
+const AUTH_PROMPT_REDACTION = "[interactive auth prompt suppressed]";
 
 export type LocalShell = {
 	name: "powershell" | "bash";
@@ -46,11 +47,21 @@ export function buildNonInteractiveShellEnv(
 		CI: env.CI ?? "1",
 		GIT_ASKPASS: env.GIT_ASKPASS ?? DISABLED_ASKPASS,
 		GIT_TERMINAL_PROMPT: "0",
+		SSH_BATCH_MODE: env.SSH_BATCH_MODE ?? "yes",
 		NPM_CONFIG_AUDIT: env.NPM_CONFIG_AUDIT ?? "false",
 		NPM_CONFIG_FUND: env.NPM_CONFIG_FUND ?? "false",
 		SUDO_ASKPASS: env.SUDO_ASKPASS ?? DISABLED_ASKPASS,
 		SSH_ASKPASS: env.SSH_ASKPASS ?? DISABLED_ASKPASS,
 	};
+}
+
+export function sanitizeShellOutput(output: string): string {
+	return output
+		.replace(/(\[sudo\]\s*)?password(?:\s+for\s+[^:\r\n]+)?\s*:/gi, AUTH_PROMPT_REDACTION)
+		.replace(
+			/(?:enter\s+)?passphrase(?:\s+for\s+key\s+['"][^'"]+['"])?\s*:/gi,
+			AUTH_PROMPT_REDACTION
+		);
 }
 
 export async function executeLocalShellCommand({
@@ -118,6 +129,8 @@ export async function executeLocalShellCommand({
 			if (stderr.length > MAX_OUTPUT_LENGTH) {
 				stderr = `${stderr.slice(0, MAX_OUTPUT_LENGTH)}\n... [output truncated]`;
 			}
+			stdout = sanitizeShellOutput(stdout);
+			stderr = sanitizeShellOutput(stderr);
 
 			if (killed) {
 				resolve({

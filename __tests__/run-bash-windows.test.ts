@@ -2,8 +2,10 @@ import { describe, expect, it } from "bun:test";
 
 import {
 	buildNonInteractiveShellEnv,
+	executeLocalShellCommand,
 	getLocalShellCommand,
 	getWindowsPowerShellPath,
+	sanitizeShellOutput,
 } from "../src/ai/tools/run-bash";
 import {
 	classifyCommandRisk,
@@ -50,7 +52,17 @@ describe("local shell command execution", () => {
 		expect(env.GIT_TERMINAL_PROMPT).toBe("0");
 		expect(env.GIT_ASKPASS).toBe("/usr/bin/false");
 		expect(env.SSH_ASKPASS).toBe("/usr/bin/false");
+		expect(env.SSH_BATCH_MODE).toBe("yes");
 		expect(env.SUDO_ASKPASS).toBe("/usr/bin/false");
+	});
+
+	it("redacts captured interactive auth prompts", () => {
+		expect(sanitizeShellOutput("[sudo] password for matt:")).toBe(
+			"[interactive auth prompt suppressed]"
+		);
+		expect(sanitizeShellOutput("Enter passphrase for key '/tmp/id_ed25519':")).toBe(
+			"[interactive auth prompt suppressed]"
+		);
 	});
 });
 
@@ -101,6 +113,23 @@ describe("Windows command safety policy", () => {
 		).toBeString();
 		expect(getBlockedCommandReason("netsh advfirewall set allprofiles state off")).toBeString();
 		expect(getBlockedCommandReason("powershell.exe -EncodedCommand SQBFAFgA")).toBeString();
+	});
+
+	it("blocks interactive authentication commands before they can touch the TTY", async () => {
+		expect(getBlockedCommandReason("sudo git status")).toContain(
+			"interactive authentication prompt"
+		);
+		expect(getBlockedCommandReason("su -")).toContain("interactive authentication prompt");
+		expect(getBlockedCommandReason("ssh user@example.com")).toContain(
+			"interactive authentication prompt"
+		);
+		expect(getBlockedCommandReason("ssh -o BatchMode=yes user@example.com true")).toBeNull();
+
+		const result = await executeLocalShellCommand({ command: "sudo git status" });
+		expect(result.success).toBe(false);
+		expect(result.error).toContain("interactive authentication prompt");
+		expect(result.stdout).toBe("");
+		expect(result.stderr).toBe("");
 	});
 
 	it("allows approved remediation commands that re-enable Windows protections", () => {

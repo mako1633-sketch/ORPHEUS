@@ -9,13 +9,28 @@ export interface OrpheusMenuItem {
 	description?: string;
 }
 
-const DEFAULT_ITEMS: OrpheusMenuItem[] = [
+export const ORPHEUS_MENU_ITEMS: OrpheusMenuItem[] = [
 	{
 		id: "startup",
 		label: "Startup Protocol",
 		description: "Run full health + git + security checks",
 	},
 	{ id: "security", label: "Security Scan", description: "Run security audit" },
+	{
+		id: "red-team-scope",
+		label: "Red Team Scope",
+		description: "Create an authorized assessment scope",
+	},
+	{
+		id: "red-team-playbooks",
+		label: "Red Team Playbooks",
+		description: "List defensive assessment playbooks",
+	},
+	{
+		id: "red-team-report",
+		label: "Red Team Report",
+		description: "Format scoped evidence and retest notes",
+	},
 	{ id: "project", label: "Project Info", description: "Show project registry info" },
 	{ id: "task", label: "Task List", description: "List active tasks" },
 	{ id: "suggest", label: "Suggest Next", description: "Proactive next-action suggestions" },
@@ -63,6 +78,52 @@ const DEFAULT_ITEMS: OrpheusMenuItem[] = [
 	},
 ];
 
+export function getOrpheusMenuActionPrompt(item: OrpheusMenuItem): string {
+	const prompts: Record<string, string> = {
+		startup:
+			"Run the ORPHEUS startup protocol: check local health, git state, configuration, provider route, and summarize any issues with fixes.",
+		security:
+			"Run an ORPHEUS security scan for this local project and summarize actionable findings.",
+		"red-team-scope":
+			"Start an authorized defensive red-team assessment scope. Use the redTeamAssessment tool with action scopeTemplate first, then ask for any missing owner, authorization, target, date, allowed-activity, and forbidden-activity details before suggesting active validation.",
+		"red-team-playbooks":
+			"Show ORPHEUS defensive red-team assessment capabilities. Use the redTeamAssessment tool with action listPlaybooks, explain which scopes each playbook supports, and emphasize that any command execution still requires validated authorization and runShell approval.",
+		"red-team-report":
+			"Prepare a defensive red-team report workflow. Use the redTeamAssessment tool to validate scope and describe how evidence, findings, remediation, and retest notes should be formatted. Do not write a report file unless I explicitly approve it.",
+		project:
+			"Inspect the current ORPHEUS project setup and explain what is wired correctly or incorrectly.",
+		task: "List active ORPHEUS tasks and identify any stale or incomplete work.",
+		suggest:
+			"Suggest the next best ORPHEUS maintenance or coding action based on the current repo state.",
+		diff: "Review the current ORPHEUS git diff and call out risks, incomplete wiring, and missing tests.",
+		ci: "Run local ORPHEUS CI checks (pre-push gate): typecheck, lint, format-check, and tests. Summarize failures and suggest fixes.",
+		"github-triage":
+			"Run ORPHEUS GitHub triage: check recent workflow failures, open issues, and PRs. Summarize actionable items.",
+		shell: "Review ORPHEUS shell and CLI startup behavior for macOS compatibility issues.",
+		status:
+			"Show an ORPHEUS status dashboard with app health, tools, model provider, memory, and repo state.",
+		briefing:
+			"Show the ORPHEUS launch briefing: health, active coding task, executive items, memory state, and next suggested action.",
+		"context-budget":
+			"Check ORPHEUS context budget risk and tell me whether we should compact or persist task state before continuing.",
+		"project-doctor":
+			"Run the ORPHEUS project doctor for this repo: scripts, dependencies, git state, docs, validation, startup risks, and concrete fixes.",
+		"github-publish":
+			"Prepare a GitHub publish plan for this ORPHEUS repo with secret checks, README checks, commit/push approval gates, and verification steps.",
+		"memory-control":
+			"Open the ORPHEUS memory control center: show persistent context summary, editable actions, export option, and any stale memory risks.",
+		scan: "Scan available ORPHEUS capabilities and local developer tools.",
+		"scan-files":
+			"Scan the ORPHEUS project files for anomalies, missing imports, stale artifacts, and incomplete wiring.",
+		remediate:
+			"Plan safe auto-remediation for the current ORPHEUS repo issues, asking before destructive changes.",
+		diagnostics:
+			"Run ORPHEUS runtime diagnostics: probe keyboard state, Ollama connectivity, app context, and system health. Report findings with fixes.",
+	};
+
+	return prompts[item.id] ?? item.description ?? item.label;
+}
+
 interface OrpheusMenuProps {
 	onClose: () => void;
 	onSelect?: (item: OrpheusMenuItem) => void;
@@ -82,19 +143,19 @@ export function OrpheusMenu({ onClose, onSelect }: OrpheusMenuProps) {
 			}
 
 			if (key.name === "up" || key.sequence === "k") {
-				setSelectedIndex((prev) => (prev > 0 ? prev - 1 : DEFAULT_ITEMS.length - 1));
+				setSelectedIndex((prev) => (prev > 0 ? prev - 1 : ORPHEUS_MENU_ITEMS.length - 1));
 				key.preventDefault();
 				return;
 			}
 
 			if (key.name === "down" || key.sequence === "j") {
-				setSelectedIndex((prev) => (prev < DEFAULT_ITEMS.length - 1 ? prev + 1 : 0));
+				setSelectedIndex((prev) => (prev < ORPHEUS_MENU_ITEMS.length - 1 ? prev + 1 : 0));
 				key.preventDefault();
 				return;
 			}
 
 			if (key.name === "return") {
-				const item = DEFAULT_ITEMS[selectedIndex];
+				const item = ORPHEUS_MENU_ITEMS[selectedIndex];
 				if (item) {
 					onSelect?.(item);
 				}
@@ -107,7 +168,7 @@ export function OrpheusMenu({ onClose, onSelect }: OrpheusMenuProps) {
 
 	useKeyboard(handleKeyPress);
 
-	const labelWidth = Math.max(0, ...DEFAULT_ITEMS.map((item) => item.label.length)) + 4;
+	const labelWidth = Math.max(0, ...ORPHEUS_MENU_ITEMS.map((item) => item.label.length)) + 4;
 
 	return (
 		<box
@@ -147,7 +208,7 @@ export function OrpheusMenu({ onClose, onSelect }: OrpheusMenuProps) {
 					</text>
 				</box>
 				<box flexDirection="column">
-					{DEFAULT_ITEMS.map((item, idx) => {
+					{ORPHEUS_MENU_ITEMS.map((item, idx) => {
 						const isSelected = idx === selectedIndex;
 						return (
 							<box

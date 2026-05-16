@@ -634,6 +634,7 @@ export function useAppController({
 				error: daemon.error,
 				resetNotification,
 				escPendingCancel,
+				yesNoPromptActive,
 			},
 			reasoning: {
 				showFullReasoning,

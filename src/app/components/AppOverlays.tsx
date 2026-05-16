@@ -6,7 +6,11 @@ import { HotkeysPane } from "../../components/HotkeysPane";
 import { MemoryMenu } from "../../components/MemoryMenu";
 import { ModelMenu } from "../../components/ModelMenu";
 import { OnboardingOverlay } from "../../components/OnboardingOverlay";
-import { OrpheusMenu, type OrpheusMenuItem } from "../../components/OrpheusMenu";
+import {
+	OrpheusMenu,
+	type OrpheusMenuItem,
+	getOrpheusMenuActionPrompt,
+} from "../../components/OrpheusMenu";
 import { ProviderMenu } from "../../components/ProviderMenu";
 import { SessionMenu } from "../../components/SessionMenu";
 import { SettingsMenu } from "../../components/SettingsMenu";
@@ -41,42 +45,7 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 	} = ctx;
 
 	const handleOrpheusAction = (item: OrpheusMenuItem) => {
-		const prompts: Record<string, string> = {
-			startup:
-				"Run the ORPHEUS startup protocol: check local health, git state, configuration, provider route, and summarize any issues with fixes.",
-			security:
-				"Run an ORPHEUS security scan for this local project and summarize actionable findings.",
-			project:
-				"Inspect the current ORPHEUS project setup and explain what is wired correctly or incorrectly.",
-			task: "List active ORPHEUS tasks and identify any stale or incomplete work.",
-			suggest:
-				"Suggest the next best ORPHEUS maintenance or coding action based on the current repo state.",
-			diff: "Review the current ORPHEUS git diff and call out risks, incomplete wiring, and missing tests.",
-			ci: "Run local ORPHEUS CI checks (pre-push gate): typecheck, lint, format-check, and tests. Summarize failures and suggest fixes.",
-			"github-triage":
-				"Run ORPHEUS GitHub triage: check recent workflow failures, open issues, and PRs. Summarize actionable items.",
-			shell: "Review ORPHEUS shell and CLI startup behavior for macOS compatibility issues.",
-			status:
-				"Show an ORPHEUS status dashboard with app health, tools, model provider, memory, and repo state.",
-			briefing:
-				"Show the ORPHEUS launch briefing: health, active coding task, executive items, memory state, and next suggested action.",
-			"context-budget":
-				"Check ORPHEUS context budget risk and tell me whether we should compact or persist task state before continuing.",
-			"project-doctor":
-				"Run the ORPHEUS project doctor for this repo: scripts, dependencies, git state, docs, validation, startup risks, and concrete fixes.",
-			"github-publish":
-				"Prepare a GitHub publish plan for this ORPHEUS repo with secret checks, README checks, commit/push approval gates, and verification steps.",
-			"memory-control":
-				"Open the ORPHEUS memory control center: show persistent context summary, editable actions, export option, and any stale memory risks.",
-			scan: "Scan available ORPHEUS capabilities and local developer tools.",
-			"scan-files":
-				"Scan the ORPHEUS project files for anomalies, missing imports, stale artifacts, and incomplete wiring.",
-			remediate:
-				"Plan safe auto-remediation for the current ORPHEUS repo issues, asking before destructive changes.",
-			diagnostics:
-				"Run ORPHEUS runtime diagnostics: probe keyboard state, Ollama connectivity, app context, and system health. Report findings with fixes.",
-		};
-		const prompt = prompts[item.id] ?? item.description ?? item.label;
+		const prompt = getOrpheusMenuActionPrompt(item);
 		menus.setShowOrpheusMenu(false);
 		void getDaemonManager().submitText(prompt);
 	};

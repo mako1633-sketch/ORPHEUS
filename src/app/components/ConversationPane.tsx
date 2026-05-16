@@ -37,6 +37,7 @@ export interface StatusDisplayState {
 	error: string;
 	resetNotification: string;
 	escPendingCancel: boolean;
+	yesNoPromptActive?: boolean;
 }
 
 export interface ReasoningDisplayState {
@@ -81,6 +82,7 @@ export interface ConversationPaneProps {
 	modelName?: string;
 	sessionTitle?: string;
 	healthSnapshot?: HealthSnapshot | null;
+	yesNoPromptActive?: boolean;
 	isVoiceOutputEnabled?: boolean;
 	startupIntroDone?: boolean;
 	// HUD additions
@@ -128,6 +130,7 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 		error,
 		resetNotification,
 		escPendingCancel,
+		yesNoPromptActive,
 	} = status;
 	const { showFullReasoning, showToolOutput, reasoningQueue, reasoningDisplay, fullReasoning } =
 		reasoning;
@@ -375,9 +378,9 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 					stickyStart="bottom"
 					ref={conversationScrollRef}
 					style={{
-						rootOptions: { backgroundColor: frostColor },
+						rootOptions: { backgroundColor: "transparent" },
 						contentOptions: {
-							backgroundColor: frostColor,
+							backgroundColor: "transparent",
 							paddingLeft: 2,
 							paddingRight: 2,
 						},
@@ -388,7 +391,7 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 						paddingTop={1}
 						paddingBottom={2}
 						width="100%"
-						backgroundColor={frostColor}
+						backgroundColor="transparent"
 					>
 						{conversationHistory.map((msg: ConversationMessage) => (
 							<box key={msg.id} flexDirection="column">

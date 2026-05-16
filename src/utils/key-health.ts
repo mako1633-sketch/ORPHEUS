@@ -23,7 +23,7 @@ function validateKey(name: string, value: string | undefined, pattern?: RegExp):
 export function getKeyHealth(env: NodeJS.ProcessEnv = process.env): KeyHealth[] {
 	return [
 		validateKey("OPENAI_API_KEY", env.OPENAI_API_KEY, /^sk-/),
-		validateKey("OPENROUTER_API_KEY", env.OPENROUTER_API_KEY, /^sk-or-/),
+		validateKey("OPENROUTER_API_KEY", env.OPENROUTER_API_KEY, /^sk-(or-|proj-)/),
 		validateKey("EXA_API_KEY", env.EXA_API_KEY),
 	];
 }

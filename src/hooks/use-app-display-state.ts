@@ -164,7 +164,7 @@ export function useAppDisplayState(params: UseAppDisplayStateParams): UseAppDisp
 		[terminalHeight]
 	);
 
-	const frostColor = hasInteracted ? "#090014D8" : COLORS.BACKGROUND;
+	const frostColor = hasInteracted ? "#090014C8" : COLORS.BACKGROUND;
 	const isListening =
 		daemonState === DaemonState.LISTENING || daemonState === DaemonState.TRANSCRIBING;
 	const isListeningDim = isListening && hasInteracted;

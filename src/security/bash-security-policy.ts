@@ -247,6 +247,16 @@ const DANGEROUS_PATTERNS = [
 	/\b(write-output|echo)\s+\$env:\w*_?(KEY|TOKEN|SECRET|PASSWORD|CREDENTIALS)/i,
 ];
 
+const INTERACTIVE_AUTH_COMMAND_PATTERNS = [
+	/\bsudo\b/i,
+	/\bsu\b/i,
+	/\bdoas\b/i,
+	/\bpasswd\b/i,
+	/\bssh\b(?![^;&|]*\bBatchMode=yes\b)/i,
+	/\bscp\b(?![^;&|]*\bBatchMode=yes\b)/i,
+	/\bsftp\b(?![^;&|]*\bBatchMode=yes\b)/i,
+];
+
 const BLOCKED_COMMAND_PATTERNS = [
 	/\bkillall\b.*\s-9\b/i,
 	/\bkill\s+-9\b/i,
@@ -281,6 +291,12 @@ const BLOCKED_COMMAND_PATTERNS = [
 ];
 
 function getBlockedCommandReason(command: string): string | null {
+	for (const pattern of INTERACTIVE_AUTH_COMMAND_PATTERNS) {
+		if (pattern.test(command)) {
+			return "Command is blocked because it can open an interactive authentication prompt and leak into the terminal UI. Use a non-interactive credential flow or run it manually in a separate terminal.";
+		}
+	}
+
 	for (const pattern of BLOCKED_COMMAND_PATTERNS) {
 		if (pattern.test(command)) {
 			return "Command is blocked because it can kill processes, run indefinitely, modify critical system state, or cause data loss.";
