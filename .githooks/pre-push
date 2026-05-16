@@ -3,6 +3,10 @@
 # ORPHEUS pre-push hook: run the full CI validation gate locally before pushing
 # Also guards against pushing with uncommitted working changes (fixes that won't leave your machine)
 
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=.githooks/bun-path.sh
+source "$HOOK_DIR/bun-path.sh"
+
 echo "Running CI gate before push..."
 bun run pretend-ci --dirty-check
 if [ $? -ne 0 ]; then

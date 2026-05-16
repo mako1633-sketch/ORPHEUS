@@ -2,6 +2,10 @@
 
 # ORPHEUS pre-commit hook: lint, format, and diff review
 
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=.githooks/bun-path.sh
+source "$HOOK_DIR/bun-path.sh"
+
 echo "Running pre-commit checks..."
 
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx)$')
