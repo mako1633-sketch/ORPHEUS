@@ -35,6 +35,7 @@ export interface AppControllerResult {
 		viewportHeight: number;
 		zIndex: number;
 		showBanner: boolean;
+		showCompactGif: boolean;
 		animateBanner: boolean;
 		startupAnimationActive: boolean;
 	};
@@ -615,6 +616,9 @@ export function useAppController({
 				!daemon.hasInteracted &&
 				terminalSize.height >= 30 &&
 				terminalSize.width >= 100,
+			// Show compact GIF avatar during chat sessions on all platforms
+			showCompactGif:
+				daemon.hasInteracted && terminalSize.height >= 24 && terminalSize.width >= 100,
 			animateBanner: startupAnimationActive,
 			startupAnimationActive,
 		},

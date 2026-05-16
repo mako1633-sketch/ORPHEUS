@@ -38,3 +38,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 tmp/
 BRIDGE_EOF
 /~
+
+# Documentation (README.md is kept tracked)
+*.md
+!README.md
