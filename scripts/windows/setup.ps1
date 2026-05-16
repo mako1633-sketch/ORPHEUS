@@ -32,7 +32,7 @@ if (-not $SkipBrowserSetup) {
 git config core.hooksPath .githooks
 
 bun run typecheck
-bun test __tests__/run-bash-windows.test.ts __tests__/windows-assessment-context.test.ts __tests__/direct-windows-assessment-runner.test.ts
+bun test __tests__/run-bash-windows.test.ts (Get-ChildItem "__tests__/windows-*.test.ts" | ForEach-Object { $_.FullName })
 
 Write-Host "ORPHEUS Windows setup complete." -ForegroundColor Green
 Write-Host "Start it with: .\scripts\windows\run.ps1"
