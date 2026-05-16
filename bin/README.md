@@ -176,3 +176,39 @@ or auditing. Example:
 - `suggest-next`: added `--no-input` + `isatty()` auto-detection, stale-task heuristics, pending backlog suggestions.
 - `project-registry`: added `bun` type detection, auto-reads `package.json` scripts.
 - `orpheus-startup`: rewritten with isolated step execution (failures no longer block downstream), per-step timing telemetry, structured JSON state output at `~/.config/orpheus/.state/`, and a summary table with ❌/✅ icons.
+
+## auto-remediate log
+
+The remediation audit log is append-only ndjson at `~/.local/state/orpheus/auto-remediate.log.ndjson`.
+
+### Log entry schema
+
+```json
+{
+  "timestamp": "2026-05-16T22:23:28.841692+00:00",
+  "finding": "./src/...",
+  "action": "chmod",
+  "result": "fixed",
+  "risk": "safe",
+  "dry_run": false,
+  "session_id": "65396e2c6e04",
+  "before": "0o777",
+  "after": "0o644"
+}
+```
+
+### Viewing the log
+
+```bash
+auto-remediate log                 # all entries grouped by session
+auto-remediate log --tail 10       # last 10 entries
+auto-remediate log --days 7        # last 7 days only
+auto-remediate log --risk safe     # only safe-risk entries
+auto-remediate log --rotate        # purge stale entries (>90 days or >5000 entries)
+```
+
+### Rotation
+
+- Entries older than **90 days** are removed.
+- Log is capped at **5000 entries**.
+- Rotation is atomic (`rename`); no corruption on interruption.
