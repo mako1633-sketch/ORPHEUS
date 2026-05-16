@@ -332,10 +332,11 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 				return;
 			}
 
-			// Ctrl+O (also catches Ctrl+Shift+O, which many terminals conflate)
+			// Ctrl+Shift+O: ORPHEUS Quick Actions (kitty keyboard protocol)
 			if (
 				key.eventType === "press" &&
 				(key.meta || key.ctrl) &&
+				key.shift &&
 				key.name?.toLowerCase() === "o" &&
 				(currentState === DaemonState.IDLE ||
 					currentState === DaemonState.SPEAKING ||
@@ -343,6 +344,22 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			) {
 				closeAllMenus();
 				actions.setShowOrpheusMenu(true);
+				key.preventDefault();
+				return;
+			}
+
+			// Ctrl+O: Tools menu
+			if (
+				key.eventType === "press" &&
+				(key.meta || key.ctrl) &&
+				!key.shift &&
+				key.name?.toLowerCase() === "o" &&
+				(currentState === DaemonState.IDLE ||
+					currentState === DaemonState.SPEAKING ||
+					currentState === DaemonState.RESPONDING)
+			) {
+				closeAllMenus();
+				actions.setShowToolsMenu(true);
 				key.preventDefault();
 				return;
 			}

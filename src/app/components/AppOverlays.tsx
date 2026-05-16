@@ -214,7 +214,7 @@ function AppOverlaysImpl({ conversationHistory, currentContentBlocks }: AppOverl
 						{
 							id: "tools",
 							label: "Tools",
-							shortcut: "T",
+							shortcut: "Ctrl+O",
 							action: () => {
 								menus.setShowCommandPalette(false);
 								menus.setShowToolsMenu(true);
