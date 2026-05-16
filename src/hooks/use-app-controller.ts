@@ -616,9 +616,7 @@ export function useAppController({
 				!daemon.hasInteracted &&
 				terminalSize.height >= 30 &&
 				terminalSize.width >= 100,
-			// Show compact GIF avatar during chat sessions on all platforms
-			showCompactGif:
-				daemon.hasInteracted && terminalSize.height >= 24 && terminalSize.width >= 100,
+			showCompactGif: false,
 			animateBanner: startupAnimationActive,
 			startupAnimationActive,
 		},

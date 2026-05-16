@@ -10,7 +10,8 @@ describe("calculateHomeGifLayout", () => {
 		});
 		expect(layout.width).toBeGreaterThanOrEqual(1);
 		expect(layout.height).toBeGreaterThanOrEqual(1);
-		expect(layout.top).toBeGreaterThanOrEqual(0);
+		expect(layout.top).toBeGreaterThanOrEqual(13);
+		expect(layout.top + layout.height).toBeLessThanOrEqual(35);
 	});
 
 	it("uses full height when banner is not shown", () => {

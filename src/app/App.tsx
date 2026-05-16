@@ -72,6 +72,7 @@ export function App() {
 						applyAvatarForState={controller.avatarLayerProps.applyAvatarForState}
 						width={controller.avatarLayerProps.width}
 						height={controller.avatarLayerProps.height}
+						viewportHeight={controller.avatarLayerProps.viewportHeight}
 						zIndex={controller.avatarLayerProps.zIndex}
 						showBanner={controller.avatarLayerProps.showBanner}
 						showCompactGif={controller.avatarLayerProps.showCompactGif}

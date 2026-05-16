@@ -16,7 +16,10 @@ const HOME_GIF_MIN_WIDTH = 48;
 const HOME_GIF_MAX_WIDTH = 168;
 const HOME_GIF_WIDTH_RATIO = 0.82;
 const HOME_GIF_TOP_RESERVE_RATIO = 0.18;
-const HOME_GIF_BOTTOM_RESERVE = 4;
+const HOME_GIF_BOTTOM_RESERVE_MIN = 10;
+const HOME_GIF_BOTTOM_RESERVE_RATIO = 0.3;
+const HOME_BANNER_TOP = 5;
+const HOME_GIF_BANNER_GAP = 2;
 
 const CHAT_GIF_MIN_WIDTH = 24;
 const CHAT_GIF_MAX_WIDTH = 40;
@@ -34,22 +37,38 @@ export function calculateHomeGifLayout({
 	showBanner: boolean;
 }): { width: number; height: number; top: number } {
 	const safeViewportWidth = Math.max(1, Math.floor(viewportWidth));
-	const reservedTop = showBanner ? Math.floor(viewportHeight * HOME_GIF_TOP_RESERVE_RATIO) : 0;
+	const safeViewportHeight = Math.max(1, Math.floor(viewportHeight));
+	const bannerBottom = HOME_BANNER_TOP + DAEMON_BANNER_LINES.length + 1;
+	const reservedTop = showBanner
+		? Math.max(
+				Math.floor(safeViewportHeight * HOME_GIF_TOP_RESERVE_RATIO),
+				bannerBottom + HOME_GIF_BANNER_GAP
+			)
+		: 0;
+	const reservedBottom = showBanner
+		? Math.max(
+				HOME_GIF_BOTTOM_RESERVE_MIN,
+				Math.floor(safeViewportHeight * HOME_GIF_BOTTOM_RESERVE_RATIO)
+			)
+		: 4;
 	const availableHeight = Math.max(
 		1,
-		Math.floor(viewportHeight - reservedTop - HOME_GIF_BOTTOM_RESERVE)
+		Math.floor(safeViewportHeight - reservedTop - reservedBottom)
 	);
 	const targetWidth = Math.floor(safeViewportWidth * HOME_GIF_WIDTH_RATIO);
 	const maxWidthForViewport = Math.max(1, safeViewportWidth - 4);
+	const maxWidthForHeight = Math.max(1, Math.floor(availableHeight * DAEMON_GIF_ASPECT * 2));
 	const nextWidth = Math.max(
-		Math.min(HOME_GIF_MIN_WIDTH, maxWidthForViewport),
-		Math.min(HOME_GIF_MAX_WIDTH, targetWidth, maxWidthForViewport)
+		1,
+		Math.min(HOME_GIF_MAX_WIDTH, targetWidth, maxWidthForViewport, maxWidthForHeight)
 	);
 	const nextHeight = Math.max(
 		1,
 		Math.min(availableHeight, Math.floor(nextWidth / DAEMON_GIF_ASPECT / 2))
 	);
-	const top = Math.max(0, Math.floor((viewportHeight - nextHeight) / 2));
+	const centeredTop = reservedTop + Math.floor((availableHeight - nextHeight) / 2);
+	const maxTop = Math.max(0, safeViewportHeight - nextHeight - reservedBottom);
+	const top = Math.max(0, Math.min(maxTop, centeredTop));
 	return { width: nextWidth, height: nextHeight, top };
 }
 
@@ -156,7 +175,7 @@ function AvatarLayerImpl(props: AvatarLayerProps) {
 			{showBanner && (
 				<box
 					position="absolute"
-					top={5}
+					top={HOME_BANNER_TOP}
 					left={0}
 					width="100%"
 					height={DAEMON_BANNER_LINES.length + 1}
