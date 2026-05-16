@@ -6,6 +6,7 @@
 import { getOllamaBaseUrl } from "../ai/model-config";
 import type { ModelOption } from "../types";
 import { debug } from "./debug-logger";
+import { withOllamaReasoningCapabilities } from "./ollama-model-capabilities";
 
 interface OllamaApiModelItem {
 	id?: string;
@@ -34,7 +35,7 @@ function normalizeOllamaModels(items: OllamaApiModelItem[]): ModelOption[] {
 		const name =
 			typeof item.name === "string" && item.name.trim().length > 0 ? item.name.trim() : id;
 
-		models.push({ id, name });
+		models.push(withOllamaReasoningCapabilities({ id, name }));
 	}
 
 	return models.sort((a, b) => a.name.localeCompare(b.name));
