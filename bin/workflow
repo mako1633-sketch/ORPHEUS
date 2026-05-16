@@ -1,0 +1,382 @@
+#!/usr/bin/env bash
+# workflow — ORPHEUS automation engine
+# Define and run reusable multi-step command chains.
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ORPHEUS_HOME="${ORPHEUS_HOME:-${HOME}/.config/orpheus}"
+WORKFLOW_DIR="${ORPHEUS_HOME}/workflows"
+
+cmd_help() {
+  cat <<'EOF'
+Usage: workflow <command> [args]
+
+Commands:
+  list                       Show all registered workflows
+  show <name>                Display a workflow definition
+  run <name> [args...]       Execute a workflow
+  create <name>              Interactive workflow creation
+  delete <name>              Remove a workflow
+  refresh                    Re-generate built-in workflows for current project type
+
+Built-in workflows (project-aware):
+  deploy-safe                test → lint → build → preflight-git → push
+  safe-commit                detect changes → generate message → commit
+  security-sweep             credential scan + file integrity + port check
+  dependency-audit           find outdated/vulnerable dependencies
+
+Exit codes:
+  0 = all steps passed
+  1 = workflow or step failed
+EOF
+}
+
+ensure_dir() {
+  [ -d "$WORKFLOW_DIR" ] || mkdir -p "$WORKFLOW_DIR"
+}
+
+_resolve_project_commands() {
+  local path="${1:-$(pwd)}"
+  path="$(cd "$path" && pwd)"
+
+  # 1. Try registered project preferences
+  if command -v project-registry >/dev/null 2>&1; then
+    local reg
+    reg=$(project-registry info "$(basename "$path")" 2>/dev/null || true)
+    if [ -n "$reg" ]; then
+      local test_cmd build_cmd lint_cmd
+      test_cmd=$(echo "$reg" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('preferences',{}).get('test_cmd',''))" 2>/dev/null || true)
+      build_cmd=$(echo "$reg" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('preferences',{}).get('build_cmd',''))" 2>/dev/null || true)
+      lint_cmd=$(echo "$reg" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('preferences',{}).get('lint_cmd',''))" 2>/dev/null || true)
+      echo "test_cmd=${test_cmd}"
+      echo "build_cmd=${build_cmd}"
+      echo "lint_cmd=${lint_cmd}"
+      return 0
+    fi
+  fi
+
+  # 2. Fallback to file-system detection
+  local test_cmd="" build_cmd="" lint_cmd=""
+  if [ -f "$path/bun.lockb" ] || [ -f "$path/bun.lock" ]; then
+    test_cmd="bun test"
+    build_cmd="bun run build"
+    lint_cmd="bun run lint"
+  elif [ -f "$path/package.json" ]; then
+    test_cmd="npm test"
+    build_cmd="npm run build"
+    lint_cmd="npm run lint"
+  fi
+  if [ -f "$path/pyproject.toml" ] || [ -f "$path/requirements.txt" ] || [ -f "$path/setup.py" ]; then
+    test_cmd="${test_cmd:-python -m pytest}"
+    build_cmd="${build_cmd:-python -m build}"
+    lint_cmd="${lint_cmd:-ruff check .}"
+  fi
+  if [ -f "$path/go.mod" ]; then
+    test_cmd="${test_cmd:-go test ./...}"
+    build_cmd="${build_cmd:-go build}"
+  fi
+
+  echo "test_cmd=${test_cmd}"
+  echo "build_cmd=${build_cmd}"
+  echo "lint_cmd=${lint_cmd}"
+}
+
+cmd_list() {
+  ensure_dir
+  install_builtins
+  echo "== Registered Workflows =="
+  if [ ! "$(ls -A "$WORKFLOW_DIR" 2>/dev/null)" ]; then
+    echo "No workflows found. Run: workflow create <name>"
+    return
+  fi
+  for f in "$WORKFLOW_DIR"/*.json; do
+    [ -f "$f" ] || continue
+    local name
+    name=$(basename "$f" .json)
+    local desc
+    desc=$(python3 -c "
+import json
+with open('$f') as fh:
+    d = json.load(fh)
+print(d.get('description', 'no description'))
+" 2>/dev/null || echo "?")
+    printf "  %-20s %s\n" "$name" "$desc"
+  done
+}
+
+cmd_show() {
+  local name="$1"
+  local file="$WORKFLOW_DIR/$name.json"
+  if [ ! -f "$file" ]; then
+    echo "Workflow not found: $name"
+    return 1
+  fi
+  python3 -c "
+import json
+with open('$file') as fh:
+    d = json.load(fh)
+print(json.dumps(d, indent=2))
+" 2>/dev/null
+}
+
+cmd_run() {
+  local name="$1"
+  shift || true
+  local file="$WORKFLOW_DIR/$name.json"
+  if [ ! -f "$file" ]; then
+    echo "Workflow not found: $name"
+    return 1
+  fi
+
+  python3 -c "
+import json, subprocess, sys, os
+
+with open('$file') as fh:
+    wf = json.load(fh)
+
+print(f\"== Workflow: {wf.get('name', '$name')} ==\")
+if wf.get('description'):
+    print(wf['description'])
+print('')
+
+steps = wf.get('steps', [])
+if not steps:
+    print('No steps defined.')
+    sys.exit(1)
+
+passed = 0
+failed = 0
+for i, step in enumerate(steps, 1):
+    desc = step.get('description', step.get('run', 'step'))
+    cmd = step.get('run', '')
+    shell = step.get('shell', True)
+    halt_on_fail = step.get('halt_on_fail', True)
+    print(f\"[{i}/{len(steps)}] {desc}\")
+    
+    if not cmd:
+        print('  SKIP: no command defined')
+        continue
+    
+    env = os.environ.copy()
+    for k, v in step.get('env', {}).items():
+        env[k] = v
+    
+    try:
+        if shell:
+            result = subprocess.run(cmd, shell=True, env=env, cwd=os.getcwd())
+        else:
+            result = subprocess.run(cmd.split(), env=env, cwd=os.getcwd())
+        
+        if result.returncode == 0:
+            print(f'  OK')
+            passed += 1
+        else:
+            print(f'  FAIL (exit {result.returncode})')
+            failed += 1
+            if halt_on_fail:
+                print(f'\\nWorkflow halted at step {i}.')
+                sys.exit(1)
+    except Exception as e:
+        print(f'  ERROR: {e}')
+        failed += 1
+        if halt_on_fail:
+            sys.exit(1)
+
+print(f'\\n== Workflow complete: {passed} passed, {failed} failed ==')
+sys.exit(0 if failed == 0 else 1)
+" 2>/dev/null
+}
+
+cmd_create() {
+  local name="$1"
+  ensure_dir
+  local file="$WORKFLOW_DIR/$name.json"
+  if [ -f "$file" ]; then
+    echo "Workflow already exists: $name"
+    return 1
+  fi
+
+  cat > "$file" <<EOF
+{
+  "name": "$name",
+  "description": "",
+  "steps": [
+    {
+      "description": "Example step",
+      "run": "echo 'hello'",
+      "halt_on_fail": true
+    }
+  ]
+}
+EOF
+  echo "Created: $file"
+  echo "Edit the JSON to add your steps."
+}
+
+cmd_delete() {
+  local name="$1"
+  local file="$WORKFLOW_DIR/$name.json"
+  if [ ! -f "$file" ]; then
+    echo "Workflow not found: $name"
+    return 1
+  fi
+  rm "$file"
+  echo "Deleted: $name"
+}
+
+cmd_refresh() {
+  echo "Refreshing built-in workflows for current project type..."
+  # Remove existing built-ins so they get recreated
+  for wf in deploy-safe dependency-audit safe-commit security-sweep; do
+    rm -f "$WORKFLOW_DIR/$wf.json"
+  done
+  install_builtins
+  echo "Done."
+}
+
+# Install built-in workflows if missing
+install_builtins() {
+  ensure_dir
+
+  # Resolve commands for current project
+  local _test_cmd="" _build_cmd="" _lint_cmd=""
+  while IFS='=' read -r key value; do
+    case "$key" in
+      test_cmd) _test_cmd="$value" ;;
+      build_cmd) _build_cmd="$value" ;;
+      lint_cmd) _lint_cmd="$value" ;;
+    esac
+  done < <(_resolve_project_commands)
+
+  # deploy-safe
+  if [ ! -f "$WORKFLOW_DIR/deploy-safe.json" ]; then
+    local test_step="${_test_cmd:-true}"
+    local lint_step="${_lint_cmd:-true}"
+    local build_step="${_build_cmd:-true}"
+    cat > "$WORKFLOW_DIR/deploy-safe.json" <<EOF
+{
+  "name": "deploy-safe",
+  "description": "Full deployment pipeline: test → lint → build → preflight → push",
+  "steps": [
+    {"description": "Run tests", "run": "$test_step", "halt_on_fail": true},
+    {"description": "Run linter", "run": "$lint_step", "halt_on_fail": true},
+    {"description": "Build project", "run": "$build_step", "halt_on_fail": true},
+    {"description": "GitHub preflight check", "run": "preflight-git", "halt_on_fail": true},
+    {"description": "Push to remote", "run": "git push", "halt_on_fail": true}
+  ]
+}
+EOF
+  fi
+
+  # safe-commit
+  if [ ! -f "$WORKFLOW_DIR/safe-commit.json" ]; then
+    cat > "$WORKFLOW_DIR/safe-commit.json" <<'EOF'
+{
+  "name": "safe-commit",
+  "description": "Detect changes, stage, generate message, commit",
+  "steps": [
+    {"description": "Check git status", "run": "git status -s", "halt_on_fail": false},
+    {"description": "Stage all changes", "run": "git add -A", "halt_on_fail": true},
+    {"description": "Commit with timestamp", "run": "git commit -m 'update $(date +%Y-%m-%d_%H:%M)'", "halt_on_fail": true}
+  ]
+}
+EOF
+  fi
+
+  # security-sweep
+  if [ ! -f "$WORKFLOW_DIR/security-sweep.json" ]; then
+    cat > "$WORKFLOW_DIR/security-sweep.json" <<'EOF'
+{
+  "name": "security-sweep",
+  "description": "Quick security audit: credentials + ports + file integrity",
+  "steps": [
+    {"description": "Scan for exposed credentials", "run": "grep -rE '(API_KEY|SECRET|TOKEN|PRIVATE_KEY|password).*[=:].*[A-Za-z0-9]{16,}' --include='*.env' --include='*.config' --include='*.json' --include='*.js' --include='*.py' --include='*.ts' --include='*.yaml' --include='*.yml' . 2>/dev/null || echo 'No obvious credential patterns found'", "halt_on_fail": false},
+    {"description": "Check listening ports", "run": "lsof -i -P | grep LISTEN || netstat -an | grep LISTEN || ss -tln", "halt_on_fail": false},
+    {"description": "Find recently modified files", "run": "find . -type f -mtime -1 ! -path './.git/*' ! -path './node_modules/*' | head -20", "halt_on_fail": false}
+  ]
+}
+EOF
+  fi
+
+  # dependency-audit
+  if [ ! -f "$WORKFLOW_DIR/dependency-audit.json" ]; then
+    if [ -f "bun.lockb" ] || [ -f "bun.lock" ]; then
+      cat > "$WORKFLOW_DIR/dependency-audit.json" <<'EOF'
+{
+  "name": "dependency-audit",
+  "description": "Audit project dependencies for vulnerabilities",
+  "steps": [
+    {"description": "bun outdated check", "run": "bun outdated 2>/dev/null || echo 'No outdated check available'", "halt_on_fail": false},
+    {"description": "npm audit (fallback)", "run": "npm audit", "halt_on_fail": false}
+  ]
+}
+EOF
+    elif [ -f "package.json" ]; then
+      cat > "$WORKFLOW_DIR/dependency-audit.json" <<'EOF'
+{
+  "name": "dependency-audit",
+  "description": "Audit project dependencies for vulnerabilities",
+  "steps": [
+    {"description": "npm audit", "run": "npm audit", "halt_on_fail": false},
+    {"description": "Check for outdated packages", "run": "npm outdated", "halt_on_fail": false}
+  ]
+}
+EOF
+    elif [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
+      cat > "$WORKFLOW_DIR/dependency-audit.json" <<'EOF'
+{
+  "name": "dependency-audit",
+  "description": "Audit project dependencies for vulnerabilities",
+  "steps": [
+    {"description": "pip-audit (if available)", "run": "pip-audit 2>/dev/null || python -m pip_audit 2>/dev/null || echo 'pip-audit not installed'", "halt_on_fail": false},
+    {"description": "pip list outdated", "run": "pip list --outdated 2>/dev/null || echo 'No outdated check available'", "halt_on_fail": false}
+  ]
+}
+EOF
+    else
+      cat > "$WORKFLOW_DIR/dependency-audit.json" <<'EOF'
+{
+  "name": "dependency-audit",
+  "description": "Audit project dependencies for vulnerabilities",
+  "steps": [
+    {"description": "npm audit", "run": "npm audit", "halt_on_fail": false},
+    {"description": "Check for outdated packages", "run": "npm outdated", "halt_on_fail": false}
+  ]
+}
+EOF
+    fi
+  fi
+}
+
+# Main dispatch
+install_builtins
+
+case "${1:-help}" in
+  help|--help|-h)
+    cmd_help
+    ;;
+  list)
+    cmd_list
+    ;;
+  show)
+    shift; cmd_show "$1"
+    ;;
+  run)
+    shift; cmd_run "$@"
+    ;;
+  create)
+    shift; cmd_create "$1"
+    ;;
+  delete)
+    shift; cmd_delete "$1"
+    ;;
+  refresh)
+    cmd_refresh
+    ;;
+  *)
+    echo "Unknown command: $1"
+    cmd_help
+    exit 1
+    ;;
+esac

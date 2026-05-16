@@ -1,0 +1,338 @@
+#!/usr/bin/env python3
+"""
+suggest-next — ORPHEUS proactive context awareness engine
+
+Usage:
+  suggest-next [--auto|--quiet] [--path <dir>]
+
+Always emits absolute paths so commands work even when called through symlinks
+outside of the bin directory.
+"""
+import json, os, sys, subprocess, argparse, fnmatch
+from pathlib import Path
+from datetime import datetime, timezone, timedelta
+
+_ORPHEUS_HOME = os.path.expanduser("~/.config/orpheus")
+_SCRIPT_PATH = os.path.realpath(__file__)
+_BIN_DIR = os.path.dirname(_SCRIPT_PATH)
+
+def _run(cmd, cwd=None):
+    try:
+        r = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd, timeout=60)
+        return r.returncode, r.stdout, r.stderr
+    except Exception as e:
+        return -1, "", str(e)
+
+def _in_git_repo(path="."):
+    c, _, _ = _run("git rev-parse --git-dir", cwd=path)
+    return c == 0
+
+def _git_status(path="."):
+    c, out, _ = _run("git status --porcelain", cwd=path)
+    if c != 0:
+        return None
+    files = [l for l in out.strip().split("\n") if l.strip()]
+    staged = [f for f in files if f.startswith(("A ", "M ", "D "))]
+    unstaged = [f for f in files if f.startswith((" M", " D", "??"))]
+    return {"total": len(files), "staged": len(staged), "unstaged": len(unstaged)}
+
+def _git_branch_state(path="."):
+    c, out, _ = _run("git rev-parse --abbrev-ref HEAD", cwd=path)
+    branch = out.strip() if c == 0 else "unknown"
+    c, out, _ = _run("git log --oneline @{u}..HEAD 2>/dev/null || echo ''", cwd=path)
+    ahead = len([l for l in out.strip().split("\n") if l.strip()])
+    c, out, _ = _run("git log --oneline HEAD..@{u} 2>/dev/null || echo ''", cwd=path)
+    behind = len([l for l in out.strip().split("\n") if l.strip()])
+    return {"branch": branch, "ahead": ahead, "behind": behind}
+
+def _project_type(path="."):
+    types = []
+    p = Path(path)
+    if (p / "package.json").exists(): types.append("node-js")
+    if (p / "requirements.txt").exists() or (p / "pyproject.toml").exists() or (p / "setup.py").exists(): types.append("python")
+    if (p / "Cargo.toml").exists(): types.append("rust")
+    if (p / "go.mod").exists(): types.append("go")
+    if (p / "Dockerfile").exists() or (p / "docker-compose.yml").exists(): types.append("docker")
+    if (p / "Gemfile").exists(): types.append("ruby")
+    if (p / ".git").exists(): types.append("git-repo")
+    return types
+
+def _open_tasks():
+    tasks_file = os.path.join(_ORPHEUS_HOME, "tasks.json")
+    if not os.path.exists(tasks_file):
+        return []
+    try:
+        with open(tasks_file) as f:
+            data = json.load(f)
+        return [
+            {"name": t["name"], "state": t["state"], "project": t.get("project", ""), "created": t.get("created", "")}
+            for t in data.get("tasks", {}).values()
+            if t["state"] in ("in_progress", "blocked", "pending")
+        ]
+    except:
+        return []
+
+def _security_issues(path="."):
+    issues = []
+    for root, dirs, files in os.walk(path):
+        depth = root[len(path):].count(os.sep)
+        if depth > 2:
+            del dirs[:]
+            continue
+        if ".git" in dirs: dirs.remove(".git")
+        if "node_modules" in dirs: dirs.remove("node_modules")
+        for f in files:
+            fp = os.path.join(root, f)
+            try:
+                if os.stat(fp).st_mode & 0o002:
+                    issues.append(fp)
+            except:
+                pass
+    return issues
+
+def _npm_outdated(path="."):
+    if not Path(path, "package.json").exists():
+        return None
+    c, out, _ = _run("npm outdated --json 2>/dev/null || echo '{}'", cwd=path)
+    try:
+        return len(json.loads(out or "{}"))
+    except:
+        return None
+
+def _bin(cmd):
+    """Return absolute bin path."""
+    return os.path.join(_BIN_DIR, cmd)
+
+def _get_suggestions(path="."):
+    suggestions = []
+
+    # 1. Security — world-writable files
+    sec = _security_issues(path)
+    if sec:
+        suggestions.append({
+            "priority": 10,
+            "title": f"Security: {len(sec)} world-writable file(s)",
+            "command": f"{_bin('auto-remediate')} fix-world-writable",
+            "reason": f"{len(sec)} file(s) are world-writable"
+        })
+
+    # 2. Credential leaks — only in repos, shallow scan
+    has_gitignore = Path(path, ".gitignore").exists()
+    has_git = Path(path, ".git").exists()
+    if has_git or has_gitignore:
+        env_files = []
+        p = Path(path)
+        for f in p.glob(".env*"):
+            if f.is_file():
+                env_files.append(str(f))
+        for f in p.glob("*.env"):
+            if f.is_file() and str(f) not in env_files:
+                env_files.append(str(f))
+        for subdir in [d for d in p.iterdir() if d.is_dir() and d.name not in {"node_modules", ".git", "__pycache__", ".venv", "vendor"}]:
+            for f in subdir.glob(".env*"):
+                if f.is_file():
+                    env_files.append(str(f))
+            for f in subdir.glob("*.env"):
+                if f.is_file() and str(f) not in env_files:
+                    env_files.append(str(f))
+
+        gitignored = set()
+        if has_gitignore:
+            with open(Path(path, ".gitignore"), 'r') as f:
+                patterns = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+            for ef in env_files:
+                ef_rel = os.path.relpath(ef, path)
+                for pat in patterns:
+                    if fnmatch.fnmatch(ef_rel, pat) or fnmatch.fnmatch(os.path.basename(ef_rel), pat):
+                        gitignored.add(ef)
+
+        leaks = [f for f in env_files if f not in gitignored]
+        if leaks:
+            suggestions.append({
+                "priority": 9,
+                "title": "Security: .env files not gitignored",
+                "command": f"{_bin('auto-remediate')} fix-env-leaks",
+                "reason": f"{len(leaks)} .env file(s) — add to .gitignore"
+            })
+
+    # 3. Uncommitted changes
+    if _in_git_repo(path):
+        gs = _git_status(path)
+        if gs and gs["total"] > 0:
+            if gs["unstaged"] > 0:
+                suggestions.append({
+                    "priority": 7,
+                    "title": f"Git: {gs['unstaged']} unstaged change(s)",
+                    "command": f"{_bin('diff-review')} summary",
+                    "reason": "Uncommitted work detected — review and stage",
+                })
+            if gs["staged"] > 0:
+                suggestions.append({
+                    "priority": 6,
+                    "title": f"Git: {gs['staged']} staged commit-ready",
+                    "command": f"{_bin('diff-review')} suggest",
+                    "reason": "Changes are staged — generate commit message and commit",
+                })
+
+        # 4. Behind origin
+        bs = _git_branch_state(path)
+        if bs["behind"] > 0:
+            suggestions.append({
+                "priority": 5,
+                "title": f"Git: branch is {bs['behind']} commits behind origin",
+                "command": "git pull --rebase",
+                "reason": "Local branch is behind — pull to avoid conflicts",
+            })
+        if bs["ahead"] > 0:
+            suggestions.append({
+                "priority": 5,
+                "title": f"Git: {bs['ahead']} local commit(s) to push",
+                "command": f"{_bin('workflow')} run deploy-safe",
+                "reason": "Commits ready — run deploy-safe pipeline",
+            })
+
+    # 5. Outdated dependencies
+    outdated = _npm_outdated(path)
+    if outdated and outdated > 0:
+        suggestions.append({
+            "priority": 4,
+            "title": f"Dependencies: {outdated} outdated package(s)",
+            "command": f"{_bin('workflow')} run dependency-audit",
+            "reason": "Outdated dependencies may have security vulnerabilities",
+        })
+
+    # 6. Open tasks
+    tasks = _open_tasks()
+    blocked = [t for t in tasks if t["state"] == "blocked"]
+    in_progress = [t for t in tasks if t["state"] == "in_progress"]
+    pending = [t for t in tasks if t["state"] == "pending"]
+
+    # Stale pending check (>48h)
+    stale_pending = []
+    for t in pending:
+        try:
+            created = datetime.fromisoformat(t["created"].replace("Z", "+00:00"))
+            if (datetime.now(timezone.utc) - created) > timedelta(hours=48):
+                stale_pending.append(t)
+        except Exception:
+            pass
+    if stale_pending:
+        suggestions.append({
+            "priority": 7,
+            "title": f"Tasks: {len(stale_pending)} stale pending task(s)",
+            "command": f"{_bin('task-orchestrator')} list",
+            "reason": f"{len(stale_pending)} task(s) pending >48h — review backlog",
+        })
+
+    if blocked:
+        suggestions.append({
+            "priority": 8,
+            "title": f"Tasks: {len(blocked)} blocked",
+            "command": f"{_bin('task-orchestrator')} resolve '{blocked[0]['name']}'",
+            "reason": f"Blocked task: {blocked[0]['name']} — resolve blocker",
+        })
+    if len(in_progress) > 1:
+        suggestions.append({
+            "priority": 8,
+            "title": f"Tasks: context drift ({len(in_progress)} active)",
+            "command": f"{_bin('task-orchestrator')} drift",
+            "reason": "Multiple active tasks — focus or park some",
+        })
+    elif in_progress:
+        suggestions.append({
+            "priority": 3,
+            "title": f"Resume: {in_progress[0]['name']}",
+            "command": f"{_bin('task-orchestrator')} resume",
+            "reason": f"Continue: {in_progress[0]['name']}",
+        })
+    elif len(pending) > 3:
+        suggestions.append({
+            "priority": 5,
+            "title": f"Tasks: {len(pending)} pending tasks",
+            "command": f"{_bin('task-orchestrator')} resume",
+            "reason": f"No active tasks, {len(pending)} pending — resume most recent",
+        })
+
+    return sorted(suggestions, key=lambda x: -x["priority"])
+
+def main():
+    parser = argparse.ArgumentParser(prog="suggest-next")
+    parser.add_argument("--auto", action="store_true", help="Execute top suggestion")
+    parser.add_argument("--quiet", action="store_true", help="JSON output")
+    parser.add_argument("--no-input", action="store_true", help="Never prompt (non-interactive)")
+    parser.add_argument("--path", default=".")
+    args = parser.parse_args()
+
+    # Non-interactive guard
+    if not args.auto and not args.quiet and not args.no_input and not sys.stdin.isatty():
+        args.no_input = True
+
+    suggestions = _get_suggestions(args.path)
+
+    if args.quiet:
+        print(json.dumps({"suggestions": suggestions}, indent=2))
+        return 0
+
+    print("== ORPHEUS Suggestion Engine ==")
+    print("")
+    if not suggestions:
+        print("[CLEAR] No actionable items detected.")
+        print("Context looks clean. Ready for new tasks.")
+        return 0
+
+    top = suggestions[0]
+    print(f"TOP SUGGESTION (priority {top['priority']}/10)")
+    print(f"   {top['title']}")
+    print(f"   -> {top['command']}")
+    print(f"   Why: {top['reason']}")
+    print("")
+
+    if args.auto:
+        print("[AUTO] Executing...")
+        print(f"$ {top['command']}")
+        c, out, err = _run(top['command'] + ' 2>&1', cwd=args.path)
+        print(out)
+        if err:
+            print(err, file=sys.stderr)
+        return c
+
+    if args.no_input:
+        if len(suggestions) > 1:
+            print("Other suggestions:")
+            for s in suggestions[1:4]:
+                icon = {
+                    "Security:": "🔒", "Git:": "🌿", "Tasks:": "📋", "Dependencies:": "🔧", "Resume:": "▶"
+                }.get(s["title"].split()[0] + ":", "•")
+                print(f"  {icon} [{s['priority']}] {s['title']}")
+                print(f"      -> {s['command']}")
+        return 0
+
+    if len(suggestions) > 1:
+        print("Other suggestions:")
+        for s in suggestions[1:4]:
+            icon = {
+                "Security:": "🔒", "Git:": "🌿", "Tasks:": "📋", "Dependencies:": "🔧", "Resume:": "▶"
+            }.get(s["title"].split()[0] + ":", "•")
+            print(f"  {icon} [{s['priority']}] {s['title']}")
+            print(f"      -> {s['command']}")
+        print("")
+
+    response = input("Run top suggestion? [y/n/show-all] ").strip().lower()
+    if response == 'y':
+        print(f"$ {top['command']}")
+        c, out, err = _run(top['command'] + ' 2>&1', cwd=args.path)
+        print(out)
+        if err:
+            print(err, file=sys.stderr)
+        return c
+    elif response == 'show-all':
+        print("")
+        for s in suggestions:
+            print(f"  [{s['priority']}] {s['title']}: {s['command']}")
+    else:
+        print("Skipped.")
+        return 2
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# preflight-git — pre-flight checks before any Git/GitHub operation
+# Run this before push, clone, or repo operations to avoid mutual-waiting loops.
+#
+# Usage: preflight-git [--strict]
+#   --strict   Return non-zero (2) for warnings; default is 0 for warnings-only.
+
+set -euo pipefail
+
+ERRORS=0
+WARNINGS=0
+STRICT=false
+
+# Parse arguments
+for arg in "$@"; do
+  case "$arg" in
+    --strict)
+      STRICT=true
+      shift
+      ;;
+    *)
+      echo "[INFO] Unknown argument: $arg"
+      ;;
+  esac
+done
+
+echo "== Git / GitHub Pre-flight Check =="
+echo ""
+
+# 1. Git installed
+if command -v git &>/dev/null; then
+  GIT_VER=$(git --version 2>/dev/null || echo "unknown")
+  echo "[OK] git installed: $GIT_VER"
+else
+  echo "[FAIL] git is not installed or not in PATH"
+  ((ERRORS++))
+fi
+
+# 2. Inside a git repo (if applicable)
+if git rev-parse --git-dir &>/dev/null; then
+  echo "[OK] inside a git repository"
+
+  # 3. Remote configured
+  REMOTES=$(git remote 2>/dev/null || true)
+  if [ -n "$REMOTES" ]; then
+    echo "[OK] remotes configured:"
+    git remote -v 2>/dev/null | sed 's/^/     /' || true
+  else
+    echo "[WARN] no remotes configured"
+    ((WARNINGS++))
+  fi
+
+  # 4. Remote reachability (fetch, dry-run)
+  for R in $(git remote 2>/dev/null); do
+    if git ls-remote --heads "$R" &>/dev/null; then
+      echo "[OK] remote '$R' is reachable"
+    else
+      echo "[FAIL] remote '$R' is NOT reachable (auth or network issue)"
+      ((ERRORS++))
+    fi
+  done
+
+  # 5. Current branch has upstream
+  BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "HEAD")
+  if git rev-parse --abbrev-ref --symbolic-full-name @{u} &>/dev/null; then
+    echo "[OK] branch '$BRANCH' has upstream tracking"
+  else
+    echo "[WARN] branch '$BRANCH' has no upstream tracking"
+    ((WARNINGS++))
+  fi
+else
+  echo "[INFO] not inside a git repository — skipping repo-specific checks"
+fi
+
+# 6. SSH agent / auth
+if [ -S "${SSH_AUTH_SOCK:-}" ] && ssh-add -l &>/dev/null; then
+  echo "[OK] SSH agent has keys loaded"
+elif [ -f "${HOME}/.git-credentials" ] || git config --global credential.helper &>/dev/null; then
+  echo "[OK] Git credential helper configured"
+else
+  echo "[WARN] No SSH agent keys or credential helper detected — pushes may fail"
+  ((WARNINGS++))
+fi
+
+# 7. GitHub CLI (optional but nice)
+if command -v gh &>/dev/null; then
+  if gh auth status &>/dev/null; then
+    echo "[OK] GitHub CLI authenticated"
+  else
+    echo "[WARN] GitHub CLI installed but not authenticated"
+    ((WARNINGS++))
+  fi
+else
+  echo "[INFO] GitHub CLI (gh) not installed — optional"
+fi
+
+echo ""
+echo "== Summary: $ERRORS error(s), $WARNINGS warning(s) =="
+if [ "$ERRORS" -gt 0 ]; then
+  echo "BLOCKED: fix errors before proceeding."
+  exit 1
+elif [ "$WARNINGS" -gt 0 ]; then
+  if [ "$STRICT" = true ]; then
+    echo "PROCEED WITH CAUTION: warnings may cause failures (strict mode)."
+    exit 2
+  else
+    echo "CLEARED with warnings: safe to proceed."
+    exit 0
+  fi
+else
+  echo "CLEARED: good to go."
+  exit 0
+fi

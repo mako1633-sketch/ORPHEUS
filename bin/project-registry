@@ -1,0 +1,400 @@
+#!/usr/bin/env bash
+# project-registry — ORPHEUS project intelligence core
+# Manages auto-detection, registration, and context loading for all workspaces.
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ORPHEUS_HOME="${ORPHEUS_HOME:-${HOME}/.config/orpheus}"
+REGISTRY_FILE="${ORPHEUS_HOME}/projects.json"
+
+cmd_help() {
+  cat <<'EOF'
+Usage: project-registry <command> [args]
+
+Commands:
+  detect [path]           Auto-detect project type and register if new
+  load [path]             Load project context for current/specified path
+  list                    Show all registered projects
+  info <name>             Show details for a specific project
+  note <name> <text>      Add a note to a project
+  set-pref <name> <k> <v> Set a project preference
+  forget <name>           Remove a project from registry
+
+Project types auto-detected:
+  git-repo, node-js, bun, python, rust, docker, kubernetes, go, ruby
+
+Preferences auto-detected:
+  test_cmd, build_cmd, lint_cmd (from package.json, pyproject.toml, go.mod)
+
+Exit codes:
+  0 = success
+  1 = error
+  2 = new project registered
+  3 = no project found
+EOF
+}
+
+ensure_registry() {
+  if [ ! -f "$REGISTRY_FILE" ]; then
+    echo '{"projects":{},"version":1}' > "$REGISTRY_FILE"
+  fi
+}
+
+detect_type() {
+  local path="${1:-$(pwd)}"
+  local types=""
+  
+  if [ -d "$path/.git" ]; then types="${types}git-repo "; fi
+  if [ -f "$path/package.json" ]; then types="${types}node-js "; fi
+  if [ -f "$path/bun.lockb" ] || [ -f "$path/bun.lock" ]; then types="${types}bun "; fi
+  if [ -f "$path/requirements.txt" ] || [ -f "$path/pyproject.toml" ] || [ -f "$path/setup.py" ]; then types="${types}python "; fi
+  if [ -f "$path/Cargo.toml" ]; then types="${types}rust "; fi
+  if [ -f "$path/Dockerfile" ] || [ -f "$path/docker-compose.yml" ] || [ -f "$path/docker-compose.yaml" ]; then types="${types}docker "; fi
+  if [ -d "$path/k8s" ] || [ -d "$path/kubernetes" ] || [ -f "$path/kustomization.yaml" ]; then types="${types}kubernetes "; fi
+  if [ -f "$path/go.mod" ]; then types="${types}go "; fi
+  if [ -f "$path/Gemfile" ]; then types="${types}ruby "; fi
+  
+  echo "${types:-unknown}"
+}
+
+detect_commands() {
+  local path="$1"
+  python3 -c "
+import json, os, sys
+path = '$path'
+prefs = {}
+pkg = os.path.join(path, 'package.json')
+bun = os.path.exists(os.path.join(path, 'bun.lockb')) or os.path.exists(os.path.join(path, 'bun.lock'))
+req = os.path.join(path, 'requirements.txt')
+pyproj = os.path.join(path, 'pyproject.toml')
+setup = os.path.join(path, 'setup.py')
+gomod = os.path.join(path, 'go.mod')
+
+pm = 'bun' if bun else ('npm' if os.path.exists(pkg) else None)
+
+if pm and os.path.exists(pkg):
+    try:
+        with open(pkg) as f:
+            d = json.load(f)
+        s = d.get('scripts', {})
+        for k in ('test', 'build', 'lint'):
+            if k in s:
+                prefs[k + '_cmd'] = f'{pm} run {k}'
+    except Exception:
+        pass
+
+if os.path.exists(req) or os.path.exists(pyproj) or os.path.exists(setup):
+    if os.path.exists(pyproj):
+        with open(pyproj) as f:
+            txt = f.read()
+        if 'pytest' in txt:
+            prefs['test_cmd'] = 'pytest'
+        if 'ruff' in txt:
+            prefs['lint_cmd'] = 'ruff check .'
+    if 'test_cmd' not in prefs:
+        prefs['test_cmd'] = 'python -m pytest'
+    if 'lint_cmd' not in prefs:
+        try:
+            subprocess.run(['ruff', '--version'], capture_output=True, check=True)
+            prefs['lint_cmd'] = 'ruff check .'
+        except Exception:
+            pass
+
+if os.path.exists(gomod):
+    prefs['test_cmd'] = 'go test ./...'
+    prefs['build_cmd'] = 'go build'
+
+for k, v in prefs.items():
+    print(f'{k}={v}')
+" 2>/dev/null
+}
+
+get_project_name() {
+  local path="${1:-$(pwd)}"
+  basename "$path"
+}
+
+cmd_detect() {
+  local path="${1:-$(pwd)}"
+  path="$(cd "$path" && pwd)"
+  ensure_registry
+  
+  local name
+  name="$(get_project_name "$path")"
+  
+  # Check if already registered
+  if python3 -c "
+import json, sys
+data = json.load(open('$REGISTRY_FILE'))
+for k,v in data['projects'].items():
+  if v.get('path') == '$path':
+    sys.exit(0)
+sys.exit(1)
+" 2>/dev/null; then
+    echo "[OK] Project '$name' already registered at $path"
+    return 0
+  fi
+  
+  local types
+  types="$(detect_type "$path")"
+  
+  local tmp_prefs
+  tmp_prefs="$(mktemp)"
+  detect_commands "$path" > "$tmp_prefs"
+  
+  python3 -c "
+import json, os
+path = '$path'
+name = '$name'
+types = '$types'.strip().split()
+
+try:
+    with open('$REGISTRY_FILE', 'r') as f:
+        data = json.load(f)
+except:
+    data = {'projects': {}, 'version': 1}
+
+prefs = {}
+pfile = '$tmp_prefs'
+if os.path.exists(pfile):
+    with open(pfile) as f:
+        for line in f:
+            if '=' in line:
+                k, v = line.strip().split('=', 1)
+                prefs[k] = v
+    os.remove(pfile)
+
+data['projects'][name] = {
+    'path': path,
+    'types': types,
+    'registered': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+    'last_accessed': None,
+    'notes': [],
+    'preferences': prefs,
+    'blockers': [],
+    'commands': []
+}
+
+with open('$REGISTRY_FILE', 'w') as f:
+    json.dump(data, f, indent=2)
+
+print(f'[NEW] Registered project: {name}')
+print(f'      Path:     {path}')
+print(f'      Types:    {types}')
+if prefs:
+    print(f'      Prefs:    {prefs}')
+" 2>/dev/null
+  
+  local exit=$?
+  if [ $exit -eq 0 ]; then
+    return 2
+  else
+    echo "[FAIL] Could not register project (python3 required)"
+    return 1
+  fi
+}
+
+cmd_load() {
+  local path="${1:-$(pwd)}"
+  path="$(cd "$path" && pwd)"
+  ensure_registry
+  
+  python3 -c "
+import json, sys
+
+try:
+    with open('$REGISTRY_FILE', 'r') as f:
+        data = json.load(f)
+except:
+    sys.exit(3)
+
+found = None
+for k, v in data['projects'].items():
+    if v.get('path') == '$path':
+        found = k
+        break
+
+if not found:
+    sys.exit(3)
+
+proj = data['projects'][found]
+proj['last_accessed'] = '$(date -u +%Y-%m-%dT%H:%M:%SZ)'
+
+with open('$REGISTRY_FILE', 'w') as f:
+    json.dump(data, f, indent=2)
+
+print(f'== Project Context: {found} ==')
+print(f'Path:        {proj[\"path\"]}')
+print(f'Types:       {\" \".join(proj[\"types\"])}')
+print(f'Registered:  {proj[\"registered\"]}')
+print(f'Notes:       {len(proj[\"notes\"])}')
+print(f'Blockers:    {len(proj[\"blockers\"])}')
+
+if proj['notes']:
+    print('')
+    print('--- Recent Notes ---')
+    for n in proj['notes'][-3:]:
+        print(f\"  [{n.get('date', '?')}] {n.get('text', '')}\")
+
+if proj['blockers']:
+    print('')
+    print('--- Active Blockers ---')
+    for b in proj['blockers']:
+        print(f\"  • {b}\")
+
+if proj['preferences']:
+    print('')
+    print('--- Preferences ---')
+    for k, v in proj['preferences'].items():
+        print(f\"  {k}: {v}\")
+" 2>/dev/null
+  
+  return $?
+}
+
+cmd_list() {
+  ensure_registry
+  python3 -c "
+import json, sys
+
+with open('$REGISTRY_FILE', 'r') as f:
+    data = json.load(f)
+
+if not data['projects']:
+    print('No projects registered yet.')
+    print('Run: project-registry detect')
+    sys.exit(0)
+
+print(f\"{'Name':<20} {'Path':<40} {'Types':<20} {'Last Accessed'}\")
+print('-'*90)
+for name, proj in sorted(data['projects'].items()):
+    types = ' '.join(proj['types'])
+    last = proj.get('last_accessed') or 'never'
+    print(f\"{name:<20} {proj['path']:<40} {types:<20} {last}\")
+" 2>/dev/null
+}
+
+cmd_info() {
+  local name="$1"
+  ensure_registry
+  python3 -c "
+import json, sys
+
+with open('$REGISTRY_FILE', 'r') as f:
+    data = json.load(f)
+
+if '$name' not in data['projects']:
+    print(f'Project not found: $name')
+    sys.exit(1)
+
+proj = data['projects']['$name']
+print(json.dumps(proj, indent=2))
+" 2>/dev/null
+}
+
+cmd_note() {
+  local name="$1"
+  shift
+  local text="$*"
+  ensure_registry
+  python3 -c "
+import json, sys
+
+with open('$REGISTRY_FILE', 'r') as f:
+    data = json.load(f)
+
+if '$name' not in data['projects']:
+    print(f'Project not found: $name')
+    sys.exit(1)
+
+data['projects']['$name']['notes'].append({
+    'date': '$(date -u +%Y-%m-%dT%H:%M:%SZ)',
+    'text': '''$text'''
+})
+
+with open('$REGISTRY_FILE', 'w') as f:
+    json.dump(data, f, indent=2)
+
+print(f'Note added to $name')
+" 2>/dev/null
+}
+
+cmd_set_pref() {
+  local name="$1"
+  local key="$2"
+  local value="$3"
+  ensure_registry
+  python3 -c "
+import json, sys
+
+with open('$REGISTRY_FILE', 'r') as f:
+    data = json.load(f)
+
+if '$name' not in data['projects']:
+    print(f'Project not found: $name')
+    sys.exit(1)
+
+data['projects']['$name']['preferences']['$key'] = '$value'
+
+with open('$REGISTRY_FILE', 'w') as f:
+    json.dump(data, f, indent=2)
+
+print(f\"Preference set: $name.$key = $value\")
+" 2>/dev/null
+}
+
+cmd_forget() {
+  local name="$1"
+  ensure_registry
+  python3 -c "
+import json, sys
+
+with open('$REGISTRY_FILE', 'r') as f:
+    data = json.load(f)
+
+if '$name' not in data['projects']:
+    print(f'Project not found: $name')
+    sys.exit(1)
+
+del data['projects']['$name']
+
+with open('$REGISTRY_FILE', 'w') as f:
+    json.dump(data, f, indent=2)
+
+print(f'Forgotten project: $name')
+" 2>/dev/null
+}
+
+# Main dispatch
+case "${1:-help}" in
+  help|--help|-h)
+    cmd_help
+    ;;
+  detect)
+    cmd_detect "${2:-}"
+    ;;
+  load)
+    cmd_load "${2:-}"
+    ;;
+  list)
+    cmd_list
+    ;;
+  info)
+    shift; cmd_info "$1"
+    ;;
+  note)
+    shift; cmd_note "$@"
+    ;;
+  set-pref)
+    shift; cmd_set_pref "$1" "$2" "$3"
+    ;;
+  forget)
+    shift; cmd_forget "$1"
+    ;;
+  *)
+    echo "Unknown command: $1"
+    cmd_help
+    exit 1
+    ;;
+esac
