@@ -9,6 +9,7 @@ import {
 } from "../ai/model-config";
 import type { ProviderMenuItem } from "../components/ProviderMenu";
 import type { LlmProvider, ModelOption } from "../types";
+import { getOllamaReasoningCapabilities } from "../utils/ollama-model-capabilities";
 import type { OpenRouterInferenceProvider } from "../utils/openrouter-endpoints";
 import { mergePricingAverages } from "../utils/openrouter-pricing";
 import { useAppCopilotModelsLoader } from "./use-app-copilot-models-loader";
@@ -189,19 +190,34 @@ export function useAppModel(params: UseAppModelParams): UseAppModelReturn {
 				? copilotModelsUpdatedAt
 				: ollamaModelsUpdatedAt;
 	const currentModelSupportsReasoning = useMemo(() => {
-		if (currentModelProvider !== "copilot") {
-			return false;
+		if (currentModelProvider === "ollama") {
+			const selected = ollamaModels.find((model) => model.id === ollamaModelId);
+			return (
+				selected?.supportsReasoningEffort === true ||
+				getOllamaReasoningCapabilities(ollamaModelId).supportsReasoningEffort === true
+			);
 		}
-		const selected = copilotModels.find((model) => model.id === copilotModelId);
-		return selected?.supportsReasoningEffort === true;
-	}, [copilotModelId, copilotModels, currentModelProvider]);
+		if (currentModelProvider === "copilot") {
+			const selected = copilotModels.find((model) => model.id === copilotModelId);
+			return selected?.supportsReasoningEffort === true;
+		}
+		return false;
+	}, [copilotModelId, copilotModels, currentModelProvider, ollamaModelId, ollamaModels]);
+
 	const currentModelSupportsReasoningXHigh = useMemo(() => {
-		if (currentModelProvider !== "copilot") {
-			return false;
+		if (currentModelProvider === "ollama") {
+			const selected = ollamaModels.find((model) => model.id === ollamaModelId);
+			return (
+				selected?.supportsReasoningEffortXHigh === true ||
+				getOllamaReasoningCapabilities(ollamaModelId).supportsReasoningEffortXHigh === true
+			);
 		}
-		const selected = copilotModels.find((model) => model.id === copilotModelId);
-		return selected?.supportsReasoningEffortXHigh === true;
-	}, [copilotModelId, copilotModels, currentModelProvider]);
+		if (currentModelProvider === "copilot") {
+			const selected = copilotModels.find((model) => model.id === copilotModelId);
+			return selected?.supportsReasoningEffortXHigh === true;
+		}
+		return false;
+	}, [copilotModelId, copilotModels, currentModelProvider, ollamaModelId, ollamaModels]);
 
 	const setCurrentModelId = useCallback(
 		(modelId: string) => {

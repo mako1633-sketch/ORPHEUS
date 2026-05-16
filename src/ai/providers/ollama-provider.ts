@@ -1,9 +1,10 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAI, type OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
 import { type ModelMessage, ToolLoopAgent, generateText, stepCountIs } from "ai";
 import { getDaemonManager } from "../../state/daemon-state";
 import { getRuntimeContext } from "../../state/runtime-context";
 import type { ToolApprovalRequest } from "../../types";
 import { debug, toolDebug } from "../../utils/debug-logger";
+import { getOllamaReasoningCapabilities } from "../../utils/ollama-model-capabilities";
 import { getWorkspacePath } from "../../utils/workspace-manager";
 import { extractFinalAssistantText } from "../message-utils";
 import { getOllamaBaseUrl, getResponseModel } from "../model-config";
@@ -35,8 +36,20 @@ function createOllamaClient() {
 	});
 }
 
+function buildOllamaProviderOptions(reasoningEffort?: ProviderStreamRequest["reasoningEffort"]) {
+	if (!reasoningEffort) return undefined;
+	if (!getOllamaReasoningCapabilities(getResponseModel()).supportsReasoningEffort) return undefined;
+
+	return {
+		openai: {
+			reasoningEffort,
+		} satisfies OpenAIChatLanguageModelOptions,
+	};
+}
+
 async function createDaemonAgent(
 	interactionMode: ProviderStreamRequest["interactionMode"] = "text",
+	reasoningEffort?: ProviderStreamRequest["reasoningEffort"],
 	memoryInjection?: string
 ) {
 	const { sessionId } = getRuntimeContext();
@@ -57,6 +70,7 @@ async function createDaemonAgent(
 		}),
 		tools,
 		stopWhen: stepCountIs(MAX_AGENT_STEPS),
+		providerOptions: buildOllamaProviderOptions(reasoningEffort),
 		prepareStep: async ({ messages }) => ({
 			messages: sanitizeMessagesForInput(messages),
 		}),
@@ -79,7 +93,11 @@ async function streamOllamaResponse(
 	messages.push({ role: "user" as const, content: userMessage });
 
 	for (let attempt = 1; attempt <= MAX_TRANSIENT_STREAM_ATTEMPTS; attempt++) {
-		const agent = await createDaemonAgent(interactionMode, memoryInjection);
+		const agent = await createDaemonAgent(
+			interactionMode,
+			request.reasoningEffort,
+			memoryInjection
+		);
 		let currentMessages = messages;
 		let fullText = "";
 		let streamError: Error | null = null;
