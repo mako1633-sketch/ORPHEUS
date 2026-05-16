@@ -14,6 +14,9 @@ install process, or by symlinking this directory into `~/.local/bin`).
 | `workflow` | Multi-step automation engine (test → lint → build → push) | Bash |
 | `suggest-next` | Proactive context engine: suggests next actions based on repo state | Python 3 |
 | `project-registry` | Auto-detects project type and stores per-project preferences | Bash |
+| `orpheus-startup` | Session initialization with isolated steps + telemetry | Bash |
+| `auto-remediate` | Safe auto-remediation with risk-classified audit log | Python 3 |
+| `orpheus-digest` | Session health summary (tasks, remediations, anomalies) | Python 3 |
 
 ## Usage
 
@@ -108,16 +111,46 @@ These scripts are invoked during the ORPHEUS startup protocol:
 - `suggest-next --no-input` feeds the launch briefing with actionable items
 - `workflow refresh` regenerates project-specific steps when project type changes
 
-## Changelog
 
-### 2026-05-16
-- `preflight-git`: warnings now exit `0` by default. Added `--strict` flag.
-- `workflow`: built-ins are now project-type aware (reads `bun.lock`, `go.mod`, `pyproject.toml`).
-- `suggest-next`: added `--no-input` + `isatty()` auto-detection, stale-task heuristics, pending backlog suggestions.
-- `project-registry`: added `bun` type detection, auto-reads `package.json` scripts.
+## orpheus-digest — Session Summary
+
+Display a structured summary of the current session state across all ORPHEUS
+subsystems: startup health, task backlog, recent remediations, and anomalies.
+
+```bash
+orpheus-digest
+```
+
+**Sections shown:**
+
+1. **Session Health** — startup step results since last session (pass/warn/fail + duration)
+2. **Tasks** — task counts, stale items (>48h), orphaned entries
+3. **Remediations** — recent auto-remediate activity grouped by session
+4. **Anomalies** — warnings or irregularities that may need attention
+
+**Example output:**
+
+```
+Session Health   (since 2026-05-16T22:16:32Z)
+  ✅ 7 passed  |  ⚠️ 1 warned  |  ❌ 0 failed  |  ⏱ 4.1s
+    ⚠️ Dependency Health Check         412ms
+    ✅ Capability Discovery             1.8s
+
+Tasks   (6 total)
+  pending: 6  in_progress: 0  done: 0  blocked: 0
+  ⚠️ 6 stale (>48h): Scan environment, Analyze findings...
+
+Remediations   (last 3 entries, 2 sessions)
+  Session ad795d71
+    🛡️ chmod 0o644          → dry-run [DRY]
+
+Anomalies   (3 found)
+  • Startup warning: Dependency Health Check
+  • Orphaned task: __bt_a__
+```
 
 
-### orpheus-startup — Session Initialization Protocol (v2)
+## orpheus-startup — Session Initialization Protocol (v2)
 
 The central orchestrator that runs all startup checks in an isolated, resilient
 manner. Each step executes independently — a failure in one never blocks
@@ -176,6 +209,8 @@ or auditing. Example:
 - `suggest-next`: added `--no-input` + `isatty()` auto-detection, stale-task heuristics, pending backlog suggestions.
 - `project-registry`: added `bun` type detection, auto-reads `package.json` scripts.
 - `orpheus-startup`: rewritten with isolated step execution (failures no longer block downstream), per-step timing telemetry, structured JSON state output at `~/.config/orpheus/.state/`, and a summary table with ❌/✅ icons.
+- `auto-remediate`: added `--yes` flag for safe auto-approval, risk classification per finding, append-only ndjson audit log, and built-in `log` viewer subcommand.
+- `orpheus-digest`: new session summary command reading startup state, task backlog, remediation audit log, and anomaly detection.
 
 ## auto-remediate log
 

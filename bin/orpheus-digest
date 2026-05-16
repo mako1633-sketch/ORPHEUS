@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+# orpheus-digest — Session health summary
+# Reads startup state, task state, and audit log to produce human-readable digest.
+
+import json
+import os
+import glob
+import sys
+from datetime import datetime, timezone, timedelta
+from pathlib import Path
+
+ORPHEUS_HOME = Path(os.environ.get("ORPHEUS_HOME", Path.home() / ".config/orpheus"))
+STATE_DIR = ORPHEUS_HOME / ".state"
+TASKS_FILE = ORPHEUS_HOME / "tasks.json"
+AUDIT_LOG = Path.home() / ".local/state/orpheus/auto-remediate.log.ndjson"
+
+def load_startup_state():
+    files = sorted(STATE_DIR.glob("startup-*.json"), reverse=True)
+    if not files:
+        return None
+    with open(files[0], "r") as f:
+        return json.load(f)
+
+def load_tasks():
+    if not TASKS_FILE.exists():
+        return {}
+    with open(TASKS_FILE, "r") as f:
+        return json.load(f)
+
+def load_audit_tail(n=10):
+    if not AUDIT_LOG.exists():
+        return []
+    lines = []
+    with open(AUDIT_LOG, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                lines.append(json.loads(line))
+    return lines[-n:]
+
+def fmt_duration(ms):
+    if ms < 1000:
+        return f"{ms:.0f}ms"
+    return f"{ms/1000:.1f}s"
+
+def session_health(state):
+    if not state:
+        print("❌ No startup state found. Run orpheus-startup first.")
+        return
+    ts = state.get("timestamp", "?")
+    steps = state.get("steps", [])
+    passed = sum(1 for s in steps if s["exit_code"] == 0)
+    warned = sum(1 for s in steps if s["exit_code"] == 2)
+    failed = sum(1 for s in steps if s["exit_code"] not in (0, 2))
+    total_ms = sum(s["duration_ms"] for s in steps)
+    print(f"\033[1;36mSession Health\033[0m   (since {ts})")
+    print(f"  ✅ {passed} passed  |  ⚠️ {warned} warned  |  ❌ {failed} failed  |  ⏱ {fmt_duration(total_ms)}")
+    for s in steps:
+        icon = "✅" if s["exit_code"] == 0 else ("⚠️" if s["exit_code"] == 2 else "❌")
+        slow = " ⚠️ SLOW" if s["duration_ms"] > 5000 else ""
+        print(f"    {icon} {s['name']:<28} {fmt_duration(s['duration_ms']):>8}{slow}")
+
+def task_summary(tasks_data):
+    if not tasks_data or "tasks" not in tasks_data:
+        print("\n\033[1;36mTasks\033[0m   (no state)")
+        return
+    tasks = tasks_data["tasks"]
+    now = datetime.now(timezone.utc)
+    stale_threshold = timedelta(hours=48)
+    counts = {"pending": 0, "in_progress": 0, "done": 0, "blocked": 0, "stale": 0, "orphaned": 0}
+    stale_names = []
+    for t in tasks.values():
+        state = t.get("state", "pending")
+        counts[state] = counts.get(state, 0) + 1
+        created = t.get("created")
+        if created:
+            created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            if state == "pending" and now - created_dt > stale_threshold:
+                counts["stale"] += 1
+                stale_names.append(t.get("name", "?"))
+        if state == "pending" and t.get("name", "").startswith("__"):
+            counts["orphaned"] += 1
+    print(f"\n\033[1;36mTasks\033[0m   ({len(tasks)} total)")
+    print(f"  pending: {counts['pending']}  in_progress: {counts['in_progress']}  done: {counts['done']}  blocked: {counts['blocked']}")
+    if counts["stale"]:
+        print(f"  ⚠️ {counts['stale']} stale (>48h): {', '.join(stale_names[:3])}")
+    if counts["orphaned"]:
+        print(f"  🧹 {counts['orphaned']} orphaned entries (suggest cleanup)")
+
+def audit_summary(entries):
+    if not entries:
+        print("\n\033[1;36mRemediations\033[0m   (no activity)")
+        return
+    sessions = {}
+    for e in entries:
+        sid = e.get("session_id", "?")
+        sessions.setdefault(sid, []).append(e)
+    print(f"\n\033[1;36mRemediations\033[0m   (last {len(entries)} entries, {len(sessions)} sessions)")
+    for sid, sess_entries in list(sessions.items())[-3:]:
+        print(f"  Session {sid[:8]}")
+        for e in sess_entries:
+            icon = "🛡️" if e.get("risk") == "safe" else ("👁️" if e.get("risk") == "review" else "⚠️")
+            action = e.get("action", "?")
+            result = e.get("result", "?")
+            dry = " [DRY]" if e.get("dry_run") else ""
+            print(f"    {icon} {action:<20} → {result}{dry}")
+
+def anomalies(state, tasks_data, entries):
+    items = []
+    if state:
+        steps = state.get("steps", [])
+        for s in steps:
+            if s["exit_code"] == 2:
+                items.append(f"Startup warning: {s['name']}")
+            elif s["exit_code"] != 0:
+                items.append(f"Startup failure: {s['name']} (exit {s['exit_code']})")
+    if tasks_data and "tasks" in tasks_data:
+        for t in tasks_data["tasks"].values():
+            if t.get("state") == "pending" and t.get("name", "").startswith("__"):
+                items.append(f"Orphaned task: {t.get('name')}")
+    if not items:
+        print("\n\033[1;36mAnomalies\033[0m   🟢 None detected")
+    else:
+        print(f"\n\033[1;36mAnomalies\033[0m   ({len(items)} found)")
+        for i in items:
+            print(f"  • {i}")
+
+def main():
+    state = load_startup_state()
+    tasks_data = load_tasks()
+    entries = load_audit_tail(10)
+    session_health(state)
+    task_summary(tasks_data)
+    audit_summary(entries)
+    anomalies(state, tasks_data, entries)
+
+if __name__ == "__main__":
+    main()
