@@ -181,11 +181,13 @@ export function useAppController({
 	const [yesNoPromptActive, setYesNoPromptActive] = useState(false);
 
 	const supportsReasoning =
-		currentModelProvider === "copilot"
+		currentModelProvider === "copilot" || currentModelProvider === "ollama"
 			? currentModelSupportsReasoning
 			: (daemon.modelMetadata?.supportsReasoning ?? false);
 	const supportsReasoningXHigh =
-		currentModelProvider === "copilot" ? currentModelSupportsReasoningXHigh : false;
+		currentModelProvider === "copilot" || currentModelProvider === "ollama"
+			? currentModelSupportsReasoningXHigh
+			: false;
 
 	// Preferences bootstrap (hook): returns a stable persist callback.
 	const { persistPreferences } = useAppPreferencesBootstrap({

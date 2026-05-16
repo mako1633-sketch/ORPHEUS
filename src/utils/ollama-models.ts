@@ -7,6 +7,7 @@
 import { getOllamaBaseUrl } from "../ai/model-config";
 import type { ModelOption } from "../types";
 import { debug } from "./debug-logger";
+import { withOllamaReasoningCapabilities } from "./ollama-model-capabilities";
 
 interface OllamaApiModelItem {
 	id?: string;
@@ -47,7 +48,7 @@ function normalizeModelIds(ids: string[]): ModelOption[] {
 		if (seen.has(id)) continue;
 		seen.add(id);
 
-		models.push({ id, name: id });
+		models.push(withOllamaReasoningCapabilities({ id, name: id }));
 	}
 
 	return models.sort((a, b) => a.name.localeCompare(b.name));
@@ -65,7 +66,7 @@ function normalizeOllamaModels(items: OllamaApiModelItem[]): ModelOption[] {
 
 	return models.map((model) => {
 		const name = namesById.get(model.id);
-		return name ? { ...model, name } : model;
+		return name ? withOllamaReasoningCapabilities({ ...model, name }) : model;
 	});
 }
 
