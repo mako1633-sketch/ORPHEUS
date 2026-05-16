@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-auto-remediate — ORPHEUS remediation engine v2
+auto-remediate — ORPHEUS remediation engine v3
 Reads scan findings, proposes fixes with dry-run fidelity, executes with confirmation.
 
 Usage:
-  auto-remediate security [--dry-run] [--safe]          # security fixes
-  auto-remediate security --safe                        # no-blast-radius only
-  auto-remediate file-guardian [--dry-run] [--safe]
-  auto-remediate fix-world-writable [path] [--safe]       # direct fix
-  auto-remediate fix-env-leaks [path]
-  auto-remediate fix-ssh-permissions
+  auto-remediate security [--dry-run] [--safe] [--yes]    # security fixes
+  auto-remediate security --safe --yes                  # auto-execute safe only
+  auto-remediate file-guardian [--dry-run] [--safe] [--yes]
+  auto-remediate fix-world-writable [path] [--safe] [--yes]
+  auto-remediate fix-env-leaks [path] [--yes]
+  auto-remediate fix-ssh-permissions [--yes]
   auto-remediate review-creds [path]
 
 Exit codes:
@@ -18,6 +18,7 @@ Exit codes:
   2 = user declined fixes
   3 = dry-run only (would fix if run normally)
   4 = blocked by --safe (unsafe fix found, not applied)
+  5 = blocked by --yes (unsafe or review fix found in auto mode)
 """
 import json, os, sys, subprocess, argparse, re, fnmatch
 from pathlib import Path
@@ -42,6 +43,12 @@ SKIP_DIRS = {
 # File extensions that should remain executable
 EXECUTABLE_EXTS = {".sh", ".py", ".rb", ".pl", ".php", ".go", ".rs", ".js", ".ts", ".mjs"}
 
+# Risk classification for fixes
+RISK_SAFE = "safe"
+RISK_MEDIUM = "medium"
+RISK_HIGH = "high"
+RISK_REVIEW = "review"
+
 def ensure_log():
     os.makedirs(ORPHEUS_HOME, exist_ok=True)
     if not os.path.exists(REMEDY_LOG):
@@ -63,7 +70,15 @@ def log_remedy(finding, action, result, dry_run=False, safe_mode=False):
     with open(REMEDY_LOG, 'w') as f:
         json.dump(data, f, indent=2)
 
-def ask(prompt, options="[y/n/dry-run/show]"):
+def ask(prompt, options="[y/n/dry-run/show]", yes_mode=False, all_safe=False):
+    """Prompt user or auto-approve in --yes mode."""
+    if yes_mode:
+        if all_safe:
+            print(f"\n[AUTO-APPROVE] {prompt}")
+            return 'y'
+        else:
+            print(f"\n[BLOCKED] --yes requires all fixes to be safe. Unsafe or review fixes found.")
+            return 'blocked_by_yes'
     print(f"\n{prompt}")
     response = input(f"{options} ").strip().lower()
     return response
@@ -103,7 +118,7 @@ def _suggest_perms(fp):
             pass
     return 0o644
 
-def fix_world_writable(path=".", dry_run=False, safe_mode=False):
+def fix_world_writable(path=".", dry_run=False, safe_mode=False, yes_mode=False):
     findings = []
     for root, dirs, files in os.walk(path):
         depth = root[len(path):].count(os.sep)
@@ -157,7 +172,11 @@ def fix_world_writable(path=".", dry_run=False, safe_mode=False):
         log_remedy(f"{len(findings)} world-writable files", f"chmod per-type", f"dry-run {len(findings)} items", True, safe_mode)
         return 3
 
-    resp = ask(f"Fix {len(findings)} files?", "[y/n]")
+    all_safe = len(unsafe_fixes) == 0
+    resp = ask(f"Fix {len(findings)} files?", "[y/n]", yes_mode, all_safe)
+    if resp == 'blocked_by_yes':
+        log_remedy(f"{len(findings)} world-writable files", "declined", "--yes blocked (unsafe fixes)")
+        return 5
     if resp == 'n':
         log_remedy(f"{len(findings)} world-writable files", "declined", "user declined")
         return 2
@@ -178,7 +197,7 @@ def fix_world_writable(path=".", dry_run=False, safe_mode=False):
     return 0 if fixed == len(findings) else 1
 
 
-def fix_env_leaks(path=".", dry_run=False):
+def fix_env_leaks(path=".", dry_run=False, safe_mode=False, yes_mode=False):
     gitignore = os.path.join(path, ".gitignore")
     has_gitignore = os.path.exists(gitignore)
 
@@ -236,7 +255,11 @@ def fix_env_leaks(path=".", dry_run=False):
         log_remedy(f"{len(leaks)} .env leaks", "add to .gitignore", "dry-run", True)
         return 3
 
-    resp = ask(f"Add .env patterns to .gitignore?", "[y/n]")
+    # Env leak fixes are always safe (just .gitignore edits)
+    resp = ask(f"Add .env patterns to .gitignore?", "[y/n]", yes_mode, all_safe=True)
+    if resp == 'blocked_by_yes':
+        log_remedy(f"{len(leaks)} .env leaks", "declined", "--yes blocked")
+        return 5
     if resp == 'n':
         log_remedy(f"{len(leaks)} .env leaks", "declined", "user declined")
         return 2
@@ -259,7 +282,7 @@ def fix_env_leaks(path=".", dry_run=False):
     return 0
 
 
-def fix_ssh_permissions(dry_run=False):
+def fix_ssh_permissions(dry_run=False, safe_mode=False, yes_mode=False):
     ssh_dir = os.path.expanduser("~/.ssh")
     if not os.path.isdir(ssh_dir):
         return 0
@@ -285,7 +308,11 @@ def fix_ssh_permissions(dry_run=False):
         log_remedy(f"{len(bad)} SSH permission issues", "chmod 600", "dry-run", True)
         return 3
 
-    resp = ask(f"Fix SSH file permissions to 600?", "[y/n]")
+    # SSH permission fixes are always safe
+    resp = ask(f"Fix SSH file permissions to 600?", "[y/n]", yes_mode, all_safe=True)
+    if resp == 'blocked_by_yes':
+        log_remedy(f"{len(bad)} SSH permission issues", "declined", "--yes blocked")
+        return 5
     if resp == 'n':
         log_remedy(f"{len(bad)} SSH permission issues", "declined", "user declined")
         return 2
@@ -366,24 +393,27 @@ def review_credential_patterns(path="."):
     return 0
 
 
-def run_security_remediation(path=".", dry_run=False, safe_mode=False):
+def run_security_remediation(path=".", dry_run=False, safe_mode=False, yes_mode=False):
     print("== Security Remediation ==")
     print("")
     results = []
-    results.append(("World-writable files", fix_world_writable(path, dry_run, safe_mode)))
-    results.append((".env file leaks", fix_env_leaks(path, dry_run)))
-    results.append(("SSH permissions", fix_ssh_permissions(dry_run)))
+    results.append(("World-writable files", fix_world_writable(path, dry_run, safe_mode, yes_mode)))
+    results.append((".env file leaks", fix_env_leaks(path, dry_run, safe_mode, yes_mode)))
+    results.append(("SSH permissions", fix_ssh_permissions(dry_run, safe_mode, yes_mode)))
     results.append(("Credential patterns", review_credential_patterns(path)))
 
     fixed = sum(1 for _, r in results if r == 0)
     declined = sum(1 for _, r in results if r == 2)
     dry_runs = sum(1 for _, r in results if r == 3)
     blocked = sum(1 for _, r in results if r == 4)
+    blocked_by_yes = sum(1 for _, r in results if r == 5)
 
     print("")
-    print(f"== Summary: {fixed} fixed, {declined} declined, {dry_runs} dry-run, {blocked} blocked-by-safe ==")
+    print(f"== Summary: {fixed} fixed, {declined} declined, {dry_runs} dry-run, {blocked} blocked-by-safe, {blocked_by_yes} blocked-by-yes ==")
     if any(r == 1 for _, r in results):
         return 1
+    if blocked_by_yes > 0:
+        return 5
     if blocked > 0:
         return 4
     if dry_runs > 0:
@@ -391,11 +421,11 @@ def run_security_remediation(path=".", dry_run=False, safe_mode=False):
     return 0
 
 
-def run_file_guardian_remediation(path=".", dry_run=False, safe_mode=False):
+def run_file_guardian_remediation(path=".", dry_run=False, safe_mode=False, yes_mode=False):
     print("== File Guardian Remediation ==")
     print("")
     results = []
-    results.append(("World-writable files", fix_world_writable(path, dry_run, safe_mode)))
+    results.append(("World-writable files", fix_world_writable(path, dry_run, safe_mode, yes_mode)))
 
     large = []
     skip_dirs = SKIP_DIRS
@@ -434,26 +464,27 @@ def main():
     parser = argparse.ArgumentParser(prog='auto-remediate')
     parser.add_argument('--dry-run', action='store_true', help='Show changes without applying')
     parser.add_argument('--safe', action='store_true', help='Only apply no-blast-radius fixes')
+    parser.add_argument('--yes', action='store_true', help='Auto-approve only safe fixes (blocks if unsafe/review required)')
     sub = parser.add_subparsers(dest='cmd')
 
     p = sub.add_parser('security', help='Run security scan + remediation')
     p.add_argument('--path', default='.')
-    p.set_defaults(func=lambda a: run_security_remediation(a.path, a.dry_run, a.safe))
+    p.set_defaults(func=lambda a: run_security_remediation(a.path, a.dry_run, a.safe, a.yes))
 
     p = sub.add_parser('file-guardian', help='Run file guardian + remediation')
     p.add_argument('--path', default='.')
-    p.set_defaults(func=lambda a: run_file_guardian_remediation(a.path, a.dry_run, a.safe))
+    p.set_defaults(func=lambda a: run_file_guardian_remediation(a.path, a.dry_run, a.safe, a.yes))
 
     p = sub.add_parser('fix-world-writable', help='Fix world-writable files directly')
     p.add_argument('path', nargs='?', default='.')
-    p.set_defaults(func=lambda a: fix_world_writable(a.path, a.dry_run, a.safe))
+    p.set_defaults(func=lambda a: fix_world_writable(a.path, a.dry_run, a.safe, a.yes))
 
     p = sub.add_parser('fix-env-leaks', help='Ensure .env files are gitignored')
     p.add_argument('path', nargs='?', default='.')
-    p.set_defaults(func=lambda a: fix_env_leaks(a.path, a.dry_run))
+    p.set_defaults(func=lambda a: fix_env_leaks(a.path, a.dry_run, a.safe, a.yes))
 
     p = sub.add_parser('fix-ssh-permissions', help='Fix SSH key permissions to 600')
-    p.set_defaults(func=lambda a: fix_ssh_permissions(a.dry_run))
+    p.set_defaults(func=lambda a: fix_ssh_permissions(a.dry_run, a.safe, a.yes))
 
     p = sub.add_parser('review-creds', help='Review credential patterns found')
     p.add_argument('path', nargs='?', default='.')
@@ -461,7 +492,7 @@ def main():
 
     p = sub.add_parser('dry-run', help='Show all fixes without applying')
     p.add_argument('path', nargs='?', default='.')
-    p.set_defaults(func=lambda a: run_security_remediation(a.path, True, a.safe))
+    p.set_defaults(func=lambda a: run_security_remediation(a.path, True, a.safe, a.yes))
 
     args = parser.parse_args()
     if not args.cmd:

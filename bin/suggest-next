@@ -13,8 +13,7 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
 _ORPHEUS_HOME = os.path.expanduser("~/.config/orpheus")
-_SCRIPT_PATH = os.path.realpath(__file__)
-_BIN_DIR = os.path.dirname(_SCRIPT_PATH)
+_BIN_DIR = os.path.join(_ORPHEUS_HOME, "workspaces", "4225ca70-bc89-46be-99ef-d3e82098faf2", "bin")
 
 def _run(cmd, cwd=None):
     try:
@@ -288,9 +287,19 @@ def main():
     print("")
 
     if args.auto:
+        # When auto-executing, inject --yes before the subcommand so auto-remediate
+        # auto-approves safe fixes without blocking on stdin.
+        cmd = top['command']
+        if "auto-remediate" in cmd and "--yes" not in cmd:
+            parts = cmd.split()
+            for i, part in enumerate(parts):
+                if part.endswith("auto-remediate"):
+                    parts.insert(i + 1, "--yes")
+                    break
+            cmd = " ".join(parts)
         print("[AUTO] Executing...")
-        print(f"$ {top['command']}")
-        c, out, err = _run(top['command'] + ' 2>&1', cwd=args.path)
+        print(f"$ {cmd}")
+        c, out, err = _run(cmd + ' 2>&1', cwd=args.path)
         print(out)
         if err:
             print(err, file=sys.stderr)
