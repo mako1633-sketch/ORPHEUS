@@ -115,3 +115,64 @@ These scripts are invoked during the ORPHEUS startup protocol:
 - `workflow`: built-ins are now project-type aware (reads `bun.lock`, `go.mod`, `pyproject.toml`).
 - `suggest-next`: added `--no-input` + `isatty()` auto-detection, stale-task heuristics, pending backlog suggestions.
 - `project-registry`: added `bun` type detection, auto-reads `package.json` scripts.
+
+
+### orpheus-startup — Session Initialization Protocol (v2)
+
+The central orchestrator that runs all startup checks in an isolated, resilient
+manner. Each step executes independently — a failure in one never blocks
+execution of downstream steps.
+
+```bash
+orpheus-startup
+```
+
+**Startup steps executed:**
+1. **Dependency Health Check** — validates tools (git, python3, bun)
+2. **Capability Discovery** — scans for newly installed tools
+3. **Git Pre-flight** — checks repo health, auth, remotes
+4. **Project Intelligence** — auto-detects project type, loads preferences
+5. **Uncommitted Changes** — diff review summary (if dirty)
+6. **Task Orchestrator** — drift detection and resume suggestions
+7. **Quick Security Scan** — lightweight security check (cached 24h)
+8. **Proactive Suggestions** — `suggest-next` summary
+
+**Isolated execution:** Each step receives its own timing and exit code.
+Failures are displayed but the script continues. Final summary shows a table:
+
+```
+== Startup Summary ==
+  Dependency Health Check                  ❌ 412.467ms
+  Capability Discovery                     ✅ 1794.226ms
+  Git Pre-flight                         ✅ 834.972ms
+  ...
+
+STATUS: READY WITH 1 FAILURE(S)
+  Downstream steps ran independently. Check steps marked ❌ above.
+Total time: 4111.888ms
+```
+
+**Structured state output:** Every session writes a JSON file to
+`~/.config/orpheus/.state/startup-<timestamp>.json` for downstream digest
+or auditing. Example:
+
+```json
+{
+  "timestamp": "2026-05-16T22:16:28Z",
+  "session_dir": "/Users/matt/Documents/Orpheus",
+  "steps": [
+    {"name": "Dependency Health Check", "duration_ms": "412.467", "exit_code": 2, "category": "infra"},
+    {"name": "Capability Discovery", "duration_ms": "1794.226", "exit_code": 0, "category": "infra"},
+    ...
+  ]
+}
+```
+
+## Changelog
+
+### 2026-05-16
+- `preflight-git`: warnings now exit `0` by default. Added `--strict` flag.
+- `workflow`: built-ins are now project-type aware (reads `bun.lock`, `go.mod`, `pyproject.toml`).
+- `suggest-next`: added `--no-input` + `isatty()` auto-detection, stale-task heuristics, pending backlog suggestions.
+- `project-registry`: added `bun` type detection, auto-reads `package.json` scripts.
+- `orpheus-startup`: rewritten with isolated step execution (failures no longer block downstream), per-step timing telemetry, structured JSON state output at `~/.config/orpheus/.state/`, and a summary table with ❌/✅ icons.
