@@ -40,8 +40,6 @@ See full installation details below for configuration and system dependencies.
 At the core of the TUI is ORPHEUS's **animated avatar**, reacting to what it's doing in real time:
 listening to audio input, reasoning about questions, calling tools, and generating an answer.
 
-The avatar was deliberately designed to feel slightly ominous and alien-like playing into sci-fi depictions.
-
 ### LLMs
 ORPHEUS supports multiple model backends:
 - **OpenRouter** (API key based)
