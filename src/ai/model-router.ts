@@ -56,10 +56,13 @@ const PARALLEL_PATTERNS = [
 ];
 
 const WEB_NEEDED_PATTERNS = [
-	"latest",
-	"current",
-	"as of",
-	"2026",
+	"latest news",
+	"current web",
+	"current online",
+	"look up",
+	"web search",
+	"search the web",
+	"search online",
 	"cve",
 	"vulnerability",
 	"release notes",
@@ -121,12 +124,12 @@ export async function routeTask(userMessage: string): Promise<RouterDecision> {
 		};
 	}
 
-	// Priority 3: Needs latest web info -> Copilot (has live index)
-	if (needsWeb) {
+	// Priority 3: Web/current-info tasks on Copilot -> keep Copilot selected
+	if (needsWeb && currentProvider === "copilot") {
 		return {
 			provider: "copilot",
 			modelId: getResponseModelForProvider("copilot"),
-			reason: "Query requires current web data — routing to Copilot",
+			reason: "Query requires current web data on Copilot — keeping Copilot selected",
 			useSubagents: needsParallel,
 		};
 	}

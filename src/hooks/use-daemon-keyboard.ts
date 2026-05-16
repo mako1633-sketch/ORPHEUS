@@ -16,6 +16,7 @@ export interface KeyboardHandlerState {
 	showFullReasoning: boolean;
 	showToolOutput: boolean;
 	currentModelProvider: LlmProvider;
+	yesNoPromptActive: boolean;
 }
 
 export interface KeyboardHandlerActions {
@@ -44,6 +45,7 @@ export interface KeyboardHandlerActions {
 	conversationScrollRef: React.RefObject<ScrollBoxRenderable | null>;
 	startNewSession: () => void;
 	undoLastTurn: () => void;
+	setYesNoPromptActive: (active: boolean) => void;
 }
 
 export function useDaemonKeyboard(state: KeyboardHandlerState, actions: KeyboardHandlerActions) {
@@ -55,6 +57,7 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 		hasGrounding,
 		showFullReasoning,
 		currentModelProvider,
+		yesNoPromptActive,
 	} = state;
 
 	const closeAllMenus = useCallback(() => {
@@ -77,6 +80,28 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			const currentState = manager.state;
 
 			if (isOverlayOpen) return;
+
+			// Yes/No prompt shortcut: Y or N when prompt is active and in IDLE/SPEAKING state
+			if (
+				yesNoPromptActive &&
+				(key.sequence === "y" ||
+					key.sequence === "Y" ||
+					key.sequence === "n" ||
+					key.sequence === "N") &&
+				key.eventType === "press" &&
+				!key.ctrl &&
+				!key.meta &&
+				(currentState === DaemonState.IDLE || currentState === DaemonState.SPEAKING)
+			) {
+				const answer = key.sequence.toLowerCase() === "y" ? "yes" : "no";
+				actions.setCurrentTranscription(answer);
+				actions.setCurrentResponse("");
+				actions.currentUserInputRef.current = answer;
+				actions.setYesNoPromptActive(false);
+				manager.submitText(answer);
+				key.preventDefault();
+				return;
+			}
 
 			if (
 				key.eventType === "press" &&
@@ -244,10 +269,12 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			}
 
 			// 'N' key to start a new session (in IDLE or SPEAKING state)
+			// When yesNoPromptActive, 'N' is handled by the y/n shortcut at the top
 			if (
 				(key.sequence === "n" || key.sequence === "N") &&
 				key.eventType === "press" &&
-				(currentState === DaemonState.IDLE || currentState === DaemonState.SPEAKING)
+				(currentState === DaemonState.IDLE || currentState === DaemonState.SPEAKING) &&
+				!yesNoPromptActive
 			) {
 				actions.startNewSession();
 				key.preventDefault();
@@ -521,6 +548,7 @@ export function useDaemonKeyboard(state: KeyboardHandlerState, actions: Keyboard
 			showFullReasoning,
 			state.showToolOutput,
 			currentModelProvider,
+			yesNoPromptActive,
 			actions,
 		]
 	);

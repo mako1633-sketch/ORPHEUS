@@ -13,6 +13,7 @@ import { orpheusCli, resolveOrpheusCliPath } from "./orpheus-cli";
 import { persistentContext } from "./persistent-context";
 import { projectContext } from "./project-context";
 import { readFile } from "./read-file";
+import { redTeamAssessment } from "./red-team-assessment";
 import { renderUrl } from "./render-url";
 import { runBash } from "./run-bash";
 import { screenshot } from "./screenshot";
@@ -73,6 +74,7 @@ const TOOL_REGISTRY: ToolEntry[] = [
 		tool: windowsHardening,
 		gate: gateWindowsTool,
 	},
+	{ id: "redTeamAssessment", toggleKey: "redTeamAssessment", tool: redTeamAssessment },
 	{ id: "daemonStatus", toggleKey: "daemonStatus", tool: daemonStatus },
 	{ id: "webSearch", toggleKey: "webSearch", tool: webSearch, gate: gateExa },
 	{ id: "fetchUrls", toggleKey: "fetchUrls", tool: fetchUrls, gate: gateExa },
@@ -180,6 +182,7 @@ function normalizeToggles(toggles?: ToolToggles): ToolToggles {
 		runBash: toggles?.runBash ?? true,
 		windowsSecurity: toggles?.windowsSecurity ?? true,
 		windowsHardening: toggles?.windowsHardening ?? true,
+		redTeamAssessment: toggles?.redTeamAssessment ?? true,
 		daemonStatus: toggles?.daemonStatus ?? true,
 		webSearch: toggles?.webSearch ?? true,
 		fetchUrls: toggles?.fetchUrls ?? true,
@@ -301,6 +304,7 @@ export function getToolLabels(): Record<ToolId, string> {
 		runBash: "runShell",
 		windowsSecurity: "windowsSecurity",
 		windowsHardening: "windowsHardening",
+		redTeamAssessment: "redTeamAssessment",
 		daemonStatus: "daemonStatus",
 		webSearch: "webSearch",
 		fetchUrls: "fetchUrls",
@@ -331,6 +335,7 @@ export function getDefaultToolOrder(): ToolId[] {
 		"runBash",
 		"windowsSecurity",
 		"windowsHardening",
+		"redTeamAssessment",
 		"daemonStatus",
 		"webSearch",
 		"fetchUrls",
@@ -363,6 +368,7 @@ export function createToolAvailabilitySnapshot(
 		runBash: availability.runBash?.enabled ?? false,
 		windowsSecurity: availability.windowsSecurity?.enabled ?? false,
 		windowsHardening: availability.windowsHardening?.enabled ?? false,
+		redTeamAssessment: availability.redTeamAssessment?.enabled ?? false,
 		daemonStatus: availability.daemonStatus?.enabled ?? false,
 		webSearch: availability.webSearch?.enabled ?? false,
 		fetchUrls: availability.fetchUrls?.enabled ?? false,

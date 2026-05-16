@@ -178,6 +178,7 @@ export function useAppController({
 	const [resetNotification, setResetNotification] = useState<string>("");
 	const [apiKeyMissingError, setApiKeyMissingError] = useState<string>("");
 	const [escPendingCancel, setEscPendingCancel] = useState(false);
+	const [yesNoPromptActive, setYesNoPromptActive] = useState(false);
 
 	const supportsReasoning =
 		currentModelProvider === "copilot"
@@ -229,6 +230,13 @@ export function useAppController({
 
 	const { clearConversationState, loadSessionById, startNewSession, undoLastTurn } =
 		conversationManager;
+
+	useEffect(() => {
+		const hasPrompt = /\(\s*y\s*\/\s*n\s*\?\s*\)|\[\s*y\s*\/\s*n\s*\]/i.test(
+			daemon.currentResponse
+		);
+		setYesNoPromptActive(hasPrompt);
+	}, [daemon.currentResponse]);
 
 	const startNewSessionAndReset = useCallback(() => {
 		startNewSession();
@@ -334,6 +342,7 @@ export function useAppController({
 			conversationScrollRef: daemon.conversationScrollRef,
 			startNewSession: startNewSessionAndReset,
 			undoLastTurn,
+			setYesNoPromptActive,
 		}),
 		[
 			setShowDeviceMenu,
@@ -359,6 +368,7 @@ export function useAppController({
 			daemon.conversationScrollRef,
 			startNewSessionAndReset,
 			undoLastTurn,
+			setYesNoPromptActive,
 		]
 	);
 
@@ -401,6 +411,7 @@ export function useAppController({
 			showFullReasoning,
 			showToolOutput,
 			currentModelProvider,
+			yesNoPromptActive,
 		},
 		keyboardActions
 	);

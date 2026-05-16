@@ -297,6 +297,7 @@ export type ToolToggleId =
 	| "runBash"
 	| "windowsSecurity"
 	| "windowsHardening"
+	| "redTeamAssessment"
 	| "daemonStatus"
 	| "webSearch"
 	| "fetchUrls"
@@ -326,6 +327,7 @@ export const DEFAULT_TOOL_TOGGLES: ToolToggles = {
 	runBash: true,
 	windowsSecurity: true,
 	windowsHardening: true,
+	redTeamAssessment: true,
 	daemonStatus: true,
 	webSearch: true,
 	fetchUrls: true,
@@ -513,6 +515,18 @@ export interface UrlMenuItem {
 	status: "ok" | "error";
 	error?: string;
 	lastSeenIndex: number;
+}
+
+/**
+ * Active yes/no confirmation prompt state.
+ * ORPHEUS sets this when the last assistant message contains (y/n?)
+ * so the user can press Y or N without typing into the input.
+ */
+export interface YesNoPromptState {
+	/** Whether a y/n prompt is currently active */
+	active: boolean;
+	/** Optional display text for what is being confirmed */
+	label?: string;
 }
 
 // ============================================================

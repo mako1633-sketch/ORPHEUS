@@ -24,6 +24,28 @@ describe("model router", () => {
 		expect(getModelProvider()).toBe("ollama");
 	});
 
+	it("does not route local current-state requests to Copilot", async () => {
+		setModelProvider("ollama");
+		setResponseModelForProvider("ollama", "kimi-k2.6:cloud");
+
+		const decision = await routeTask(
+			"Save this current working state to memory and implement a checkpoint system."
+		);
+
+		expect(decision.provider).toBe("ollama");
+		expect(decision.modelId).toBe("kimi-k2.6:cloud");
+	});
+
+	it("keeps explicit web requests on Ollama unless Copilot is selected", async () => {
+		setModelProvider("ollama");
+		setResponseModelForProvider("ollama", "kimi-k2.6:cloud");
+
+		const decision = await routeTask("Search the web for the latest release notes");
+
+		expect(decision.provider).toBe("ollama");
+		expect(decision.modelId).toBe("kimi-k2.6:cloud");
+	});
+
 	it("uses Codex for coding tasks when Copilot is the selected provider", async () => {
 		setModelProvider("copilot");
 
