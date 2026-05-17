@@ -12,7 +12,7 @@ export interface OpenAITTSOptions {
 	apiKey?: string;
 	/** OpenAI speech model (default: gpt-4o-mini-tts) */
 	model?: SpeechCreateParams["model"];
-	/** Voice name (default: onyx) */
+	/** Voice name (default: ballad) */
 	voice?: SpeechCreateParams["voice"];
 	/** Output format (default: pcm) */
 	outputFormat?: SpeechCreateParams["response_format"];
@@ -29,12 +29,9 @@ export interface OpenAITTSStreamEvents {
 }
 
 const DEFAULT_MODEL: SpeechCreateParams["model"] = "gpt-4o-mini-tts";
-const DEFAULT_VOICE: SpeechCreateParams["voice"] = "onyx";
+const DEFAULT_VOICE: SpeechCreateParams["voice"] = "ballad";
 const DEFAULT_FORMAT: SpeechCreateParams["response_format"] = "pcm";
 const DEFAULT_SPEED: SpeechCreateParams["speed"] = 1.1;
-
-const DEFAULT_INSTRUCTIONS =
-	"Speak with a confident and precise tone inspired by JARVIS from Iron Man with a purposeful and helpful cadence.";
 
 interface SpeechAudioDeltaEvent {
 	type: "speech.audio.delta";
@@ -77,7 +74,7 @@ export class OpenAITTSStream extends EventEmitter {
 		this.voice = options.voice ?? DEFAULT_VOICE;
 		this.outputFormat = options.outputFormat ?? DEFAULT_FORMAT;
 		this.speed = options.speed ?? DEFAULT_SPEED;
-		this.instructions = options.instructions ?? DEFAULT_INSTRUCTIONS;
+		this.instructions = options.instructions;
 	}
 
 	get isSpeaking(): boolean {
@@ -109,7 +106,9 @@ export class OpenAITTSStream extends EventEmitter {
 
 			if (supportsSSE) {
 				params.stream_format = "sse";
-				params.instructions = this.instructions;
+				if (this.instructions) {
+					params.instructions = this.instructions;
+				}
 			}
 
 			const response = await this.client.audio.speech.create(params, {

@@ -22,10 +22,19 @@ export interface VoiceDependencies {
 // Cache the detection result
 let cachedDependencies: VoiceDependencies | null = null;
 
+/** Common absolute paths where sox may be installed outside PATH. */
+const COMMON_SOX_PATHS = [
+	"/opt/homebrew/bin/sox",
+	"/usr/local/bin/sox",
+	"/usr/bin/sox",
+	"/bin/sox",
+];
+
 /**
- * Check if a binary exists on PATH by attempting to run it.
+ * Check if a binary exists by attempting to run it.
+ * Accepts either a name (resolved via PATH) or an absolute path.
  */
-async function checkBinaryOnPath(binary: string): Promise<boolean> {
+async function checkBinary(binary: string): Promise<boolean> {
 	return new Promise((resolve) => {
 		const proc = spawn(binary, ["--version"], {
 			stdio: ["ignore", "ignore", "ignore"],
@@ -42,13 +51,22 @@ async function checkBinaryOnPath(binary: string): Promise<boolean> {
 	});
 }
 
+/** Try to find sox on PATH or at a known fallback location. */
+async function resolveSoxBinary(): Promise<string | null> {
+	if (await checkBinary("sox")) return "sox";
+	for (const p of COMMON_SOX_PATHS) {
+		if (await checkBinary(p)) return p;
+	}
+	return null;
+}
+
 /**
  * Detect sox availability.
  */
 async function detectSox(): Promise<VoiceCapability> {
-	const available = await checkBinaryOnPath("sox");
+	const path = await resolveSoxBinary();
 
-	if (available) {
+	if (path) {
 		return {
 			available: true,
 			reason: "sox is installed.",

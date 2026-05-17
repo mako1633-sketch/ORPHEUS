@@ -3,6 +3,41 @@ import { EventEmitter } from "node:events";
 import type { AudioDevice } from "../types";
 
 let soxAvailableCache: boolean | null = null;
+let soxResolvedPath: string | null = null;
+
+/** Common absolute paths where sox may be installed outside PATH. */
+const COMMON_SOX_PATHS = [
+	"/opt/homebrew/bin/sox",
+	"/usr/local/bin/sox",
+	"/usr/bin/sox",
+	"/bin/sox",
+];
+
+/**
+ * Attempt to locate sox on PATH or at known fallback paths.
+ * Returns the absolute path (or "sox" for PATH) and caches it.
+ */
+function locateSoxSync(): string | null {
+	if (soxResolvedPath !== null) return soxResolvedPath;
+
+	const check = (bin: string): boolean => {
+		const result = spawnSync(bin, ["--version"], { stdio: "ignore", timeout: 2000 });
+		return result.status === 0;
+	};
+
+	if (check("sox")) {
+		soxResolvedPath = "sox";
+		return soxResolvedPath;
+	}
+	for (const p of COMMON_SOX_PATHS) {
+		if (check(p)) {
+			soxResolvedPath = p;
+			return soxResolvedPath;
+		}
+	}
+	soxResolvedPath = null;
+	return soxResolvedPath;
+}
 
 /**
  * Get the appropriate sox audio driver for the current platform.
@@ -44,16 +79,13 @@ export function isSoxAvailable(): boolean {
 		return soxAvailableCache;
 	}
 
-	const result = spawnSync("sox", ["--version"], {
-		stdio: "ignore",
-		timeout: 2000,
-	});
-	soxAvailableCache = result.status === 0;
+	soxAvailableCache = locateSoxSync() !== null;
 	return soxAvailableCache;
 }
 
 export function invalidateSoxCache(): void {
 	soxAvailableCache = null;
+	soxResolvedPath = null;
 }
 
 export class SoxNotAvailableError extends Error {
@@ -236,7 +268,8 @@ export class AudioRecorder extends EventEmitter {
 	start(): void {
 		if (this._isRecording) return;
 
-		if (!isSoxAvailable()) {
+		const soxPath = locateSoxSync();
+		if (!soxPath) {
 			this.emit("error", new SoxNotAvailableError());
 			return;
 		}
@@ -280,7 +313,7 @@ export class AudioRecorder extends EventEmitter {
 			"-"
 		);
 
-		this.process = spawn("sox", args, {
+		this.process = spawn(soxPath, args, {
 			stdio: ["pipe", "pipe", "pipe"],
 		});
 
@@ -518,9 +551,12 @@ export async function listAudioDevices(): Promise<AudioDevice[]> {
 }
 
 async function listAudioDevicesMacOS(): Promise<AudioDevice[]> {
+	const soxPath = locateSoxSync();
+	if (!soxPath) return [{ name: "default" }];
+
 	return new Promise((resolve) => {
 		const proc = spawn(
-			"sox",
+			soxPath,
 			["-V6", "-n", "-t", "coreaudio", "nonexistent_device_to_force_list"],
 			{
 				stdio: ["ignore", "pipe", "pipe"],
