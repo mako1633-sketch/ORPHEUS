@@ -1,5 +1,5 @@
 import type { TextareaRenderable } from "@opentui/core";
-import { type MutableRefObject, type ReactNode, createContext, useContext } from "react";
+import { createContext, type MutableRefObject, type ReactNode, useContext } from "react";
 import type { ProviderMenuItem } from "../components/ProviderMenu";
 import type {
 	AppPreferences,

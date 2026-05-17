@@ -1,4 +1,4 @@
-import { type ReactNode, createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { daemonEvents } from "../state/daemon-events";
 import type { ToolApprovalRequest, ToolApprovalResponse } from "../types";
 

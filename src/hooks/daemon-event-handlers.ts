@@ -9,8 +9,7 @@ import {
 	detectAssistantResponseLeak,
 } from "../ai/assistant-response-guard";
 import { getCurrentTodos } from "../ai/tools/todo-manager";
-import type { DaemonAvatarRenderable } from "../avatar/DaemonAvatarRenderable";
-import type { ToolCategory } from "../avatar/DaemonAvatarRenderable";
+import type { DaemonAvatarRenderable, ToolCategory } from "../avatar/DaemonAvatarRenderable";
 import { clearRuntimeContext, setRuntimeContext } from "../state/runtime-context";
 import { saveSessionSnapshot } from "../state/session-store";
 import type {
@@ -22,7 +21,6 @@ import type {
 	TokenUsage,
 	ToolApprovalRequest,
 	ToolCall,
-	ToolResultOutput,
 } from "../types";
 import { DaemonState } from "../types";
 import { REASONING_COLORS, STATE_COLORS } from "../types/theme";
@@ -30,13 +28,9 @@ import { REASONING_ANIMATION } from "../ui/constants";
 import { debug, messageDebug } from "../utils/debug-logger";
 import { hasVisibleText } from "../utils/formatters";
 import {
-	INTERRUPTED_TOOL_RESULT,
 	buildInterruptedContentBlocks,
 	buildInterruptedModelMessages,
-	normalizeInterruptedToolBlockResult,
-	normalizeInterruptedToolResultOutput,
 } from "./daemon-event-handlers/interrupted-turn";
-import { recordTurn } from "../utils/auto-summarizer";
 
 export { buildInterruptedModelMessages };
 

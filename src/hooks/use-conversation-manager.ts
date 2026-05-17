@@ -3,7 +3,6 @@ import { useCallback } from "react";
 import { getDaemonManager } from "../state/daemon-state";
 import {
 	buildModelHistoryFromConversation,
-	deleteSession,
 	loadSessionSnapshot,
 	saveSessionSnapshot,
 } from "../state/session-store";

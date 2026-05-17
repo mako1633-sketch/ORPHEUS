@@ -1,13 +1,14 @@
 {
-	"$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
 	"files": {
-		"ignore": [
-			"node_modules/**",
-			"tmp/**",
-			".build-test/**",
-			"opentui/**",
-			"opentui-examples/**",
-			"codex/**"
+		"includes": [
+			"**",
+			"!**/node_modules/**",
+			"!**/tmp/**",
+			"!**/.build-test/**",
+			"!**/opentui/**",
+			"!**/opentui-examples/**",
+			"!**/codex/**"
 		]
 	},
 	"formatter": {
@@ -16,25 +17,26 @@
 		"lineWidth": 100,
 		"lineEnding": "lf"
 	},
-	"organizeImports": {
-		"enabled": true
-	},
+	"assist": { "actions": { "source": { "organizeImports": "on" } } },
 	"linter": {
 		"enabled": true,
 		"rules": {
 			"recommended": true,
+			"a11y": {
+				"noStaticElementInteractions": "off"
+			},
 			"suspicious": {
 				"noArrayIndexKey": "off",
 				"noExplicitAny": "off"
 			},
 			"correctness": {
-				"noUnnecessaryContinue": "off",
 				"useExhaustiveDependencies": "off"
 			},
 			"complexity": {
 				"noForEach": "off",
 				"noUselessTernary": "off",
-				"useOptionalChain": "off"
+				"useOptionalChain": "off",
+				"noUselessContinue": "off"
 			},
 			"style": {
 				"noInferrableTypes": "off",

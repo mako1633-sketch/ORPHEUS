@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { memo, useCallback, useEffect, useRef } from "react";
 import type { RefObject } from "react";
+import { memo, useCallback, useEffect, useRef } from "react";
 import type { DaemonAvatarRenderable } from "../../avatar/DaemonAvatarRenderable";
 import {
 	BANNER_GRADIENT,
@@ -12,7 +12,7 @@ import { DaemonState } from "../../types";
 const DAEMON_HOME_GIF_PATH = fileURLToPath(new URL("../../../img/daemon.gif", import.meta.url));
 const DAEMON_GIF_ASPECT = 960 / 551;
 
-const HOME_GIF_MIN_WIDTH = 48;
+const _HOME_GIF_MIN_WIDTH = 48;
 const HOME_GIF_MAX_WIDTH = 168;
 const HOME_GIF_WIDTH_RATIO = 0.82;
 const HOME_GIF_TOP_RESERVE_RATIO = 0.18;
@@ -72,11 +72,12 @@ export function calculateHomeGifLayout({
 	return { width: nextWidth, height: nextHeight, top };
 }
 
-export function calculateChatGifLayout({
-	viewportWidth,
-}: {
-	viewportWidth: number;
-}): { width: number; height: number; top: number; right: number } {
+export function calculateChatGifLayout({ viewportWidth }: { viewportWidth: number }): {
+	width: number;
+	height: number;
+	top: number;
+	right: number;
+} {
 	const safeViewportWidth = Math.max(1, Math.floor(viewportWidth));
 	const targetWidth = Math.floor(safeViewportWidth * CHAT_GIF_WIDTH_RATIO);
 	const maxWidthForViewport = Math.max(1, safeViewportWidth - CHAT_GIF_RIGHT - 2);

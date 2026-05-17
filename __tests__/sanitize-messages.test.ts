@@ -24,7 +24,7 @@ describe("sanitizeMessagesForInput", () => {
 		] as unknown as ModelMessage[];
 
 		const sanitized = sanitizeMessagesForInput(messages);
-		const asJson = JSON.stringify(sanitized);
+		const _asJson = JSON.stringify(sanitized);
 
 		expect(sanitized.length).toBe(1);
 		expect(Array.isArray(sanitized[0]?.content)).toBe(true);

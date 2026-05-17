@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { calculateHomeGifLayout, calculateChatGifLayout } from "../src/app/components/AvatarLayer";
+import { calculateChatGifLayout, calculateHomeGifLayout } from "../src/app/components/AvatarLayer";
 
 describe("calculateHomeGifLayout", () => {
 	it("reserves top space when banner is shown", () => {

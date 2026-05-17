@@ -1,15 +1,13 @@
 import type { ScrollBoxRenderable } from "@opentui/core";
-import { useCallback, useEffect, useRef } from "react";
 import type { MutableRefObject } from "react";
-
+import { useCallback, useEffect, useRef } from "react";
+import { daemonEvents } from "../state/daemon-events";
+import type { LlmProvider } from "../types";
 import { useDaemonEvents } from "./use-daemon-events";
 import { useInputHistory } from "./use-input-history";
 import { useReasoningAnimation } from "./use-reasoning-animation";
 import { useResponseTimer } from "./use-response-timer";
 import { useTypingMode } from "./use-typing-mode";
-
-import { daemonEvents } from "../state/daemon-events";
-import type { LlmProvider } from "../types";
 
 export interface DaemonRuntimeControllerResult {
 	reasoning: ReturnType<typeof useReasoningAnimation>;

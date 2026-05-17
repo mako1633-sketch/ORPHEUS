@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 
-import { type MCPClient, createMCPClient } from "@ai-sdk/mcp";
+import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
 import type { ToolSet } from "ai";
 
-import { type McpServerConfig, type McpTransportType, loadManualConfig } from "../../utils/config";
+import { loadManualConfig, type McpServerConfig, type McpTransportType } from "../../utils/config";
 import { debug } from "../../utils/debug-logger";
 
 export type McpServerLifecycleStatus = "idle" | "loading" | "ready" | "error";

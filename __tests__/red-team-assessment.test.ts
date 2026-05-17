@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import { redTeamAssessment } from "../src/ai/tools/red-team-assessment";
-import { buildRedTeamScope } from "../src/security/red-team-scope";
 import {
 	buildRedTeamPlaybookCommand,
 	getRedTeamPlaybook,
 	recommendRedTeamPlaybooks,
 } from "../src/security/red-team-playbooks";
+import { buildRedTeamScope } from "../src/security/red-team-scope";
 
 function toolExecute<TInput, TOutput>(input: TInput): Promise<TOutput> {
 	return (

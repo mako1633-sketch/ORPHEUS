@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { type McpServerStatus, getMcpManager } from "../ai/mcp/mcp-manager";
+import { getMcpManager, type McpServerStatus } from "../ai/mcp/mcp-manager";
 import { invalidateDaemonToolsCache } from "../ai/tools/index";
 import { invalidateSubagentToolsCache } from "../ai/tools/subagents";
 import {
@@ -28,7 +28,7 @@ type MenuToolItem = {
 	disabledReason?: string;
 };
 
-function getToolLabel(id: ToolToggleId): string {
+function _getToolLabel(id: ToolToggleId): string {
 	switch (id) {
 		case "readFile":
 			return "readFile";

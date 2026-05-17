@@ -4,6 +4,6 @@
  * plus the unified injection pipeline.
  */
 
-export { getMemoryManager, isMemoryAvailable } from "./memory-manager";
-export { buildMemoryInjection, getMemoryContextForMessage } from "./memory-injection";
 export { getHonchoManager, isHonchoAvailable } from "./honcho-manager";
+export { buildMemoryInjection, getMemoryContextForMessage } from "./memory-injection";
+export { getMemoryManager, isMemoryAvailable } from "./memory-manager";

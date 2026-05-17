@@ -189,7 +189,7 @@ export async function getSystemDefaultInputDeviceName(): Promise<string | undefi
 		defaultInputDeviceCache = { name, timestampMs: now };
 		return name;
 	} catch (error: unknown) {
-		const err = error instanceof Error ? error : new Error(String(error));
+		const _err = error instanceof Error ? error : new Error(String(error));
 		defaultInputDeviceCache = { name: undefined, timestampMs: now };
 		return undefined;
 	}
@@ -349,7 +349,7 @@ export class AudioRecorder extends EventEmitter {
 			);
 		});
 
-		this.process.on("close", (code) => {
+		this.process.on("close", (_code) => {
 			this._isRecording = false;
 			this.emit("stop");
 		});

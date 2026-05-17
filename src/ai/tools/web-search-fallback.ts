@@ -92,7 +92,7 @@ async function searchExa(
 async function searchBrave(
 	query: string,
 	numResults: number,
-	recency?: z.infer<typeof RecencyEnum>,
+	_recency?: z.infer<typeof RecencyEnum>,
 	includeDomains?: string[]
 ): Promise<{ results: SearchResult[]; error?: string }> {
 	const apiKey = process.env.BRAVE_API_KEY;

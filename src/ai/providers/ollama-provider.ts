@@ -1,5 +1,5 @@
 import { createOpenAI, type OpenAIChatLanguageModelOptions } from "@ai-sdk/openai";
-import { type ModelMessage, ToolLoopAgent, generateText, stepCountIs } from "ai";
+import { generateText, type ModelMessage, stepCountIs, ToolLoopAgent } from "ai";
 import { getDaemonManager } from "../../state/daemon-state";
 import { getRuntimeContext } from "../../state/runtime-context";
 import type { ToolApprovalRequest } from "../../types";

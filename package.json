@@ -79,7 +79,7 @@
 		"release:notes": "bun run scripts/release.ts notes"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^1.9.4",
+		"@biomejs/biome": "^2.4.15",
 		"@types/bun": "^1.3.14",
 		"@types/react": "^19.2.14",
 		"playwright": "^1.60.0"

@@ -1,7 +1,6 @@
+import { STARTUP_BANNER_DURATION_S } from "../../../ui/startup";
 import type { SceneElements } from "../scene/create-scene-elements";
 import type { RigState } from "../state/rig-state";
-
-import { STARTUP_BANNER_DURATION_S } from "../../../ui/startup";
 
 const SPAWN_DURATION = STARTUP_BANNER_DURATION_S;
 

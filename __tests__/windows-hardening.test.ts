@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { listWindowsEventTriageQueries } from "../src/security/windows-event-triage";
 import {
-	WINDOWS_HARDENING_RULES,
 	getWindowsHardeningRulesForProfile,
 	listWindowsHardeningProfiles,
+	WINDOWS_HARDENING_RULES,
 } from "../src/security/windows-hardening-baselines";
 import {
 	buildHardeningCheckCommand,

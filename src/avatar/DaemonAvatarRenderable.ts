@@ -7,10 +7,10 @@ import {
 } from "@opentui/core";
 import { SuperSampleType, ThreeCliRenderer } from "@opentui/core/3d";
 import {
+	createDaemonRig,
 	type DaemonColorTheme,
 	type DaemonRig,
 	type ToolCategory,
-	createDaemonRig,
 } from "./daemon-avatar-rig";
 
 export type { ToolCategory } from "./daemon-avatar-rig";
@@ -317,8 +317,8 @@ export class DaemonAvatarRenderable extends FrameBufferRenderable {
 			);
 		} else if (!this.three || !this.rig) {
 			const fb = this.frameBuffer;
-			const w = fb.width;
-			const h = fb.height;
+			const _w = fb.width;
+			const _h = fb.height;
 			fb.clear(RGBA.fromValues(0, 0, 0, 0));
 		} else {
 			this.kickRenderFrame();

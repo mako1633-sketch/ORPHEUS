@@ -5,9 +5,8 @@
 
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { tool } from "ai";
-import { type ModelMessage, ToolLoopAgent, stepCountIs } from "ai";
 import type { ToolSet } from "ai";
+import { stepCountIs, ToolLoopAgent, tool } from "ai";
 import { z } from "zod";
 import { getDaemonManager } from "../../state/daemon-state";
 import type { SubagentProgressEmitter } from "../../types";

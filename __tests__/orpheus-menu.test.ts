@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ORPHEUS_MENU_ITEMS, getOrpheusMenuActionPrompt } from "../src/components/OrpheusMenu";
+import { getOrpheusMenuActionPrompt, ORPHEUS_MENU_ITEMS } from "../src/components/OrpheusMenu";
 
 describe("ORPHEUS menu", () => {
 	it("includes defensive red-team assessment actions", () => {

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { DaemonState } from "../types";
 import type { ContentBlock, LlmProvider, ModelOption, SessionInfo } from "../types";
+import { DaemonState } from "../types";
 import { COLORS, STATE_COLOR_HEX, STATUS_TEXT } from "../ui/constants";
 import { formatElapsedTime } from "../utils/formatters";
 import type { ModelMetadata } from "../utils/model-metadata";

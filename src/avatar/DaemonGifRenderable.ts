@@ -1,11 +1,10 @@
 import { readFileSync } from "node:fs";
 import {
-	type CliRenderer,
 	type FrameBufferOptions,
 	FrameBufferRenderable,
 	type OptimizedBuffer,
-	RGBA,
 	type RenderContext,
+	RGBA,
 	TextAttributes,
 } from "@opentui/core";
 import { GifReader } from "omggif";

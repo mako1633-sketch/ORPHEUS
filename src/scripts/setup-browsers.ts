@@ -12,7 +12,7 @@ async function main(): Promise<void> {
 	let playwrightEntryUrl: string;
 	try {
 		playwrightEntryUrl = import.meta.resolve("playwright");
-	} catch (error) {
+	} catch (_error) {
 		logError("Playwright is not installed.");
 		logError("Install it first, then retry:");
 		logError("");

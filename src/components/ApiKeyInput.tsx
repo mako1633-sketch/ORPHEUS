@@ -4,10 +4,10 @@
  */
 
 import {
+	decodePasteBytes,
 	type KeyEvent,
 	type PasteEvent,
 	type TextareaRenderable,
-	decodePasteBytes,
 } from "@opentui/core";
 import { type RefObject, useRef } from "react";
 import { COLORS } from "../ui/constants";

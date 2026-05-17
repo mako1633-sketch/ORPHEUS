@@ -1,7 +1,7 @@
 import type { KeyEvent, TextareaRenderable } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
 import type { RefObject } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { handleOnboardingKey } from "../hooks/keyboard-handlers";
 import type {
 	AppPreferences,

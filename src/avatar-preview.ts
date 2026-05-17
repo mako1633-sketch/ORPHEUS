@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { OptimizedBuffer, RGBA, createCliRenderer } from "@opentui/core";
+import { createCliRenderer, OptimizedBuffer, RGBA } from "@opentui/core";
 import { SuperSampleType, ThreeCliRenderer } from "@opentui/core/3d";
 import { createDaemonRig } from "./avatar/daemon-avatar-rig";
 

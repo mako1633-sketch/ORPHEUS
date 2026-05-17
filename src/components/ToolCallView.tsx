@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { getMcpManager } from "../ai/mcp/mcp-manager";
 import { useToolApprovalForCall } from "../hooks/use-tool-approval";
 import type { ToolCall } from "../types";
@@ -7,14 +7,14 @@ import { formatToolInputLines } from "../utils/formatters";
 import { formatGenericToolOutputPreview } from "../utils/tool-output-preview";
 import { ApprovalPicker } from "./ApprovalPicker";
 import {
-	ErrorPreviewView,
-	ResultPreviewView,
-	ToolBodyView,
-	ToolHeaderView,
 	defaultToolLayout,
+	ErrorPreviewView,
 	getDefaultAbbreviation,
 	getStatusBorderColor,
 	getToolLayout,
+	ResultPreviewView,
+	ToolBodyView,
+	ToolHeaderView,
 } from "./tool-layouts";
 
 interface ToolCallViewProps {
@@ -66,7 +66,7 @@ function ApprovalResultBadge({ result }: { result: "approved" | "denied" }) {
 	);
 }
 
-function ToolSectionDivider({ label }: { label: string }) {
+function _ToolSectionDivider({ label }: { label: string }) {
 	return (
 		<box flexDirection="column" paddingLeft={2} marginTop={1}>
 			<text>
@@ -76,13 +76,7 @@ function ToolSectionDivider({ label }: { label: string }) {
 	);
 }
 
-function CollapsibleSection({
-	label,
-	children,
-}: {
-	label: string;
-	children: React.ReactNode;
-}) {
+function CollapsibleSection({ label, children }: { label: string; children: React.ReactNode }) {
 	return (
 		<box flexDirection="column">
 			<box flexDirection="row" paddingLeft={2} marginTop={1}>

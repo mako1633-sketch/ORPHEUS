@@ -1,7 +1,6 @@
 import {
 	applyProactiveSummary,
 	buildSummary,
-	createTurnCounter,
 	shouldProactivelySummarize,
 } from "../src/ai/proactive-summary";
 import type { ModelMessage } from "../src/types";

@@ -1,5 +1,5 @@
-import { toast } from "@opentui-ui/toast/react";
 import { useRenderer } from "@opentui/react";
+import { toast } from "@opentui-ui/toast/react";
 import { useCallback } from "react";
 import { writeClipboardText } from "../utils/clipboard";
 

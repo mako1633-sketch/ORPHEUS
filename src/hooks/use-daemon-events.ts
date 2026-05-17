@@ -5,12 +5,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clearFetchCache } from "../ai/exa-fetch-cache";
 import { DaemonAvatarRenderable } from "../avatar/DaemonAvatarRenderable";
-import { buildOrpheusHealthSnapshot } from "../health/orpheus-health";
 import type { HealthSnapshot } from "../health/orpheus-health";
+import { buildOrpheusHealthSnapshot } from "../health/orpheus-health";
 import { daemonEvents } from "../state/daemon-events";
 import { getDaemonManager } from "../state/daemon-state";
 import { buildModelHistoryFromConversation } from "../state/session-store";
-import { DaemonState } from "../types";
 import type {
 	ContentBlock,
 	ConversationMessage,
@@ -18,13 +17,11 @@ import type {
 	TokenUsage,
 	ToolCall,
 } from "../types";
+import { DaemonState } from "../types";
 import { REASONING_COLORS, STATE_COLORS } from "../types/theme";
 import { REASONING_ANIMATION } from "../ui/constants";
-import { type ModelMetadata, getModelMetadata } from "../utils/model-metadata";
+import { getModelMetadata, type ModelMetadata } from "../utils/model-metadata";
 import {
-	type EventHandlerDeps,
-	type EventHandlerRefs,
-	type EventHandlerSetters,
 	createCancelledHandler,
 	createCompleteHandler,
 	createErrorHandler,
@@ -46,6 +43,9 @@ import {
 	createTranscriptionHandler,
 	createTtsLevelHandler,
 	createUserMessageHandler,
+	type EventHandlerDeps,
+	type EventHandlerRefs,
+	type EventHandlerSetters,
 } from "./daemon-event-handlers";
 
 export interface UseDaemonEventsParams {

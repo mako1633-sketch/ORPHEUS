@@ -1,7 +1,6 @@
-import { toast } from "@opentui-ui/toast/react";
-import type { KeyEvent } from "@opentui/core";
-import type { ScrollBoxRenderable } from "@opentui/core";
+import type { KeyEvent, ScrollBoxRenderable } from "@opentui/core";
 import { useKeyboard } from "@opentui/react";
+import { toast } from "@opentui-ui/toast/react";
 import { useCallback } from "react";
 import { getDaemonManager } from "../state/daemon-state";
 import { type AppPreferences, DaemonState, type LlmProvider } from "../types";

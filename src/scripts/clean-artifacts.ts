@@ -21,7 +21,7 @@ async function removePath(target: string): Promise<void> {
 	try {
 		await rm(resolved, { recursive: true, force: true });
 		console.log(`removed ${path.relative(projectRoot, resolved)}`);
-	} catch (error) {
+	} catch (_error) {
 		const entry = await stat(resolved).catch(() => null);
 		if (!entry?.isDirectory()) {
 			console.warn(`skipped locked artifact ${path.relative(projectRoot, resolved)}`);

@@ -6,10 +6,10 @@ import type { TokenUsage } from "../types";
 import { COLORS } from "../ui/constants";
 import { formatTokenCount } from "../utils/formatters";
 import {
-	type ModelMetadata,
 	calculateCost,
 	formatContextUsage,
 	formatCost,
+	type ModelMetadata,
 } from "../utils/model-metadata";
 
 interface TokenUsageDisplayProps {

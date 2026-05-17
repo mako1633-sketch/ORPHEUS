@@ -4,8 +4,6 @@ import type {
 	ReasoningEffort,
 	StreamCallbacks,
 	TokenUsage,
-	ToolApprovalRequest,
-	ToolApprovalResponse,
 } from "../types";
 import { guardAssistantResponse } from "./assistant-response-guard";
 import { generateResponse } from "./daemon-ai";

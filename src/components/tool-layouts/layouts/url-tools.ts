@@ -1,7 +1,6 @@
 import { COLORS } from "../../../ui/constants";
 import { registerToolLayout } from "../registry";
-import type { ToolBody } from "../types";
-import type { ToolHeader, ToolLayoutConfig } from "../types";
+import type { ToolBody, ToolHeader, ToolLayoutConfig } from "../types";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -117,7 +116,7 @@ type ExaLikeItem = {
 	success?: unknown;
 };
 
-function formatExaItemLabel(item: ExaLikeItem): string {
+function _formatExaItemLabel(item: ExaLikeItem): string {
 	const title = typeof item.title === "string" ? item.title : "";
 	const url = typeof item.url === "string" ? item.url : "";
 	return title || url || "(untitled)";

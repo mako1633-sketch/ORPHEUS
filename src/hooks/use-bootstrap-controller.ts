@@ -1,13 +1,11 @@
 import type { TextareaRenderable } from "@opentui/core";
-import { useMemo, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
-
+import { useMemo, useRef, useState } from "react";
+import type { AppPreferences, AudioDevice, OnboardingStep } from "../types";
+import { getSoxInstallHint, isSoxAvailable } from "../voice/audio-recorder";
 import { useAppAudioDevicesLoader } from "./use-app-audio-devices-loader";
 import { usePlaywrightNotification } from "./use-playwright-notification";
 import { useVoiceDependenciesNotification } from "./use-voice-dependencies-notification";
-
-import type { AppPreferences, AudioDevice, OnboardingStep } from "../types";
-import { getSoxInstallHint, isSoxAvailable } from "../voice/audio-recorder";
 
 export interface BootstrapControllerResult {
 	onboardingActive: boolean;

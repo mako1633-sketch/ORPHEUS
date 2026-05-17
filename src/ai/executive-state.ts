@@ -153,11 +153,7 @@ export async function updateExecutiveItem(input: {
 }
 
 export async function listExecutiveItems(
-	input: {
-		kind?: ExecutiveItemKind;
-		status?: ExecutiveItemStatus;
-		limit?: number;
-	} = {}
+	input: { kind?: ExecutiveItemKind; status?: ExecutiveItemStatus; limit?: number } = {}
 ): Promise<ExecutiveItem[]> {
 	const state = await loadExecutiveState();
 	const limit = Math.max(1, Math.min(input.limit ?? 20, MAX_ITEMS));

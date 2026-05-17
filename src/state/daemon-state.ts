@@ -14,8 +14,7 @@ import type {
 	ToolToggles,
 	VoiceInteractionType,
 } from "../types";
-import { DEFAULT_TOOL_TOGGLES } from "../types";
-import { DaemonState } from "../types";
+import { DaemonState, DEFAULT_TOOL_TOGGLES } from "../types";
 import { debug, messageDebug } from "../utils/debug-logger";
 import { SpeechController } from "../voice/tts/speech-controller";
 import { VoiceInputController } from "../voice/voice-input-controller";

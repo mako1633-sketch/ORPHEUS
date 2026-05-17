@@ -23,13 +23,7 @@ function timestampForFilename(date = new Date()): string {
 	return date.toISOString().replace(/[:.]/g, "-");
 }
 
-export async function createNote({
-	title,
-	content,
-}: {
-	title?: string;
-	content: string;
-}): Promise<{
+export async function createNote({ title, content }: { title?: string; content: string }): Promise<{
 	success: boolean;
 	action: "create";
 	path?: string;
@@ -63,11 +57,7 @@ export async function createNote({
 	}
 }
 
-export async function listNotes({
-	count = 10,
-}: {
-	count?: number;
-}): Promise<{
+export async function listNotes({ count = 10 }: { count?: number }): Promise<{
 	success: boolean;
 	action: "list";
 	notesDir: string;

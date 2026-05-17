@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CopilotClient, defineTool } from "@github/copilot-sdk";
 import type {
 	CopilotClientOptions,
 	CopilotSession,
@@ -15,6 +14,7 @@ import type {
 	ToolInvocation,
 	ToolResultObject,
 } from "@github/copilot-sdk";
+import { CopilotClient, defineTool } from "@github/copilot-sdk";
 import type { ToolSet } from "ai";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import type { StreamCallbacks, ToolApprovalRequest, ToolApprovalResponse } from "../types";

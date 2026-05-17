@@ -2,7 +2,10 @@ import { useOnResize, useRenderer } from "@opentui/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { ConversationPaneProps } from "../app/components/ConversationPane";
-
+import { getDaemonManager } from "../state/daemon-state";
+import { deleteSession } from "../state/session-store";
+import { DaemonState } from "../types";
+import { STARTUP_BANNER_DURATION_MS, STARTUP_IDLE_CHROME_LEAD_MS } from "../ui/startup";
 import { useAppCallbacks } from "./use-app-callbacks";
 import { useAppContextBuilder } from "./use-app-context-builder";
 import { useAppDisplayState } from "./use-app-display-state";
@@ -18,11 +21,6 @@ import { useDaemonRuntimeController } from "./use-daemon-runtime-controller";
 import { useHudData } from "./use-hud-data";
 import { useOverlayController } from "./use-overlay-controller";
 import { useSessionController } from "./use-session-controller";
-
-import { getDaemonManager } from "../state/daemon-state";
-import { deleteSession } from "../state/session-store";
-import { DaemonState } from "../types";
-import { STARTUP_BANNER_DURATION_MS, STARTUP_IDLE_CHROME_LEAD_MS } from "../ui/startup";
 
 export interface AppControllerResult {
 	handleCopyOnSelectMouseUp: () => void;

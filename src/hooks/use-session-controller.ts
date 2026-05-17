@@ -1,11 +1,9 @@
-import { useEffect } from "react";
 import type { MutableRefObject } from "react";
-
+import { useEffect } from "react";
+import { getDaemonManager } from "../state/daemon-state";
 import { useAppSessions } from "./use-app-sessions";
 import { useGrounding } from "./use-grounding";
 import { useGroundingMenuController } from "./use-grounding-menu-controller";
-
-import { getDaemonManager } from "../state/daemon-state";
 
 export interface SessionControllerResult {
 	currentSessionId: string | null;

@@ -7,9 +7,9 @@ import { MemoryMenu } from "../../components/MemoryMenu";
 import { ModelMenu } from "../../components/ModelMenu";
 import { OnboardingOverlay } from "../../components/OnboardingOverlay";
 import {
+	getOrpheusMenuActionPrompt,
 	OrpheusMenu,
 	type OrpheusMenuItem,
-	getOrpheusMenuActionPrompt,
 } from "../../components/OrpheusMenu";
 import { ProviderMenu } from "../../components/ProviderMenu";
 import { SessionMenu } from "../../components/SessionMenu";

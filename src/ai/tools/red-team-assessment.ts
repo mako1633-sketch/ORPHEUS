@@ -1,19 +1,19 @@
 import { tool } from "ai";
 import { z } from "zod";
 import {
+	buildRedTeamPlaybookCommand,
+	buildRedTeamReportMarkdown,
+	getRedTeamPlaybook,
+	listRedTeamPlaybooks,
+	type RedTeamPlaybookId,
+	recommendRedTeamPlaybooks,
+} from "../../security/red-team-playbooks";
+import {
 	buildRedTeamScope,
 	formatRedTeamScopeMarkdown,
 	type RedTeamActivity,
 	type RedTeamForbiddenActivity,
 } from "../../security/red-team-scope";
-import {
-	type RedTeamPlaybookId,
-	buildRedTeamPlaybookCommand,
-	buildRedTeamReportMarkdown,
-	getRedTeamPlaybook,
-	listRedTeamPlaybooks,
-	recommendRedTeamPlaybooks,
-} from "../../security/red-team-playbooks";
 
 const ScopeKindSchema = z.enum(["local-machine", "application", "network", "cloud", "domain"]);
 const ActivitySchema = z.enum([

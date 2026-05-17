@@ -1,6 +1,6 @@
 import { toast } from "@opentui-ui/toast/react";
 import { useEffect, useRef } from "react";
-import { type VoiceDependencies, detectVoiceDependencies } from "../utils/voice-dependencies";
+import { detectVoiceDependencies, type VoiceDependencies } from "../utils/voice-dependencies";
 
 export interface UseVoiceDependenciesNotificationParams {
 	/** When false, the notification is deferred until enabled becomes true */

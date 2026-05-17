@@ -4,7 +4,6 @@
 
 import type { HealthSnapshot } from "../health/orpheus-health";
 import { COLORS } from "../ui/constants";
-import type { ModelMetadata } from "../utils/model-metadata";
 
 const SESSION_TITLE_MAX_LENGTH = 40;
 const DEFAULT_TITLE_PATTERN = /^Session \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;

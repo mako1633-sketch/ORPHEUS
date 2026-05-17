@@ -5,7 +5,6 @@ import {
 	getResponseModelForProvider,
 	setModelProvider,
 	setOpenRouterProviderTag,
-	setResponseModel,
 	setResponseModelForProvider,
 } from "../ai/model-config";
 import { invalidateDaemonToolsCache } from "../ai/tools";

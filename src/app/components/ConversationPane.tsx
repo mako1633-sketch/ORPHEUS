@@ -1,6 +1,6 @@
 import type { ScrollBoxRenderable, TextareaRenderable } from "@opentui/core";
-import { memo } from "react";
 import type { MutableRefObject } from "react";
+import { memo } from "react";
 import {
 	ContentBlockView,
 	isLastReasoningBlockInList,
@@ -312,9 +312,7 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 									minWidth={55}
 									height={5}
 								/>
-							) : (
-								<></>
-							)}
+							) : null}
 						</box>
 					</box>
 				</box>
@@ -405,13 +403,11 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 										backgroundColor={COLORS.USER_BG}
 										width="100%"
 									>
-										<>
-											{renderMessageDebug(msg)}
-											<text>
-												<span fg={COLORS.USER_LABEL}>OPERATOR: </span>
-												<span fg={COLORS.USER_TEXT}>{msg.content}</span>
-											</text>
-										</>
+										{renderMessageDebug(msg)}
+										<text>
+											<span fg={COLORS.USER_LABEL}>OPERATOR: </span>
+											<span fg={COLORS.USER_TEXT}>{msg.content}</span>
+										</text>
 									</box>
 								) : msg.contentBlocks && msg.contentBlocks.length > 0 ? (
 									<>

@@ -2,8 +2,8 @@
  * Avatar and UI color themes for different ORPHEUS states.
  */
 
-import { DaemonState } from "./index";
 import type { AvatarColorTheme } from "./index";
+import { DaemonState } from "./index";
 
 /**
  * Avatar color themes for each ORPHEUS state

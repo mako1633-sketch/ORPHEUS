@@ -10,7 +10,6 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { debug } from "../utils/debug-logger";
 
 const execFileAsync = promisify(execFile);
 

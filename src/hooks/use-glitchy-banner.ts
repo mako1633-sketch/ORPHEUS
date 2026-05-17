@@ -169,4 +169,4 @@ export function useGlitchyBanner(isActive: boolean): GlitchyBannerState {
 	return state;
 }
 
-export { DAEMON_BANNER_LINES, BANNER_GRADIENT };
+export { BANNER_GRADIENT, DAEMON_BANNER_LINES };

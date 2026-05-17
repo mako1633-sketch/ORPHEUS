@@ -1,7 +1,7 @@
 import { THREE } from "@opentui/core/3d";
 import type { AvatarColorTheme } from "src/types";
-import { type SceneElements, createSceneElements } from "../scene/create-scene-elements";
-import { type RigState, createInitialState } from "../state/rig-state";
+import { createSceneElements, type SceneElements } from "../scene/create-scene-elements";
+import { createInitialState, type RigState } from "../state/rig-state";
 import { updateThemeColors } from "../theme/rig-theme";
 import { TOOL_CATEGORY_COLORS, type ToolCategory } from "../tools/rig-tools";
 import { updateCore } from "../update/update-core";
@@ -202,6 +202,8 @@ export class RigEngine {
 	}
 
 	public dispose(): void {
-		this.disposables.forEach((d) => d.dispose());
+		this.disposables.forEach((d) => {
+			d.dispose();
+		});
 	}
 }

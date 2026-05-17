@@ -1,9 +1,8 @@
 import type { KeyEvent, ScrollBoxRenderable } from "@opentui/core";
 import { useKeyboard, useRenderer } from "@opentui/react";
 import { useCallback, useMemo, useRef } from "react";
-import { COLORS } from "../ui/constants";
-
 import type { UrlMenuItem } from "../types";
+import { COLORS } from "../ui/constants";
 
 interface UrlMenuProps {
 	items: UrlMenuItem[];

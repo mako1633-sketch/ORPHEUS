@@ -9,8 +9,8 @@
  * survive new sessions.
  */
 
-import type { ModelMessage } from "../types";
 import { loadPersistentContext, savePersistentContext } from "../ai/persistent-context";
+import type { ModelMessage } from "../types";
 import { debug } from "./debug-logger";
 
 const TURNS_BETWEEN_SUMMARIES = 5;

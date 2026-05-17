@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * ORPHEUS file watcher for instant test feedback.
  *
@@ -11,8 +12,8 @@
  *   bun run src/scripts/test-watcher.ts --once   # single run then exit
  */
 
-import { watch } from "node:fs";
 import { execSync, spawn } from "node:child_process";
+import { watch } from "node:fs";
 import path from "node:path";
 
 const SRC_DIR = "src";
@@ -42,7 +43,7 @@ function findMatchingTests(changedFile: string): string[] {
 
 	// Source file → look for corresponding test
 	const base = path.basename(changedFile, ".ts");
-	const dir = path.dirname(changedFile);
+	const _dir = path.dirname(changedFile);
 
 	// Pattern 1: __tests__/path/to/file.test.ts
 	const testPath1 = changedFile

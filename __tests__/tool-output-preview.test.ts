@@ -252,7 +252,7 @@ describe("formatToolOutputPreview", () => {
 		it("respects total character limit", () => {
 			const result = {
 				success: true,
-				stdout: Array.from({ length: 3 }, (_, i) => "x".repeat(100)).join("\n"),
+				stdout: Array.from({ length: 3 }, (_, _i) => "x".repeat(100)).join("\n"),
 			};
 			const output = formatToolOutputPreview("runBash", result);
 			const totalLength = output?.reduce((sum, line) => sum + line.length, 0) ?? 0;

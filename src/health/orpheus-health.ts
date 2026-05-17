@@ -254,9 +254,7 @@ function buildCheckFromItems(
 }
 
 export async function buildOrpheusHealthSnapshot(
-	params: {
-		conversationHistory?: ConversationMessage[];
-	} = {}
+	params: { conversationHistory?: ConversationMessage[] } = {}
 ): Promise<HealthSnapshot> {
 	const statusItems = await getCachedStatusItems();
 

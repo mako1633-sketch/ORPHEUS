@@ -1,5 +1,8 @@
 import type { ToolSet } from "ai";
-
+import type { ToolToggleId, ToolToggles } from "../../types";
+import { detectLocalPlaywrightChromium } from "../../utils/js-rendering";
+import { EXA_API_KEY_INVALID_MESSAGE, isCurrentExaApiKeyInvalid } from "../exa-client";
+import { getProviderCapabilities } from "../providers/capabilities";
 import { codingWorkbench } from "./coding-workbench";
 import { daemonStatus } from "./daemon-status";
 import { dependencyAudit } from "./dependency-audit";
@@ -26,11 +29,6 @@ import { webSearchWithFallback } from "./web-search-fallback";
 import { windowsHardening } from "./windows-hardening";
 import { windowsSecurity } from "./windows-security";
 import { writeFile } from "./write-file";
-
-import type { ToolToggleId, ToolToggles } from "../../types";
-import { detectLocalPlaywrightChromium } from "../../utils/js-rendering";
-import { EXA_API_KEY_INVALID_MESSAGE, isCurrentExaApiKeyInvalid } from "../exa-client";
-import { getProviderCapabilities } from "../providers/capabilities";
 
 export type ToolId = ToolToggleId;
 

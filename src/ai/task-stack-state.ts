@@ -197,10 +197,7 @@ export async function popNextTaskStackItem(): Promise<{
 }
 
 export async function listTaskStackItems(
-	input: {
-		status?: TaskStackStatus;
-		limit?: number;
-	} = {}
+	input: { status?: TaskStackStatus; limit?: number } = {}
 ): Promise<TaskStackItem[]> {
 	const state = await loadTaskStack();
 	const limit = Math.max(1, Math.min(input.limit ?? 30, MAX_TASKS));

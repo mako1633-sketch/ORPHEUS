@@ -6,7 +6,6 @@
  * is injected into the prompt context.
  */
 
-import { promises as fs } from "node:fs";
 import path from "node:path";
 import { debug } from "../utils/debug-logger";
 import { getAppConfigDir } from "../utils/preferences";
