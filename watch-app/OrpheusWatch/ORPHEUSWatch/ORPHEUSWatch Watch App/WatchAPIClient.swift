@@ -8,9 +8,6 @@
 import Foundation
 import Combine
 
-@MainActor
-
-
 final class WatchAPIClient: ObservableObject {
     static let shared = WatchAPIClient()
 
@@ -24,6 +21,7 @@ final class WatchAPIClient: ObservableObject {
     private var reconnectTimer: Timer?
     private let serverPort = 8472
     private var currentHost: String?
+    private let sharedDefaults: UserDefaults? = UserDefaults(suiteName: "group.com.yourcompany.OrpheusWatch")
 
     func connect(to host: String) {
         currentHost = host
@@ -94,13 +92,23 @@ final class WatchAPIClient: ObservableObject {
             daemonState = s
             if let t = t { lastTranscription = t }
             if let r = r { lastResponse = r }
+            syncToSharedDefaults(state: s, preview: r ?? lastResponse)
         case .query(let f, let done, _):
-            if !f.isEmpty { lastResponse += f }
+            if !f.isEmpty {
+                lastResponse += f
+                syncToSharedDefaults(state: daemonState, preview: lastResponse)
+            }
         case .error(let msg):
             connectionError = msg
         default:
             break
         }
+    }
+
+    private func syncToSharedDefaults(state: DaemonState, preview: String) {
+        sharedDefaults?.set(state.rawValue, forKey: "daemonState")
+        sharedDefaults?.set(String(preview.prefix(120)), forKey: "lastResponsePreview")
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func startListening() {
