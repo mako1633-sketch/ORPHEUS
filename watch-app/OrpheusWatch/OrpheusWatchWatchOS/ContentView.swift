@@ -1,74 +1,75 @@
 import SwiftUI
 import WatchConnectivity
+import WatchKit
 
 struct ContentView: View {
     @StateObject private var watchSession = WatchSessionManager.shared
     @StateObject private var viewModel = WatchViewModel()
     @State private var showingHostInput = false
     @State private var hostText = ""
+    @State private var isTallScreen = false
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 8) {
-                // Connection status
-                HStack {
-                    Circle()
-                        .fill(viewModel.isConnected ? Color.green : Color.red)
-                        .frame(width: 8, height: 8)
-                    Text(viewModel.isConnected ? "Connected" : "Disconnected")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
-
-                // Daemon state pill
-                StatePill(state: viewModel.daemonState)
-
-                Spacer(minLength: 4)
-
-                // Response display (scrollable)
-                if !viewModel.lastResponse.isEmpty {
-                    ScrollView {
-                        Text(viewModel.lastResponse)
-                            .font(.body)
-                            .multilineTextAlignment(.leading)
+            GeometryReader { geo in
+                VStack(spacing: isTallScreen ? 10 : 4) {
+                    // Connection status
+                    HStack {
+                        Circle()
+                            .fill(viewModel.isConnected ? Color.green : Color.red)
+                            .frame(width: 6, height: 6)
+                        Text(viewModel.isConnected ? "Connected" : "Disconnected")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Spacer()
                     }
-                    .frame(maxHeight: 80)
-                } else if !viewModel.lastTranscription.isEmpty {
-                    Text(viewModel.lastTranscription)
-                        .font(.body)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.leading)
-                } else {
-                    Text("Raise wrist and tap 🎙 to ask ORPHEUS")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
 
-                Spacer(minLength: 4)
+                    // Daemon avatar replaces static pill on tall screens
+                    if isTallScreen {
+                        DaemonAvatarView(
+                            state: viewModel.daemonState,
+                            intensity: viewModel.avatarIntensity,
+                            isConnected: viewModel.isConnected
+                        )
+                        .frame(height: 70)
+                        .padding(.vertical, 2)
+                    } else {
+                        StatePill(state: viewModel.daemonState)
+                    }
 
-                // Error indicator
-                if let error = viewModel.connectionError {
-                    Text(error)
-                        .font(.caption2)
-                        .foregroundColor(.red)
-                        .lineLimit(1)
-                }
+                    Spacer(minLength: isTallScreen ? 6 : 2)
 
-                // Main action button
-                Button(action: handleMainAction) {
-                    Image(systemName: mainButtonIcon)
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: 56, height: 56)
-                        .background(mainButtonColor)
-                        .clipShape(Circle())
+                    // Response display
+                    responseDisplay
+                        .frame(maxHeight: isTallScreen ? 100 : 60)
+
+                    Spacer(minLength: isTallScreen ? 6 : 2)
+
+                    // Error indicator
+                    if let error = viewModel.connectionError {
+                        Text(error)
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                            .lineLimit(1)
+                    }
+
+                    // Main action button
+                    Button(action: handleMainAction) {
+                        Image(systemName: mainButtonIcon)
+                            .font(.system(size: isTallScreen ? 24 : 22, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: isTallScreen ? 52 : 46, height: isTallScreen ? 52 : 46)
+                            .background(mainButtonColor)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .onAppear {
+                    isTallScreen = geo.size.height > 180
+                }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
             .navigationTitle("ORPHEUS")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -88,11 +89,31 @@ struct ContentView: View {
         }
         .onAppear {
             watchSession.activate()
-            // Try to load saved host from UserDefaults
             if let savedHost = UserDefaults.standard.string(forKey: "orpheus_host"), !savedHost.isEmpty {
                 hostText = savedHost
                 viewModel.connect(to: savedHost)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var responseDisplay: some View {
+        if !viewModel.lastResponse.isEmpty {
+            ScrollView {
+                Text(viewModel.lastResponse)
+                    .font(.body)
+                    .multilineTextAlignment(.leading)
+            }
+        } else if !viewModel.lastTranscription.isEmpty {
+            Text(viewModel.lastTranscription)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.leading)
+        } else {
+            Text("Raise wrist and tap 🎙 to ask ORPHEUS")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
     }
 
@@ -213,8 +234,14 @@ final class WatchViewModel: ObservableObject {
     @Published var lastResponse = ""
     @Published var connectionError: String?
 
+    /// Animated intensity (0–1) derived from state for the avatar
+    @Published var avatarIntensity: Double = 0
+
     private var cancellables = Set<AnyCancellable>()
     private let client = WatchAPIClient.shared
+    private let haptics = HapticsEngine()
+    private var lastState: DaemonState = .idle
+    private var intensityTarget: Double = 0
 
     func connect(to host: String) {
         client.connect(to: host)
@@ -224,7 +251,7 @@ final class WatchViewModel: ObservableObject {
             .store(in: &cancellables)
         client.$daemonState
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] in self?.daemonState = $0 }
+            .sink { [weak self] in self?.handleStateChange($0) }
             .store(in: &cancellables)
         client.$lastTranscription
             .receive(on: DispatchQueue.main)
@@ -238,6 +265,43 @@ final class WatchViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.connectionError = $0 }
             .store(in: &cancellables)
+
+        // Intensity animation loop
+        Timer.publish(every: 1.0 / 30.0, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in self?.updateIntensity() }
+            .store(in: &cancellables)
+    }
+
+    private func handleStateChange(_ newState: DaemonState) {
+        daemonState = newState
+
+        // Map state to intensity target
+        switch newState {
+        case .idle:
+            intensityTarget = 0.1
+        case .listening:
+            intensityTarget = 0.4
+        case .transcribing:
+            intensityTarget = 0.6
+        case .responding:
+            intensityTarget = 0.8
+        case .speaking:
+            intensityTarget = 0.7
+        case .typing:
+            intensityTarget = 0.5
+        }
+
+        // Haptic feedback on state transitions
+        if lastState != newState {
+            haptics.feedback(for: newState)
+        }
+        lastState = newState
+    }
+
+    private func updateIntensity() {
+        let diff = intensityTarget - avatarIntensity
+        avatarIntensity += diff * 0.1 // smooth lerp
     }
 
     func startListening() {
@@ -255,7 +319,46 @@ final class WatchViewModel: ObservableObject {
     }
 }
 
-// MARK: - WatchConnectivity Manager (placeholder for now)
+// MARK: - Haptics Engine
+
+final class HapticsEngine {
+    private let device = WKInterfaceDevice.current()
+
+    func feedback(for state: DaemonState) {
+        switch state {
+        case .listening:
+            device.play(.start)
+        case .transcribing:
+            device.play(.click)
+        case .responding:
+            device.play(.success)
+        case .speaking:
+            device.play(.notification)
+        case .idle:
+            device.play(.stop)
+        case .typing:
+            device.play(.directionUp)
+        }
+    }
+
+    func success() {
+        device.play(.success)
+    }
+
+    func failure() {
+        device.play(.failure)
+    }
+
+    func longTaskStarted() {
+        device.play(.start)
+    }
+
+    func longTaskComplete() {
+        device.play(.success)
+    }
+}
+
+// MARK: - WatchConnectivity Manager
 
 final class WatchSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = WatchSessionManager()
