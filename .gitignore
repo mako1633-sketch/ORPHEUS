@@ -15,3 +15,6 @@ node_modules/
 # Home directory entry artifact
 ~/
 voice-samples/
+
+# Xcode user data
+xcuserdata/
