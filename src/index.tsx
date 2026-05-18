@@ -8,8 +8,12 @@ import { createRoot } from "@opentui/react";
 import { destroyMcpManager } from "./ai/mcp/mcp-manager";
 import { App } from "./app/App";
 import { destroyDaemonManager } from "./state/daemon-state";
+import { startWatchServer, stopWatchServer } from "./watch-server";
 import { COLORS } from "./ui/constants";
 import { debug } from "./utils/debug-logger";
+
+// Start the companion watch server alongside the TUI
+startWatchServer();
 
 // Main entry point
 const renderer = await createCliRenderer({
@@ -41,11 +45,13 @@ renderer.keyInput.on("paste", (event) => {
 process.on("exit", () => {
 	destroyDaemonManager();
 	destroyMcpManager();
+	stopWatchServer();
 });
 
 process.on("SIGINT", () => {
 	destroyDaemonManager();
 	destroyMcpManager();
+	stopWatchServer();
 	process.exit(0);
 });
 
