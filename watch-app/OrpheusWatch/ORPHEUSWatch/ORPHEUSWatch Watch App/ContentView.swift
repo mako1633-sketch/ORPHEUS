@@ -1,6 +1,13 @@
+//
+//  ContentView.swift
+//  ORPHEUSWatch Watch App
+//
+//  Created by Matt on 5/17/26.
+//
+
 import SwiftUI
-import WatchConnectivity
 import WatchKit
+import WatchConnectivity
 
 struct ContentView: View {
     @StateObject private var watchSession = WatchSessionManager.shared
@@ -24,7 +31,7 @@ struct ContentView: View {
                         Spacer()
                     }
 
-                    // Daemon avatar replaces static pill on tall screens
+                    // Avatar on tall screens, state pill on small
                     if isTallScreen {
                         DaemonAvatarView(
                             state: viewModel.daemonState,
@@ -151,7 +158,7 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Subviews
+// MARK: - State Pill
 
 struct StatePill: View {
     let state: DaemonState
@@ -188,6 +195,8 @@ struct StatePill: View {
         }
     }
 }
+
+// MARK: - Host Input
 
 struct HostInputView: View {
     @Binding var host: String
@@ -227,17 +236,16 @@ struct HostInputView: View {
 
 // MARK: - View Model
 
+@MainActor
 final class WatchViewModel: ObservableObject {
     @Published var isConnected = false
     @Published var daemonState: DaemonState = .idle
     @Published var lastTranscription = ""
     @Published var lastResponse = ""
     @Published var connectionError: String?
-
-    /// Animated intensity (0–1) derived from state for the avatar
     @Published var avatarIntensity: Double = 0
 
-    private var cancellables = Set<AnyCancellable>()
+    private var timerCancellable: AnyCancellable?
     private let client = WatchAPIClient.shared
     private let haptics = HapticsEngine()
     private var lastState: DaemonState = .idle
@@ -245,54 +253,46 @@ final class WatchViewModel: ObservableObject {
 
     func connect(to host: String) {
         client.connect(to: host)
-        client.$isConnected
+
+        let c = client
+        c.$isConnected
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.isConnected = $0 }
             .store(in: &cancellables)
-        client.$daemonState
+        c.$daemonState
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.handleStateChange($0) }
             .store(in: &cancellables)
-        client.$lastTranscription
+        c.$lastTranscription
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.lastTranscription = $0 }
             .store(in: &cancellables)
-        client.$lastResponse
+        c.$lastResponse
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.lastResponse = $0 }
             .store(in: &cancellables)
-        client.$connectionError
+        c.$connectionError
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.connectionError = $0 }
             .store(in: &cancellables)
 
-        // Intensity animation loop
-        Timer.publish(every: 1.0 / 30.0, on: .main, in: .common)
+        timerCancellable = Timer.publish(every: 1.0 / 30.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.updateIntensity() }
-            .store(in: &cancellables)
     }
 
     private func handleStateChange(_ newState: DaemonState) {
         daemonState = newState
 
-        // Map state to intensity target
         switch newState {
-        case .idle:
-            intensityTarget = 0.1
-        case .listening:
-            intensityTarget = 0.4
-        case .transcribing:
-            intensityTarget = 0.6
-        case .responding:
-            intensityTarget = 0.8
-        case .speaking:
-            intensityTarget = 0.7
-        case .typing:
-            intensityTarget = 0.5
+        case .idle:   intensityTarget = 0.1
+        case .listening: intensityTarget = 0.4
+        case .transcribing: intensityTarget = 0.6
+        case .responding: intensityTarget = 0.8
+        case .speaking: intensityTarget = 0.7
+        case .typing: intensityTarget = 0.5
         }
 
-        // Haptic feedback on state transitions
         if lastState != newState {
             haptics.feedback(for: newState)
         }
@@ -301,7 +301,7 @@ final class WatchViewModel: ObservableObject {
 
     private func updateIntensity() {
         let diff = intensityTarget - avatarIntensity
-        avatarIntensity += diff * 0.1 // smooth lerp
+        avatarIntensity += diff * 0.1
     }
 
     func startListening() {
@@ -317,14 +317,15 @@ final class WatchViewModel: ObservableObject {
     func cancel() {
         client.cancel()
     }
+
+    private var cancellables = Set<AnyCancellable>()
 }
 
 // MARK: - Haptics Engine
 
 final class HapticsEngine {
-    private let device = WKInterfaceDevice.current()
-
     func feedback(for state: DaemonState) {
+        let device = WKInterfaceDevice.current()
         switch state {
         case .listening:
             device.play(.start)
@@ -340,22 +341,6 @@ final class HapticsEngine {
             device.play(.directionUp)
         }
     }
-
-    func success() {
-        device.play(.success)
-    }
-
-    func failure() {
-        device.play(.failure)
-    }
-
-    func longTaskStarted() {
-        device.play(.start)
-    }
-
-    func longTaskComplete() {
-        device.play(.success)
-    }
 }
 
 // MARK: - WatchConnectivity Manager
@@ -364,9 +349,7 @@ final class WatchSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = WatchSessionManager()
     @Published var isReachable = false
 
-    private override init() {
-        super.init()
-    }
+    private override init() { super.init() }
 
     func activate() {
         guard WCSession.isSupported() else { return }
@@ -374,20 +357,15 @@ final class WatchSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         WCSession.default.activate()
     }
 
-    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        DispatchQueue.main.async { [weak self] in
-            self?.isReachable = session.isReachable
-        }
+    func session(
+        _ session: WCSession,
+        activationDidCompleteWith activationState: WCSessionActivationState,
+        error: Error?
+    ) {
+        DispatchQueue.main.async { self.isReachable = session.isReachable }
     }
 
     func sessionReachabilityDidChange(_ session: WCSession) {
-        DispatchQueue.main.async { [weak self] in
-            self?.isReachable = session.isReachable
-        }
+        DispatchQueue.main.async { self.isReachable = session.isReachable }
     }
-
-    #if os(iOS)
-    func sessionDidBecomeInactive(_ session: WCSession) {}
-    func sessionDidDeactivate(_ session: WCSession) {}
-    #endif
 }

@@ -1,8 +1,16 @@
+//
+//  WatchAPIClient.swift
+//  ORPHEUSWatch
+//
+//  Shared WebSocket client connecting to the ORPHEUS Mac server.
+//
+
 import Foundation
 import Combine
 
-/// Shared API client that talks to the ORPHEUS Mac server.
-/// Used by both the iOS companion and watchOS app (via WatchConnectivity relay).
+@MainActor
+
+
 final class WatchAPIClient: ObservableObject {
     static let shared = WatchAPIClient()
 
@@ -16,11 +24,7 @@ final class WatchAPIClient: ObservableObject {
     private var reconnectTimer: Timer?
     private let serverPort = 8472
     private var currentHost: String?
-    private var sharedDefaults: UserDefaults? {
-        UserDefaults(suiteName: "group.com.orpheus.watch")
-    }
 
-    /// Auto-discover the Mac on the local network.
     func connect(to host: String) {
         currentHost = host
         let url = URL(string: "ws://\(host):\(serverPort)/ws")!
@@ -35,27 +39,23 @@ final class WatchAPIClient: ObservableObject {
         webSocketTask?.cancel(with: .normalClosure, reason: nil)
         webSocketTask = nil
         isConnected = false
-        publishToComplications()
     }
 
-    /// Send a command to the ORPHEUS server.
     func send(command: WatchCommand) {
         guard isConnected else {
             connectionError = "Not connected"
             return
         }
-
         let envelope = WatchSocketMessage(
             id: UUID().uuidString,
             timestamp: Date().timeIntervalSince1970,
             payload: command
         )
-
         do {
             let data = try JSONEncoder().encode(envelope)
             webSocketTask?.send(.data(data)) { [weak self] error in
                 if let error = error {
-                    self?.connectionError = error.localizedDescription
+                    DispatchQueue.main.async { self?.connectionError = error.localizedDescription }
                 }
             }
         } catch {
@@ -63,71 +63,41 @@ final class WatchAPIClient: ObservableObject {
         }
     }
 
-    /// Query with streaming response via callback.
-    func query(_ text: String, onFragment: @escaping (String, Bool) -> Void) {
-        lastResponse = ""
+    func query(_ text: String, onFragment: ((String, Bool) -> Void)? = nil) {
         send(command: .query(text: text))
-
-        // Set up a temporary handler for query responses
-        // In production, this would be cleaner; for PoC we rely on the
-        // existing WebSocket message loop calling onFragment when done arrives.
-        // The intent uses polling on lastResponse instead.
     }
 
-    func cancel() {
-        send(command: .cancel)
-    }
+    func cancel()  { send(command: .cancel) }
+    func requestStatus() { send(command: .status) }
+    func toggleListening() { send(command: .listen) }
 
-    func requestStatus() {
-        send(command: .status)
-    }
-
-    func toggleListening() {
-        send(command: .listen)
-    }
-
-    // MARK: - Complication Publishing
-
-    private func publishToComplications() {
-        sharedDefaults?.set(daemonState.rawValue, forKey: "daemon_state")
-        sharedDefaults?.set(isConnected, forKey: "is_connected")
-        sharedDefaults?.set(lastTranscription, forKey: "last_query")
-        sharedDefaults?.set(0.0, forKey: "avatar_intensity")
-        sharedDefaults?.synchronize()
-
-        // Request widget timeline reload
-        #if canImport(WidgetKit)
-        WidgetCenter.shared.reloadTimelines(ofKind: "OrpheusComplicationWidget")
-        #endif
-    }
+    // MARK: - Message handling
 
     private func handleMessage(_ data: Data) {
         do {
-            let envelope = try JSONDecoder().decode(WatchSocketMessage<WatchResponse>.self, from: data)
+            let envelope = try JSONDecoder().decode(
+                WatchSocketMessage<WatchResponse>.self, from: data
+            )
             DispatchQueue.main.async { [weak self] in
                 self?.processResponse(envelope.payload)
             }
         } catch {
-            connectionError = "Decode error: \(error.localizedDescription)"
+            DispatchQueue.main.async { [weak self] in
+                self?.connectionError = "Decode error: \(error.localizedDescription)"
+            }
         }
     }
 
     private func processResponse(_ response: WatchResponse) {
         switch response {
-        case .status(let state, let transcription, let response, _, _):
-            daemonState = state
-            if let t = transcription { lastTranscription = t }
-            if let r = response { lastResponse = r }
-            publishToComplications()
-        case .query(let fragment, let done, _):
-            if !fragment.isEmpty {
-                lastResponse += fragment
-            }
-            if done {
-                publishToComplications()
-            }
-        case .error(let message):
-            connectionError = message
+        case .status(let s, let t, let r, _, _):
+            daemonState = s
+            if let t = t { lastTranscription = t }
+            if let r = r { lastResponse = r }
+        case .query(let f, let done, _):
+            if !f.isEmpty { lastResponse += f }
+        case .error(let msg):
+            connectionError = msg
         default:
             break
         }
@@ -139,20 +109,18 @@ final class WatchAPIClient: ObservableObject {
             switch result {
             case .success(let message):
                 switch message {
-                case .data(let data):
-                    self.handleMessage(data)
+                case .data(let data):   self.handleMessage(data)
                 case .string(let text):
-                    if let data = text.data(using: .utf8) {
-                        self.handleMessage(data)
-                    }
+                    if let d = text.data(using: .utf8) { self.handleMessage(d) }
                 @unknown default:
                     break
                 }
                 self.startListening()
             case .failure(let error):
-                self.isConnected = false
-                self.connectionError = error.localizedDescription
-                self.publishToComplications()
+                DispatchQueue.main.async {
+                    self.isConnected = false
+                    self.connectionError = error.localizedDescription
+                }
                 self.scheduleReconnect()
             }
         }
@@ -160,19 +128,24 @@ final class WatchAPIClient: ObservableObject {
 
     private func scheduleReconnect() {
         reconnectTimer?.invalidate()
+        guard let host = currentHost else { return }
         reconnectTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
-            guard let self = self, let host = self.currentHost else { return }
-            self.connect(to: host)
+            self?.connect(to: host)
         }
     }
 }
 
+// MARK: - WebSocket Delegate
+
 extension WatchAPIClient: URLSessionWebSocketDelegate {
-    func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
+    func urlSession(
+        _ session: URLSession,
+        webSocketTask: URLSessionWebSocketTask,
+        didOpenWithProtocol protocol: String?
+    ) {
         DispatchQueue.main.async { [weak self] in
             self?.isConnected = true
             self?.connectionError = nil
-            self?.publishToComplications()
             self?.startListening()
         }
     }
@@ -183,7 +156,6 @@ extension WatchAPIClient: URLSessionWebSocketDelegate {
             if let error = error {
                 self?.connectionError = error.localizedDescription
             }
-            self?.publishToComplications()
             self?.scheduleReconnect()
         }
     }

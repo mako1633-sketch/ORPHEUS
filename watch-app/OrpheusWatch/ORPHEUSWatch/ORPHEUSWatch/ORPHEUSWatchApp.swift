@@ -1,7 +1,14 @@
+//
+//  ORPHEUSWatchApp.swift
+//  ORPHEUSWatch
+//
+//  Created by Matt on 5/17/26.
+//
+
 import SwiftUI
 
 @main
-struct OrpheusWatchWatchOSApp: App {
+struct ORPHEUSWatchApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()

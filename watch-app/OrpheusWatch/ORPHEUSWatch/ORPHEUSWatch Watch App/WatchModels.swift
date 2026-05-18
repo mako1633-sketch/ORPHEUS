@@ -1,6 +1,13 @@
+//
+//  WatchModels.swift
+//  ORPHEUSWatch Watch App
+//
+//  Created by Matt on 5/17/26.
+//
+
 import Foundation
 
-// MARK: - Enums
+// MARK: - Daemon State
 
 enum DaemonState: String, Codable {
     case idle, listening, transcribing, responding, speaking, typing
@@ -46,18 +53,16 @@ enum WatchCommand: Codable {
         switch type {
         case "query":
             self = .query(text: try container.decode(String.self, forKey: .text))
-        case "cancel":
-            self = .cancel
-        case "status":
-            self = .status
-        case "history":
-            self = .history
+        case "cancel":  self = .cancel
+        case "status":  self = .status
+        case "history": self = .history
         case "speak":
             self = .speak(text: try container.decode(String.self, forKey: .text))
-        case "listen":
-            self = .listen
+        case "listen":  self = .listen
         default:
-            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown command type")
+            throw DecodingError.dataCorruptedError(
+                forKey: .type, in: container, debugDescription: "Unknown command"
+            )
         }
     }
 }
@@ -92,31 +97,31 @@ enum WatchResponse: Codable {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         switch self {
-        case .status(let state, let transcription, let response, let usage, let connectedAt):
+        case .status(let s, let t, let r, let u, let c):
             try container.encode("status", forKey: .type)
-            try container.encode(state, forKey: .state)
-            try container.encode(transcription, forKey: .transcription)
-            try container.encode(response, forKey: .response)
-            try container.encode(usage, forKey: .usage)
-            try container.encode(connectedAt, forKey: .connectedAt)
-        case .query(let fragment, let done, let error):
+            try container.encode(s, forKey: .state)
+            try container.encode(t, forKey: .transcription)
+            try container.encode(r, forKey: .response)
+            try container.encode(u, forKey: .usage)
+            try container.encode(c, forKey: .connectedAt)
+        case .query(let f, let d, let e):
             try container.encode("query", forKey: .type)
-            try container.encode(fragment, forKey: .fragment)
-            try container.encode(done, forKey: .done)
-            try container.encode(error, forKey: .error)
+            try container.encode(f, forKey: .fragment)
+            try container.encode(d, forKey: .done)
+            try container.encode(e, forKey: .error)
         case .history(let items):
             try container.encode("history", forKey: .type)
             try container.encode(items, forKey: .items)
-        case .error(let message):
+        case .error(let msg):
             try container.encode("error", forKey: .type)
-            try container.encode(message, forKey: .message)
+            try container.encode(msg, forKey: .message)
         }
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let type = try container.decode(String.self, forKey: .type)
-        switch type {
+        let t = try container.decode(String.self, forKey: .type)
+        switch t {
         case "status":
             self = .status(
                 state: try container.decode(DaemonState.self, forKey: .state),
@@ -136,7 +141,9 @@ enum WatchResponse: Codable {
         case "error":
             self = .error(message: try container.decode(String.self, forKey: .message))
         default:
-            throw DecodingError.dataCorruptedError(forKey: .type, in: container, debugDescription: "Unknown response type")
+            throw DecodingError.dataCorruptedError(
+                forKey: .type, in: container, debugDescription: "Unknown response"
+            )
         }
     }
 }
