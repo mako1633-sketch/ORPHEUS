@@ -1,186 +1,90 @@
 #!/usr/bin/env python3
 """
-auto-remediate — ORPHEUS remediation engine v4
+auto-remediate — ORPHEUS remediation engine v3
 Reads scan findings, proposes fixes with dry-run fidelity, executes with confirmation.
-Append-only ndjson audit log with risk tracking and delta state.
 
 Usage:
-  auto-remediate security [--dry-run] [--safe] [--yes]
+  auto-remediate security [--dry-run] [--safe] [--yes]    # security fixes
+  auto-remediate security --safe --yes                  # auto-execute safe only
   auto-remediate file-guardian [--dry-run] [--safe] [--yes]
   auto-remediate fix-world-writable [path] [--safe] [--yes]
   auto-remediate fix-env-leaks [path] [--yes]
   auto-remediate fix-ssh-permissions [--yes]
   auto-remediate review-creds [path]
-  auto-remediate log [--days N] [--risk safe|medium|high|review] [--tail N] [--rotate]
 
 Exit codes:
   0 = nothing to fix or all fixes applied
   1 = some fixes failed
   2 = user declined fixes
-  3 = dry-run only
-  4 = blocked by --safe
-  5 = blocked by --yes (unsafe/review in auto mode)
+  3 = dry-run only (would fix if run normally)
+  4 = blocked by --safe (unsafe fix found, not applied)
+  5 = blocked by --yes (unsafe or review fix found in auto mode)
 """
-import json, os, sys, argparse, re, fnmatch, uuid
+import json, os, sys, subprocess, argparse, re, fnmatch
 from pathlib import Path
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 
 ORPHEUS_HOME = os.path.expanduser("~/.config/orpheus")
-STATE_DIR = os.path.expanduser("~/.local/state/orpheus")
-REMEDY_LOG = os.path.join(STATE_DIR, "auto-remediate.log.ndjson")
-MAX_LOG_ENTRIES = 5000
-LOG_RETENTION_DAYS = 90
+REMEDY_LOG = os.path.join(ORPHEUS_HOME, "remediation-log.json")
+BIN_DIR = os.path.join(ORPHEUS_HOME, "workspaces", "4225ca70-bc89-46be-99ef-d3e82098faf2", "bin")
 
+# Directories that are safe to fix permissions on (low blast radius)
+SAFE_FIX_DIRS = {
+    "src", "lib", "dist", "build", "scripts", "bin",
+    "__tests__", "test", "tests", "spec",
+}
+# Directories to skip entirely (caches, user data, etc.)
+SKIP_DIRS = {
+    "node_modules", ".git", "vendor", "__pycache__", ".venv",
+    "Library", "Pictures", "Movies", "Music", "Downloads", "Caches",
+    "logs", "Pods", ".npm", ".bun", ".cache", "Cache",
+    ".config/orpheus",  # skip our own logs
+}
+# File extensions that should remain executable
+EXECUTABLE_EXTS = {".sh", ".py", ".rb", ".pl", ".php", ".go", ".rs", ".js", ".ts", ".mjs"}
+
+# Risk classification for fixes
 RISK_SAFE = "safe"
 RISK_MEDIUM = "medium"
 RISK_HIGH = "high"
 RISK_REVIEW = "review"
 
-SAFE_FIX_DIRS = {
-    "src", "lib", "dist", "build", "scripts", "bin",
-    "__tests__", "test", "tests", "spec",
-}
-SKIP_DIRS = {
-    "node_modules", ".git", "vendor", "__pycache__", ".venv",
-    "Library", "Pictures", "Movies", "Music", "Downloads", "Caches",
-    "logs", "Pods", ".npm", ".bun", ".cache", "Cache",
-}
-EXECUTABLE_EXTS = {".sh", ".py", ".rb", ".pl", ".php", ".go", ".rs", ".js", ".ts", ".mjs"}
+def ensure_log():
+    os.makedirs(ORPHEUS_HOME, exist_ok=True)
+    if not os.path.exists(REMEDY_LOG):
+        with open(REMEDY_LOG, 'w') as f:
+            json.dump({"entries": []}, f)
 
-
-# --- Logging -------------------------------------------------
-
-def _ensure_state_dir():
-    os.makedirs(STATE_DIR, exist_ok=True)
-
-def _generate_session_id():
-    return uuid.uuid4().hex[:12]
-
-def log_entry(finding, action, result, risk, before=None, after=None, dry_run=False, session_id=None):
-    _ensure_state_dir()
-    entry = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+def log_remedy(finding, action, result, dry_run=False, safe_mode=False):
+    ensure_log()
+    with open(REMEDY_LOG, 'r') as f:
+        data = json.load(f)
+    data["entries"].append({
+        "timestamp": datetime.utcnow().isoformat() + "Z",
         "finding": finding,
         "action": action,
         "result": result,
-        "risk": risk,
         "dry_run": dry_run,
-        "session_id": session_id or _generate_session_id(),
-    }
-    if before is not None:
-        entry["before"] = before
-    if after is not None:
-        entry["after"] = after
-    line = json.dumps(entry, separators=(',', ':'))
-    with open(REMEDY_LOG, 'a') as f:
-        f.write(line + "\n")
-        f.flush()
-        os.fsync(f.fileno())
+        "safe_mode": safe_mode,
+    })
+    with open(REMEDY_LOG, 'w') as f:
+        json.dump(data, f, indent=2)
 
-
-# --- Log Rotation -------------------------------------------
-
-def rotate_log(max_entries=MAX_LOG_ENTRIES, max_days=LOG_RETENTION_DAYS):
-    if not os.path.exists(REMEDY_LOG):
-        return 0
-    cutoff = datetime.now(timezone.utc) - timedelta(days=max_days)
-    cutoff_iso = cutoff.isoformat()
-    kept = []
-    removed = 0
-    with open(REMEDY_LOG, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entry = json.loads(line)
-                if entry["timestamp"] >= cutoff_iso and len(kept) < max_entries:
-                    kept.append(line)
-                else:
-                    removed += 1
-            except (json.JSONDecodeError, KeyError):
-                removed += 1
-    if removed > 0:
-        tmp_path = REMEDY_LOG + ".tmp"
-        with open(tmp_path, 'w') as f:
-            for line in kept:
-                f.write(line + "\n")
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp_path, REMEDY_LOG)
-    return removed
-
-
-# --- Log Viewer ---------------------------------------------
-
-def view_log(days=None, risk=None, tail=None):
-    if not os.path.exists(REMEDY_LOG):
-        print("No audit log found.")
-        return 0
-    entries = []
-    with open(REMEDY_LOG, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                entries.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue
-    if days is not None:
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-        entries = [e for e in entries if datetime.fromisoformat(e["timestamp"]) >= cutoff]
-    if risk is not None:
-        entries = [e for e in entries if e.get("risk") == risk]
-    if tail is not None:
-        entries = entries[-tail:]
-    if not entries:
-        print("No matching entries.")
-        return 0
-    sessions = {}
-    for e in entries:
-        sid = e.get("session_id", "unknown")
-        sessions.setdefault(sid, []).append(e)
-    print(f"=== Audit Log: {len(entries)} entries ===\n")
-    for sid, sess_entries in sessions.items():
-        first = sess_entries[0]
-        ts = first["timestamp"][:19].replace("T", " ")
-        print(f"Session {sid[:8]} @ {ts}")
-        print(f"{'Risk':<10} {'Action':<25} {'Result':<30} {'Finding'}")
-        print("-" * 80)
-        for e in sess_entries:
-            icon = {"safe": "✅", "medium": "⚠️", "high": "❌", "review": "👁️"}.get(e.get("risk", "?"), "?")
-            result = e["result"]
-            if len(result) > 28:
-                result = result[:25] + "..."
-            print(f"  {icon} {e.get('risk', '?'):<6} {e['action']:<22} {result:<30} {e['finding'][:40]}")
-            if "before" in e or "after" in e:
-                before = e.get("before", "—")
-                after = e.get("after", "—")
-                print(f"    delta: {before} → {after}")
-        print()
-    print(f"Showing {len(entries)} entries. Log size: {os.path.getsize(REMEDY_LOG)} bytes.")
-    return 0
-
-
-# --- Approval -----------------------------------------------
-
-def ask(prompt, yes_mode=False, all_safe=False):
+def ask(prompt, options="[y/n/dry-run/show]", yes_mode=False, all_safe=False):
+    """Prompt user or auto-approve in --yes mode."""
     if yes_mode:
         if all_safe:
             print(f"\n[AUTO-APPROVE] {prompt}")
             return 'y'
         else:
-            print(f"\n[BLOCKED] --yes requires all fixes to be safe. Unsafe/review fixes found.")
+            print(f"\n[BLOCKED] --yes requires all fixes to be safe. Unsafe or review fixes found.")
             return 'blocked_by_yes'
     print(f"\n{prompt}")
-    response = input("[y/n] ").strip().lower()
+    response = input(f"{options} ").strip().lower()
     return response
 
-
-# --- Helpers ------------------------------------------------
-
 def _is_in_safe_dir(fp, path):
+    """Check if file is in a directory that's safe to auto-fix."""
     rel = os.path.relpath(fp, path)
     parts = Path(rel).parts
     for part in parts[:-1]:
@@ -189,6 +93,7 @@ def _is_in_safe_dir(fp, path):
     return False
 
 def _is_cache_or_user_data(fp):
+    """Check if file is in a cache or user data directory."""
     fp_norm = os.path.normpath(fp)
     for skip in SKIP_DIRS:
         if skip in fp_norm.split(os.sep):
@@ -196,10 +101,12 @@ def _is_cache_or_user_data(fp):
     return False
 
 def _suggest_perms(fp):
+    """Suggest appropriate permissions based on file type."""
     ext = os.path.splitext(fp)[1].lower()
     try:
         with open(fp, 'rb') as f:
-            if f.read(2) == b'#!':
+            header = f.read(2)
+            if header == b'#!':
                 return 0o755
     except:
         pass
@@ -211,11 +118,7 @@ def _suggest_perms(fp):
             pass
     return 0o644
 
-
-# --- Fixes --------------------------------------------------
-
 def fix_world_writable(path=".", dry_run=False, safe_mode=False, yes_mode=False):
-    session_id = _generate_session_id()
     findings = []
     for root, dirs, files in os.walk(path):
         depth = root[len(path):].count(os.sep)
@@ -228,47 +131,56 @@ def fix_world_writable(path=".", dry_run=False, safe_mode=False, yes_mode=False)
             if _is_cache_or_user_data(fp):
                 continue
             try:
-                if os.stat(fp).st_mode & 0o002:
+                mode = os.stat(fp).st_mode
+                if mode & 0o002:
                     findings.append(fp)
             except:
                 pass
+
     if not findings:
         print("  [OK] No world-writable files found.")
         return 0
+
     safe_fixes = [f for f in findings if _is_in_safe_dir(f, path)]
     unsafe_fixes = [f for f in findings if f not in safe_fixes]
+
     print(f"  [WARN] {len(findings)} world-writable file(s) found:")
     for f in findings[:10]:
         current_mode = oct(os.stat(f).st_mode & 0o777)
         suggested = oct(_suggest_perms(f))
         tag = " [SAFE]" if f in safe_fixes else " [REVIEW]"
-        print(f"    {f}\n      before: {current_mode} -> after: {suggested}{tag}")
+        print(f"    {f}")
+        print(f"      before: {current_mode} -> after: {suggested}{tag}")
     if len(findings) > 10:
         print(f"    ... and {len(findings) - 10} more")
+
     if safe_mode and unsafe_fixes:
         print(f"\n  [BLOCKED] {len(unsafe_fixes)} file(s) outside safe directories.")
+        print("  Run without --safe to review all, or fix safe items only.")
         if not safe_fixes:
-            log_entry(f"{len(findings)} world-writable files", "chmod", "safe-mode blocked all", RISK_REVIEW, session_id=session_id)
+            log_remedy(f"{len(findings)} world-writable files", "chmod", "safe-mode blocked all", False, True)
             return 4
         findings = safe_fixes
         print(f"\n  Proceeding with {len(safe_fixes)} safe file(s)...")
+
     if dry_run:
         print("\n  [DRY-RUN] No changes made. Proposed changes:")
         for fp in findings:
             current = os.stat(fp).st_mode & 0o777
             suggested = _suggest_perms(fp)
             print(f"    chmod {oct(suggested)[2:]} {fp}  (was {oct(current)})")
-            risk = RISK_SAFE if fp in safe_fixes else RISK_REVIEW
-            log_entry(fp, f"chmod {oct(suggested)}", "dry-run", risk, before=oct(current), after=oct(suggested), dry_run=True, session_id=session_id)
+        log_remedy(f"{len(findings)} world-writable files", f"chmod per-type", f"dry-run {len(findings)} items", True, safe_mode)
         return 3
+
     all_safe = len(unsafe_fixes) == 0
-    resp = ask(f"Fix {len(findings)} files?", yes_mode, all_safe)
+    resp = ask(f"Fix {len(findings)} files?", "[y/n]", yes_mode, all_safe)
     if resp == 'blocked_by_yes':
-        log_entry(f"{len(findings)} world-writable files", "declined", "--yes blocked", RISK_REVIEW, session_id=session_id)
+        log_remedy(f"{len(findings)} world-writable files", "declined", "--yes blocked (unsafe fixes)")
         return 5
     if resp == 'n':
-        log_entry(f"{len(findings)} world-writable files", "declined", "user declined", RISK_REVIEW, session_id=session_id)
+        log_remedy(f"{len(findings)} world-writable files", "declined", "user declined")
         return 2
+
     fixed = 0
     for fp in findings:
         try:
@@ -276,23 +188,19 @@ def fix_world_writable(path=".", dry_run=False, safe_mode=False, yes_mode=False)
             old_mode = os.stat(fp).st_mode & 0o777
             os.chmod(fp, new_mode)
             print(f"  [FIXED] {fp}: {oct(old_mode)} -> {oct(new_mode)}")
-            risk = RISK_SAFE if fp in safe_fixes else RISK_MEDIUM
-            log_entry(fp, "chmod", "fixed", risk, before=oct(old_mode), after=oct(new_mode), session_id=session_id)
             fixed += 1
         except Exception as e:
             print(f"  [FAIL] {fp}: {e}")
-            risk = RISK_SAFE if fp in safe_fixes else RISK_MEDIUM
-            log_entry(fp, "chmod", f"failed: {e}", risk, before=oct(old_mode) if 'old_mode' in dir() else "unknown", after="unchanged", session_id=session_id)
-    overall_risk = RISK_SAFE if all_safe else RISK_MEDIUM
-    log_entry(f"{len(findings)} world-writable files", "chmod batch", f"{fixed}/{len(findings)} fixed", overall_risk, session_id=session_id)
+
+    log_remedy(f"{len(findings)} world-writable files", f"chmod per-type", f"{fixed}/{len(findings)} fixed")
     print(f"\n  [OK] Fixed {fixed}/{len(findings)} files.")
     return 0 if fixed == len(findings) else 1
 
 
 def fix_env_leaks(path=".", dry_run=False, safe_mode=False, yes_mode=False):
-    session_id = _generate_session_id()
     gitignore = os.path.join(path, ".gitignore")
     has_gitignore = os.path.exists(gitignore)
+
     env_files = []
     p = Path(path)
     for f in p.glob(".env*"):
@@ -301,21 +209,25 @@ def fix_env_leaks(path=".", dry_run=False, safe_mode=False, yes_mode=False):
     for f in p.glob("*.env"):
         if f.is_file() and str(f) not in env_files:
             env_files.append(str(f))
+
     if Path(path, ".git").exists() or has_gitignore:
+        skip_dirs = SKIP_DIRS
         for root, dirs, files in os.walk(path):
             depth = root[len(path):].count(os.sep)
             if depth > 1:
                 del dirs[:]
                 continue
-            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+            dirs[:] = [d for d in dirs if d not in skip_dirs]
             for f in files:
                 if f.startswith(".env") or f.endswith(".env"):
                     fp = os.path.join(root, f)
                     if fp not in env_files:
                         env_files.append(fp)
+
     if not env_files:
         print("  [OK] No .env files found.")
         return 0
+
     gitignored = set()
     if has_gitignore:
         with open(gitignore, 'r') as f:
@@ -325,25 +237,33 @@ def fix_env_leaks(path=".", dry_run=False, safe_mode=False, yes_mode=False):
             for pat in patterns:
                 if fnmatch.fnmatch(ef_rel, pat) or fnmatch.fnmatch(os.path.basename(ef_rel), pat):
                     gitignored.add(ef)
+
     leaks = [f for f in env_files if f not in gitignored]
     if not leaks:
         print(f"  [OK] All {len(env_files)} .env file(s) are gitignored.")
         return 0
+
     print(f"  [WARN] {len(leaks)} .env file(s) NOT gitignored:")
     for f in leaks[:10]:
         print(f"    {f}")
+
     if dry_run:
         print("\n  [DRY-RUN] Would append to .gitignore:")
-        print("    .env\n    .env.*\n    *.env")
-        log_entry(f"{len(leaks)} .env leaks", "edit .gitignore", "dry-run", RISK_SAFE, dry_run=True, session_id=session_id)
+        print("    .env")
+        print("    .env.*")
+        print("    *.env")
+        log_remedy(f"{len(leaks)} .env leaks", "add to .gitignore", "dry-run", True)
         return 3
-    resp = ask(f"Add .env patterns to .gitignore?", yes_mode, all_safe=True)
+
+    # Env leak fixes are always safe (just .gitignore edits)
+    resp = ask(f"Add .env patterns to .gitignore?", "[y/n]", yes_mode, all_safe=True)
     if resp == 'blocked_by_yes':
-        log_entry(f"{len(leaks)} .env leaks", "declined", "--yes blocked", RISK_SAFE, session_id=session_id)
+        log_remedy(f"{len(leaks)} .env leaks", "declined", "--yes blocked")
         return 5
     if resp == 'n':
-        log_entry(f"{len(leaks)} .env leaks", "declined", "user declined", RISK_SAFE, session_id=session_id)
+        log_remedy(f"{len(leaks)} .env leaks", "declined", "user declined")
         return 2
+
     with open(gitignore, 'a+') as f:
         f.seek(0)
         existing = f.read()
@@ -355,19 +275,18 @@ def fix_env_leaks(path=".", dry_run=False, safe_mode=False, yes_mode=False):
             f.write("\n# ORPHEUS auto-remediate: env files\n")
             for pat in additions:
                 f.write(pat + "\n")
-            log_entry(f"{len(leaks)} .env leaks", "edit .gitignore", f"added {len(additions)} patterns", RISK_SAFE, after=f"patterns: {additions}", session_id=session_id)
+            log_remedy(f"{len(leaks)} .env leaks", "add to .gitignore", f"added {additions}")
             print(f"  [OK] Added {len(additions)} pattern(s) to .gitignore.")
         else:
             print("  [OK] Patterns already present in .gitignore.")
-            log_entry(f"{len(leaks)} .env leaks", "edit .gitignore", "already present", RISK_SAFE, session_id=session_id)
     return 0
 
 
 def fix_ssh_permissions(dry_run=False, safe_mode=False, yes_mode=False):
-    session_id = _generate_session_id()
     ssh_dir = os.path.expanduser("~/.ssh")
     if not os.path.isdir(ssh_dir):
         return 0
+
     bad = []
     for f in os.listdir(ssh_dir):
         fp = os.path.join(ssh_dir, f)
@@ -375,41 +294,43 @@ def fix_ssh_permissions(dry_run=False, safe_mode=False, yes_mode=False):
             mode = os.stat(fp).st_mode & 0o777
             if mode != 0o600:
                 bad.append((fp, mode))
+
     if not bad:
         print("  [OK] All SSH key permissions correct (600).")
         return 0
+
     print(f"  [WARN] {len(bad)} SSH file(s) with wrong permissions:")
     for fp, mode in bad:
         print(f"    {fp}: {oct(mode)} -> 600")
+
     if dry_run:
         print("\n  [DRY-RUN] Would chmod 600 on SSH files")
-        for fp, old_mode in bad:
-            log_entry(fp, "chmod 600", "dry-run", RISK_SAFE, before=oct(old_mode), after="0o600", dry_run=True, session_id=session_id)
+        log_remedy(f"{len(bad)} SSH permission issues", "chmod 600", "dry-run", True)
         return 3
-    resp = ask(f"Fix SSH file permissions to 600?", yes_mode, all_safe=True)
+
+    # SSH permission fixes are always safe
+    resp = ask(f"Fix SSH file permissions to 600?", "[y/n]", yes_mode, all_safe=True)
     if resp == 'blocked_by_yes':
-        for fp, old_mode in bad:
-            log_entry(fp, "chmod 600", "--yes blocked", RISK_SAFE, session_id=session_id)
+        log_remedy(f"{len(bad)} SSH permission issues", "declined", "--yes blocked")
         return 5
     if resp == 'n':
-        for fp, old_mode in bad:
-            log_entry(fp, "chmod 600", "user declined", RISK_SAFE, session_id=session_id)
+        log_remedy(f"{len(bad)} SSH permission issues", "declined", "user declined")
         return 2
-    for fp, old_mode in bad:
+
+    for fp, _ in bad:
         try:
+            old = os.stat(fp).st_mode & 0o777
             os.chmod(fp, 0o600)
-            print(f"  [FIXED] {fp}: {oct(old_mode)} -> 600")
-            log_entry(fp, "chmod 600", "fixed", RISK_SAFE, before=oct(old_mode), after="0o600", session_id=session_id)
+            print(f"  [FIXED] {fp}: {oct(old)} -> 600")
         except Exception as e:
             print(f"  [FAIL] {fp}: {e}")
-            log_entry(fp, "chmod 600", f"failed: {e}", RISK_SAFE, before=oct(old_mode), after="unchanged", session_id=session_id)
-    log_entry(f"{len(bad)} SSH files", "chmod 600", f"batch: {len(bad)} items", RISK_SAFE, session_id=session_id)
+
+    log_remedy(f"{len(bad)} SSH permission issues", "chmod 600", f"attempted on {len(bad)}")
     print("  [OK] Fixed SSH permissions.")
     return 0
 
 
-def review_credential_patterns(path=".", dry_run=False, safe_mode=False, yes_mode=False):
-    session_id = _generate_session_id()
+def review_credential_patterns(path="."):
     print("  [INFO] Credential pattern review:")
     matches = []
     skip_dirs = SKIP_DIRS | {"node_modules", ".git", "__pycache__", ".venv"}
@@ -420,6 +341,7 @@ def review_credential_patterns(path=".", dry_run=False, safe_mode=False, yes_mod
         r'([A-Za-z0-9_\-\/\+]{16,})',
         re.IGNORECASE
     )
+
     for root, dirs, files in os.walk(path):
         depth = root[len(path):].count(os.sep)
         if depth > 2:
@@ -427,8 +349,7 @@ def review_credential_patterns(path=".", dry_run=False, safe_mode=False, yes_mod
             continue
         dirs[:] = [d for d in dirs if d not in skip_dirs]
         for f in files:
-            exts = ['.ts', '.tsx', '.js', '.jsx', '.py', '.rb', '.go', '.env', '.json']
-            if any(f.endswith(ext) for ext in exts):
+            if any(f.endswith(ext) for ext in ['.ts', '.tsx', '.js', '.jsx', '.py', '.rb', '.go', '.env', '.json']):
                 if any(f.endswith(s) for s in skip_files_suffix):
                     if not f.endswith('.env'):
                         continue
@@ -453,37 +374,42 @@ def review_credential_patterns(path=".", dry_run=False, safe_mode=False, yes_mod
                 break
         if len(matches) > 20:
             break
+
     if not matches:
         print("  [OK] No obvious credential patterns in source files.")
-        log_entry("credential scan", "pattern review", "none found", RISK_SAFE, session_id=session_id)
         return 0
+
     for fp, line, text in matches[:15]:
         print(f"    {fp}:{line}: {text[:80]}")
     if len(matches) > 15:
         print(f"    ... and {len(matches) - 15} more")
+
     print("\n  [REVIEW REQUIRED] Credential patterns need manual inspection.")
-    print("  Actions:\n    1. Move secrets to environment variables\n    2. Add files to .gitignore if .env\n    3. Rotate exposed credentials immediately")
-    for fp, line, text in matches:
-        log_entry(f"{fp}:{line}", "pattern review", "alerted user", RISK_REVIEW, session_id=session_id)
-    log_entry(f"{len(matches)} credential patterns", "pattern review", "user alerted", RISK_REVIEW, session_id=session_id)
+    print("  Actions:")
+    print("    1. Move secrets to environment variables")
+    print("    2. Add files to .gitignore if .env")
+    print("    3. Rotate exposed credentials immediately")
+    log_remedy(f"{len(matches)} credential patterns", "manual review", "user alerted")
     return 0
 
 
-# --- Orchestration -----------------------------------------
-
 def run_security_remediation(path=".", dry_run=False, safe_mode=False, yes_mode=False):
-    print("== Security Remediation ==\n")
+    print("== Security Remediation ==")
+    print("")
     results = []
     results.append(("World-writable files", fix_world_writable(path, dry_run, safe_mode, yes_mode)))
     results.append((".env file leaks", fix_env_leaks(path, dry_run, safe_mode, yes_mode)))
     results.append(("SSH permissions", fix_ssh_permissions(dry_run, safe_mode, yes_mode)))
-    results.append(("Credential patterns", review_credential_patterns(path, dry_run, safe_mode, yes_mode)))
+    results.append(("Credential patterns", review_credential_patterns(path)))
+
     fixed = sum(1 for _, r in results if r == 0)
     declined = sum(1 for _, r in results if r == 2)
     dry_runs = sum(1 for _, r in results if r == 3)
     blocked = sum(1 for _, r in results if r == 4)
     blocked_by_yes = sum(1 for _, r in results if r == 5)
-    print(f"\n== Summary: {fixed} fixed, {declined} declined, {dry_runs} dry-run, {blocked} blocked-by-safe, {blocked_by_yes} blocked-by-yes ==")
+
+    print("")
+    print(f"== Summary: {fixed} fixed, {declined} declined, {dry_runs} dry-run, {blocked} blocked-by-safe, {blocked_by_yes} blocked-by-yes ==")
     if any(r == 1 for _, r in results):
         return 1
     if blocked_by_yes > 0:
@@ -496,9 +422,11 @@ def run_security_remediation(path=".", dry_run=False, safe_mode=False, yes_mode=
 
 
 def run_file_guardian_remediation(path=".", dry_run=False, safe_mode=False, yes_mode=False):
-    print("== File Guardian Remediation ==\n")
+    print("== File Guardian Remediation ==")
+    print("")
     results = []
     results.append(("World-writable files", fix_world_writable(path, dry_run, safe_mode, yes_mode)))
+
     large = []
     skip_dirs = SKIP_DIRS
     for root, dirs, files in os.walk(path):
@@ -514,6 +442,7 @@ def run_file_guardian_remediation(path=".", dry_run=False, safe_mode=False, yes_
                     large.append(fp)
             except:
                 pass
+
     if large:
         print(f"\n  [WARN] {len(large)} file(s) >50MB:")
         for f in large[:5]:
@@ -521,26 +450,15 @@ def run_file_guardian_remediation(path=".", dry_run=False, safe_mode=False, yes_
             size_str = f"{size / (1024*1024):.1f}MB"
             print(f"    {f} ({size_str})")
         print("\n  [INFO] Large files in repositories should use git-lfs.")
+        print("  Consider: git lfs track '*.bin' or compress/remove.")
     else:
         print("\n  [OK] No unusually large files.")
+
     fixed = sum(1 for _, r in results if r == 0)
-    print(f"\n== Summary: {fixed} fixed ==")
+    print("")
+    print(f"== Summary: {fixed} fixed ==")
     return 0
 
-
-# --- Log subcommand handler --------------------------------
-
-def handle_log(args):
-    if args.rotate:
-        n = rotate_log()
-        if n > 0:
-            print(f"Rotated {n} stale entries from log.")
-        else:
-            print("Log rotation: nothing to remove.")
-    return view_log(args.days, args.risk, args.tail)
-
-
-# --- Main --------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(prog='auto-remediate')
@@ -575,13 +493,6 @@ def main():
     p = sub.add_parser('dry-run', help='Show all fixes without applying')
     p.add_argument('path', nargs='?', default='.')
     p.set_defaults(func=lambda a: run_security_remediation(a.path, True, a.safe, a.yes))
-
-    p = sub.add_parser('log', help='View or rotate remediation audit log')
-    p.add_argument('--days', type=int, default=None, help='Filter entries within N days')
-    p.add_argument('--risk', choices=['safe', 'medium', 'high', 'review'], default=None, help='Filter by risk level')
-    p.add_argument('--tail', type=int, default=None, help='Show last N entries')
-    p.add_argument('--rotate', action='store_true', help='Rotate stale entries and enforce limits')
-    p.set_defaults(func=handle_log)
 
     args = parser.parse_args()
     if not args.cmd:

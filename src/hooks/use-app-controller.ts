@@ -21,6 +21,7 @@ import { useDaemonRuntimeController } from "./use-daemon-runtime-controller";
 import { useHudData } from "./use-hud-data";
 import { useOverlayController } from "./use-overlay-controller";
 import { useSessionController } from "./use-session-controller";
+import { useStartupEnforcement } from "./use-startup-enforcement";
 
 export interface AppControllerResult {
 	handleCopyOnSelectMouseUp: () => void;
@@ -66,6 +67,12 @@ export function useAppController({
 	// Track if this is initial app load for startup animation
 	const [isInitialLoad, setIsInitialLoad] = useState(true);
 	const [startupIntroDone, setStartupIntroDone] = useState(false);
+
+	// Startup protocol enforcement: auto-runs once per app lifecycle
+	const _startup = useStartupEnforcement({
+		enabled: isInitialLoad,
+		skipIfAlreadyRun: true,
+	});
 
 	// Update terminal size state on resize to trigger re-render
 	useOnResize((width, height) => {
