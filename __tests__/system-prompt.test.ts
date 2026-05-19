@@ -283,4 +283,98 @@ describe("system prompt", () => {
 		);
 		expect(prompt).toContain("Do not print fake function-call JSON");
 	});
+
+	// ====== REASONING & PROBLEM-SOLVING ENHANCEMENTS ======
+
+	it("includes mandatory reasoning rules in text mode", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("# Reasoning & Self-Check Rules (MANDATORY)");
+		expect(prompt).toContain("VERIFY against actual context");
+		expect(prompt).toContain("Do not trust memory alone");
+		expect(prompt).toContain('say "I don\'t have that in my context"');
+		expect(prompt).toContain("Record assumptions as you make them");
+		expect(prompt).toContain("Note branching decisions");
+		expect(prompt).toContain("Log dead ends");
+		expect(prompt).toContain("State your confidence level");
+		expect(prompt).toContain('qualify it: "I believe..."');
+		expect(prompt).toContain("do a final coherence check");
+	});
+
+	it("includes tool output verification rules", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("# Tool Output Verification (MANDATORY for critical paths)");
+		expect(prompt).toContain("Do not accept a single tool result as conclusive");
+		expect(prompt).toContain("verify it's actually imported where expected");
+		expect(prompt).toContain("verify it exists with a readback or listing");
+		expect(prompt).toContain("verify its output matches the claimed behavior");
+		expect(prompt).toContain("I could not verify [X] because [Y]");
+	});
+
+	it("includes task completion gates", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("# Task Completion Gates (MANDATORY for non-trivial work)");
+		expect(prompt).toContain("Every declared sub-task must have validation evidence");
+		expect(prompt).toContain(
+			"Do not close a task as complete while any declared sub-task remains unchecked"
+		);
+		expect(prompt).toContain('Use the todoManager to enforce "check before close"');
+		expect(prompt).toContain("tests must pass, typecheck must pass, lint must pass");
+		expect(prompt).toContain("review your todo list");
+	});
+
+	it("includes error persistence and learning rules", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("# Error Persistence & Learning (MANDATORY)");
+		expect(prompt).toContain(
+			"Log the failure mode and the correction into persistent context immediately"
+		);
+		expect(prompt).toContain("reflection-state system");
+		expect(prompt).toContain("What assumption was incorrect");
+		expect(prompt).toContain("Future sessions inherit these fixes");
+		expect(prompt).toContain("treat it as a learning event");
+	});
+
+	it("includes executive assistant integration directives", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("# Executive Assistant Integration (MANDATORY for multi-track work)");
+		expect(prompt).toContain("Push active tasks into the executive assistant task stack");
+		expect(prompt).toContain("stackPush for new tracks");
+		expect(prompt).toContain("resume cleanly instead of leaving dangling state");
+		expect(prompt).toContain('update its executive item status to "done"');
+		expect(prompt).toContain("Keep todoManager for the current turn's execution checklist only");
+		expect(prompt).toContain("do a quick executive stack review");
+	});
+
+	it("includes condensed reasoning guidance in voice mode", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "voice",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("REASONING AND VERIFICATION:");
+		expect(prompt).toContain("Do not trust memory alone for factual claims");
+		expect(prompt).toContain("When uncertain, qualify");
+		expect(prompt).toContain("For critical tool results, verify with a second check");
+		expect(prompt).toContain("Before declaring work done, confirm every sub-task has evidence");
+	});
 });
