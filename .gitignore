@@ -18,3 +18,6 @@ voice-samples/
 
 # Xcode user data
 xcuserdata/
+# ORPHEUS workspace version backups
+*.v[0-9]*
+*-v[0-9]*
