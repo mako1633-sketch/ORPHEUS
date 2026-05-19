@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
-# orpheus-startup-v2 — ORPHEUS session initialization protocol (isolated + telemetry)
-# Each step runs independently. Failures are recorded but do not block downstream steps.
-# Timing and exit codes are emitted as structured JSON for downstream digest/summary use.
+# orpheus-startup-v3 -- ORPHEUS session initialization protocol
+# Changes from v2:
+#   - Meaningful exit codes: 0=ready, 1=critical failure(s), 2=warnings only
+#   - Critical steps (health-check, preflight-git) gate session readiness
+#   - Summary clearly distinguishes BLOCKERS vs WARNINGS vs FULLY OPERATIONAL
+#   - Designed to be consumed by the host to decide whether to proceed
+#   - Each step still runs independently so partial results are always captured
 
 set -uo pipefail
 
@@ -21,18 +25,23 @@ SESSION_FILE="$STATE_DIR/startup-$(date -u +%Y%m%d-%H%M%S).json"
 declare -a RESULTS
 declare -i TOTAL_STEPS=0
 
+# Track highest severity: 0=ok, 1=error, 2=warning
+declare -i OVERALL_STATUS=0
+
+# Steps whose failures produce exit code 1 (critical / session-blocking)
+CRITICAL_CATEGORIES="infra:git"
+
 run_step() {
     local name="$1"
     local cmd="$2"
     local category="${3:-general}"
 
-    local t_start t_end duration_ms exit_code step_output
+    local t_start t_end duration_ms exit_code
     t_start=$(date +%s%N 2>/dev/null || date +%s)
 
-    # Capture output to a temp file for potential extraction
     local tmpfile
     tmpfile=$(mktemp)
-    (eval "$cmd") >"$tmpfile" 2>&1
+    (eval "$cmd") > "$tmpfile" 2>&1
     exit_code=$?
 
     t_end=$(date +%s%N 2>/dev/null || date +%s)
@@ -45,16 +54,32 @@ run_step() {
     RESULTS[$TOTAL_STEPS]="$name|$duration_ms|$exit_code|$category"
     ((TOTAL_STEPS++))
 
-    # Print step header + concise status
-    local status_icon="✅"
-    local status_text="PASS"
-    if [ "$exit_code" -ne 0 ]; then
-        status_icon="❌"
-        status_text="FAIL (exit $exit_code)"
+    # Update overall status
+    # exit code meanings: 0=ok, 1=error (critical if in CRITICAL_CATEGORIES), 2=warning
+    if [ "$exit_code" -eq 1 ]; then
+        if echo "$CRITICAL_CATEGORIES" | grep -q "$category"; then
+            OVERALL_STATUS=1
+        elif [ "$OVERALL_STATUS" -ne 1 ]; then
+            OVERALL_STATUS=2
+        fi
+    elif [ "$exit_code" -eq 2 ]; then
+        if [ "$OVERALL_STATUS" -ne 1 ]; then
+            OVERALL_STATUS=2
+        fi
+    elif [ "$exit_code" -gt 2 ]; then
+        if echo "$CRITICAL_CATEGORIES" | grep -q "$category"; then
+            OVERALL_STATUS=1
+        elif [ "$OVERALL_STATUS" -ne 1 ]; then
+            OVERALL_STATUS=2
+        fi
     fi
 
-    echo "== $name [$status_text, ${duration_ms}ms] =="
-    # Print first 20 lines of output for visibility
+    local status_icon="PASS"
+    if [ "$exit_code" -ne 0 ]; then
+        status_icon="FAIL (exit $exit_code)"
+    fi
+
+    echo "== $name [$status_icon, ${duration_ms}ms] =="
     head -n 20 "$tmpfile"
     local line_count
     line_count=$(wc -l < "$tmpfile")
@@ -64,34 +89,43 @@ run_step() {
     echo ""
 
     rm -f "$tmpfile"
-    return 0  # Always return 0 so downstream steps run
+    return 0
 }
 
-# ── JSON State Emitter (function scope allows local vars) ───────────
+status_label() {
+    case "$1" in
+        0) echo "ready" ;;
+        1) echo "critical" ;;
+        2) echo "warnings" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
 emit_state_json() {
     local outfile="$1"
     local i
     local comma=""
     {
         echo "{"
-        echo '  "timestamp": "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'",'
-        echo '  "session_dir": "'"$PWD"'",'
-        echo '  "steps": ['
+        echo "  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\","
+        echo "  \"session_dir\": \"$PWD\","
+        echo "  \"overall_status\": $OVERALL_STATUS,"
+        echo "  \"status_label\": \"$(status_label $OVERALL_STATUS)\","
+        echo "  \"steps\": ["
         for ((i=0; i<TOTAL_STEPS; i++)); do
             local name dur rc cat
             name=$(echo "${RESULTS[$i]}" | cut -d'|' -f1)
             dur=$(echo "${RESULTS[$i]}" | cut -d'|' -f2)
             rc=$(echo "${RESULTS[$i]}" | cut -d'|' -f3)
             cat=$(echo "${RESULTS[$i]}" | cut -d'|' -f4)
-            echo '    '"$comma"'{"name": "'"$name"'", "duration_ms": '"$dur"', "exit_code": '"$rc"', "category": "'"$cat"'"}'
+            echo "    $comma{\"name\": \"$name\", \"duration_ms\": $dur, \"exit_code\": $rc, \"category\": \"$cat\"}"
             comma=","
         done
-        echo '  ]'
+        echo "  ]"
         echo "}"
     } > "$outfile"
 }
 
-# ── Summary Printer (function scope allows local vars) ──────────────
 emit_summary() {
     local total_duration=0
     local errors=0
@@ -106,19 +140,19 @@ emit_summary() {
         cat=$(echo "${RESULTS[$j]}" | cut -d'|' -f4)
 
         if [ "$rc" -ne 0 ]; then
-            icon="❌"
+            icon="FAIL"
             ((errors++))
         else
-            icon="✅"
+            icon="PASS"
         fi
 
-        # Warn if step took > 5s
         dur_warn=""
-        if command -v python3 &>/dev/null; then
-            if python3 -c "import sys; exit(0 if float(sys.argv[1]) < 5000 else 1)" "$dur" &>/dev/null; then
-                true
-            else
-                dur_warn=" ⚠️ SLOW"
+        # shellcheck disable=SC2015
+        if command -v python3 &>/dev/null && python3 -c "import sys; exit(0 if float(sys.argv[1]) < 5000 else 1)" "$dur" &>/dev/null; then
+            true
+        else
+            if command -v python3 &>/dev/null; then
+                dur_warn=" SLOW"
                 ((warnings++))
             fi
         fi
@@ -128,55 +162,62 @@ emit_summary() {
     done
 
     echo ""
-    if [ "$errors" -gt 0 ]; then
-        echo "STATUS: READY WITH $errors FAILURE(S)"
-        echo "  Downstream steps ran independently. Check steps marked ❌ above."
-    elif [ "$warnings" -gt 0 ]; then
-        echo "STATUS: READY WITH $warnings NON-CRITICAL NOTE(S)"
-    else
-        echo "STATUS: FULLY OPERATIONAL"
-    fi
+    case "$OVERALL_STATUS" in
+        0)
+            echo "STATUS: FULLY OPERATIONAL"
+            echo "  All checks passed. Session ready."
+            ;;
+        1)
+            echo "STATUS: CRITICAL FAILURE(S) -- SESSION NOT READY"
+            echo "  One or more critical steps failed. Review above before proceeding."
+            ;;
+        2)
+            echo "STATUS: READY WITH WARNINGS"
+            echo "  Non-critical steps reported issues. Proceed with awareness."
+            ;;
+    esac
     echo "Total time: ${total_duration}ms"
     echo "Session state: $SESSION_FILE"
     echo ""
-    echo "All steps complete. Ready to work."
+    echo "All steps complete."
 }
 
-# ═══════════════════════════════════════════════════════════════════
-#  MAIN
-# ═══════════════════════════════════════════════════════════════════
 
-echo "== ORPHEUS Startup Protocol v2 =="
+# ================================================================
+#  MAIN
+# ================================================================
+
+echo "== ORPHEUS Startup Protocol v3 =="
 echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo "State file: $SESSION_FILE"
 echo ""
 
-# ── Step 1: Dependency health audit ────────────────────────────────
+# -- Step 1: Dependency health audit --
 run_step "Dependency Health Check" "\"$BIN_DIR/health-check\"" "infra"
 
-# ── Step 2: Capability scan (auto-discover new tools) ──────────────
+# -- Step 2: Capability scan (auto-discover new tools) --
 run_step "Capability Discovery" "\"$BIN_DIR/capability-scan\" scan" "infra"
 
-# ── Step 3: Git pre-flight (only if inside a repo) ─────────────────
+# -- Step 3: Git pre-flight (only if inside a repo) --
 PREFLIGHT_EXIT=0
 if git rev-parse --git-dir &>/dev/null; then
     run_step "Git Pre-flight" "\"$BIN_DIR/preflight-git\"" "git"
     PREFLIGHT_EXIT=$(echo "${RESULTS[$((TOTAL_STEPS-1))]}" | cut -d'|' -f3)
 
-    # ── Step 4: Project auto-detection and context loading ─────────
+    # -- Step 4: Project auto-detection and context loading --
     if [ -f "$BIN_DIR/project-registry" ]; then
         current_dir="$(pwd)"
         run_step "Project Registry Load" "\"$BIN_DIR/project-registry\" load \"$current_dir\"" "project"
         load_exit=$(echo "${RESULTS[$((TOTAL_STEPS-1))]}" | cut -d'|' -f3)
         if [ "$load_exit" -ne 0 ]; then
-            echo "  [INFO] Project not in registry — auto-detecting..."
+            echo "  [INFO] Project not in registry -- auto-detecting..."
             run_step "Project Registry Detect" "\"$BIN_DIR/project-registry\" detect \"$current_dir\"" "project"
             echo ""
             run_step "Project Registry Load (retry)" "\"$BIN_DIR/project-registry\" load \"$current_dir\"" "project"
         fi
     fi
 
-    # ── Step 5: Diff review summary (if uncommitted changes) ───────
+    # -- Step 5: Diff review summary (if uncommitted changes) --
     if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
         run_step "Uncommitted Changes" "git diff --stat && git diff --cached --stat" "git"
     else
@@ -192,7 +233,7 @@ else
     echo ""
 fi
 
-# ── Step 6: Task Orchestration — drift detection ───────────────────
+# -- Step 6: Task Orchestration -- drift detection --
 if [ -f "$BIN_DIR/task-orchestrator" ]; then
     run_step "Task Orchestrator" "\"$BIN_DIR/task-orchestrator\" drift" "tasks"
 else
@@ -200,7 +241,7 @@ else
     ((TOTAL_STEPS++))
 fi
 
-# ── Step 7: Security quick-scan (lightweight, cached) ──────────────
+# -- Step 7: Security quick-scan (lightweight, cached) --
 SECURITY_LAST="${ORPHEUS_HOME}/.last-security-scan"
 if [ ! -f "$SECURITY_LAST" ] || [ -n "$(find "$SECURITY_LAST" -mtime +1 2>/dev/null)" ]; then
     run_step "Quick Security Scan" "\"$BIN_DIR/security-scan\"" "security"
@@ -212,7 +253,7 @@ else
     echo ""
 fi
 
-# ── Step 8: Proactive suggestion engine ────────────────────────────
+# -- Step 8: Proactive suggestion engine --
 if [ -f "$BIN_DIR/suggest-next" ]; then
     run_step "Proactive Suggestions" "\"$BIN_DIR/suggest-next\" --quiet" "suggestions"
 else
@@ -220,8 +261,8 @@ else
     ((TOTAL_STEPS++))
 fi
 
-# ── Final outputs ──────────────────────────────────────────────────
+# -- Final outputs --
 emit_state_json "$SESSION_FILE"
 emit_summary
 
-exit 0
+exit "$OVERALL_STATUS"
