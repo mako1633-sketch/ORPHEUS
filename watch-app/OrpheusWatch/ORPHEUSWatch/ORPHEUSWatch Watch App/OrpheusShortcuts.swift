@@ -82,26 +82,24 @@ struct OrpheusStatusIntent: AppIntent {
 @available(watchOS 10.0, *)
 struct OrpheusShortcutsProvider: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
-        [
-            AppShortcut(
-                intent: AskOrpheusIntent(),
-                phrases: [
-                    "Ask Orpheus \(.question)",
-                    "Hey Orpheus, \(.question)",
-                ],
-                shortTitle: "Ask Orpheus",
-                systemImageName: "mic.fill"
-            ),
-            AppShortcut(
-                intent: OrpheusStatusIntent(),
-                phrases: [
-                    "Check Orpheus status",
-                    "Is Orpheus online",
-                ],
-                shortTitle: "Status",
-                systemImageName: "circle.fill"
-            ),
-        ]
+        AppShortcut(
+            intent: AskOrpheusIntent(),
+            phrases: [
+                "Ask \(.applicationName)",
+                "Talk to \(.applicationName)",
+            ],
+            shortTitle: "Ask Orpheus",
+            systemImageName: "mic.fill"
+        )
+        AppShortcut(
+            intent: OrpheusStatusIntent(),
+            phrases: [
+                "Check \(.applicationName) status",
+                "Is \(.applicationName) online",
+            ],
+            shortTitle: "Status",
+            systemImageName: "circle.fill"
+        )
     }
 }
 

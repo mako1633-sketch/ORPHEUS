@@ -6,6 +6,7 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { type ChildProcess, spawn } from "node:child_process";
 
 import { DaemonState as DaemonStateEnum } from "../types";
 import { daemonEvents } from "../state/daemon-events";
@@ -34,8 +35,13 @@ interface WatchClient {
 
 export class WatchServer {
 	private server: import("bun").Server<SocketData> | null = null;
+	private bonjourProcess: ChildProcess | null = null;
 	private clients = new Map<string, WatchClient>();
 	private config: WatchServerConfig;
+	private stateChangeListener: ((state: DaemonStateEnum) => void) | null = null;
+	private transcriptionUpdateListener: ((text: string) => void) | null = null;
+	private cancelledListener: (() => void) | null = null;
+	private errorListener: ((error: Error) => void) | null = null;
 	private queryListeners = new Map<
 		string,
 		{ onToken: (token: string) => void; onComplete: () => void; onError: (error: Error) => void }
@@ -61,6 +67,19 @@ export class WatchServer {
 				close: (ws) => this.handleWsClose(ws),
 			},
 		});
+		this.startBonjourAdvertisement();
+
+		this.stateChangeListener = () => this.broadcastToAll(this.buildStatusPayload());
+		this.transcriptionUpdateListener = () => this.broadcastToAll(this.buildStatusPayload());
+		this.cancelledListener = () => this.broadcastToAll(this.buildStatusPayload());
+		this.errorListener = (error) => {
+			this.broadcastToAll({ type: "error", message: error.message } as WatchErrorResponse);
+			this.broadcastToAll(this.buildStatusPayload());
+		};
+		daemonEvents.on("stateChange", this.stateChangeListener);
+		daemonEvents.on("transcriptionUpdate", this.transcriptionUpdateListener);
+		daemonEvents.on("cancelled", this.cancelledListener);
+		daemonEvents.on("error", this.errorListener);
 
 		debug.info("watch-server", `Listening on ${this.config.host}:${this.config.port}`);
 	}
@@ -77,9 +96,20 @@ export class WatchServer {
 		}
 		this.clients.clear();
 		this.queryListeners.clear();
+		if (this.stateChangeListener) daemonEvents.off("stateChange", this.stateChangeListener);
+		if (this.transcriptionUpdateListener) {
+			daemonEvents.off("transcriptionUpdate", this.transcriptionUpdateListener);
+		}
+		if (this.cancelledListener) daemonEvents.off("cancelled", this.cancelledListener);
+		if (this.errorListener) daemonEvents.off("error", this.errorListener);
+		this.stateChangeListener = null;
+		this.transcriptionUpdateListener = null;
+		this.cancelledListener = null;
+		this.errorListener = null;
 
 		this.server.stop(true);
 		this.server = null;
+		this.stopBonjourAdvertisement();
 		debug.info("watch-server", "Stopped");
 	}
 
@@ -99,6 +129,9 @@ export class WatchServer {
 
 		// WebSocket upgrade
 		if (url.pathname === "/ws" && request.headers.get("upgrade") === "websocket") {
+			if (!this.isAuthorized(request)) {
+				return new Response("Unauthorized", { status: 401 });
+			}
 			const upgraded = server.upgrade(request, {
 				data: { clientId: randomUUID() },
 			});
@@ -116,19 +149,34 @@ export class WatchServer {
 
 		// REST API endpoints
 		if (url.pathname === "/api/status" && request.method === "GET") {
+			if (!this.isAuthorized(request)) {
+				return this.jsonResponse({ type: "error", message: "Unauthorized" }, 401);
+			}
 			return this.jsonResponse(this.buildStatusPayload());
 		}
 
 		if (url.pathname === "/api/command" && request.method === "POST") {
+			if (!this.isAuthorized(request)) {
+				return this.jsonResponse({ type: "error", message: "Unauthorized" }, 401);
+			}
 			return this.handleCommand(request);
 		}
 
 		if (url.pathname === "/api/history" && request.method === "GET") {
+			if (!this.isAuthorized(request)) {
+				return this.jsonResponse({ type: "error", message: "Unauthorized" }, 401);
+			}
 			return this.jsonResponse(this.buildHistoryPayload());
 		}
 
 		if (url.pathname === "/health" && request.method === "GET") {
-			return this.jsonResponse({ ok: true, server: "orpheus-watch", version: "0.1.0" });
+			return this.jsonResponse({
+				ok: true,
+				server: "orpheus-watch",
+				version: "0.1.0",
+				requiresPairingToken: Boolean(this.config.pairingToken),
+				bonjourService: "_orpheus-watch._tcp.",
+			});
 		}
 
 		return new Response("Not found", { status: 404, headers: this.corsHeaders() });
@@ -159,7 +207,55 @@ export class WatchServer {
 			return;
 		}
 
-		void this.processCommand(clientId, command);
+		void this.processCommand(clientId, command)
+			.then((response) => {
+				if (command.type !== "query") {
+					this.sendToClient(clientId, response);
+				}
+			})
+			.catch((error) => {
+				const err = error instanceof Error ? error : new Error(String(error));
+				this.sendToClient(clientId, {
+					type: "error",
+					message: err.message,
+				} as WatchErrorResponse);
+			});
+	}
+
+	private isAuthorized(request: Request): boolean {
+		if (!this.config.pairingToken) return true;
+		const url = new URL(request.url);
+		const token =
+			request.headers.get("x-orpheus-watch-token") ?? url.searchParams.get("token") ?? undefined;
+		return token === this.config.pairingToken;
+	}
+
+	private startBonjourAdvertisement(): void {
+		if (process.platform !== "darwin") return;
+		if (this.bonjourProcess) return;
+
+		try {
+			this.bonjourProcess = spawn(
+				"dns-sd",
+				["-R", this.config.bonjourName, "_orpheus-watch._tcp", "local", String(this.config.port)],
+				{ stdio: "ignore" }
+			);
+			this.bonjourProcess.once("exit", () => {
+				this.bonjourProcess = null;
+			});
+		} catch (error) {
+			debug.warn("watch-server", `Bonjour advertisement unavailable: ${String(error)}`);
+		}
+	}
+
+	private stopBonjourAdvertisement(): void {
+		if (!this.bonjourProcess) return;
+		try {
+			this.bonjourProcess.kill("SIGTERM");
+		} catch {
+			/* ignore */
+		}
+		this.bonjourProcess = null;
 	}
 
 	private handleWsClose(ws: import("bun").ServerWebSocket<SocketData>): void {
@@ -254,6 +350,30 @@ export class WatchServer {
 						}, 5000);
 					});
 				});
+			}
+
+			case "audio": {
+				if (!command.audioBase64.trim()) {
+					return { type: "error", message: "Empty audio" } as WatchErrorResponse;
+				}
+				if (
+					manager.state !== DaemonStateEnum.IDLE &&
+					manager.state !== DaemonStateEnum.TYPING &&
+					manager.state !== DaemonStateEnum.SPEAKING
+				) {
+					return { type: "error", message: "ORPHEUS is busy" } as WatchErrorResponse;
+				}
+
+				try {
+					const audioBuffer = Buffer.from(command.audioBase64, "base64");
+					void manager.submitAudio(audioBuffer, command.duration).catch((error) => {
+						const err = error instanceof Error ? error : new Error(String(error));
+						daemonEvents.emit("error", err);
+					});
+					return this.buildStatusPayload();
+				} catch {
+					return { type: "error", message: "Invalid audio payload" } as WatchErrorResponse;
+				}
 			}
 
 			case "cancel": {

@@ -17,6 +17,7 @@ enum DaemonState: String, Codable {
 
 enum WatchCommand: Codable {
     case query(text: String)
+    case audio(audioBase64: String, mimeType: String, duration: Double)
     case cancel
     case status
     case history
@@ -24,7 +25,7 @@ enum WatchCommand: Codable {
     case listen
 
     enum CodingKeys: String, CodingKey {
-        case type, text
+        case type, text, audioBase64, mimeType, duration
     }
 
     func encode(to encoder: Encoder) throws {
@@ -33,6 +34,11 @@ enum WatchCommand: Codable {
         case .query(let text):
             try container.encode("query", forKey: .type)
             try container.encode(text, forKey: .text)
+        case .audio(let audioBase64, let mimeType, let duration):
+            try container.encode("audio", forKey: .type)
+            try container.encode(audioBase64, forKey: .audioBase64)
+            try container.encode(mimeType, forKey: .mimeType)
+            try container.encode(duration, forKey: .duration)
         case .cancel:
             try container.encode("cancel", forKey: .type)
         case .status:
@@ -53,6 +59,12 @@ enum WatchCommand: Codable {
         switch type {
         case "query":
             self = .query(text: try container.decode(String.self, forKey: .text))
+        case "audio":
+            self = .audio(
+                audioBase64: try container.decode(String.self, forKey: .audioBase64),
+                mimeType: try container.decode(String.self, forKey: .mimeType),
+                duration: try container.decode(Double.self, forKey: .duration)
+            )
         case "cancel":  self = .cancel
         case "status":  self = .status
         case "history": self = .history

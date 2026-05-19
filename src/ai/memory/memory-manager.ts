@@ -12,6 +12,12 @@ import { getMemoryModel } from "../model-config";
 
 const MEMORY_USER_ID = "daemon_global";
 const MAX_MEMORY_INPUT_CHARS = 10_000;
+
+function isBetterSqliteRuntimeSupported(): boolean {
+	return !(
+		"Bun" in globalThis || Boolean((process.versions as Record<string, string | undefined>).bun)
+	);
+}
 /** Raw memory entry from mem0 API */
 interface Mem0RawEntry {
 	id: string;
@@ -97,6 +103,17 @@ class MemoryManager {
 		if (!openaiKey) {
 			debug.info("memory-init", "Memory system unavailable: OPENAI_API_KEY not set");
 			this._isAvailable = false;
+			this.initPromise = null;
+			return;
+		}
+
+		if (!isBetterSqliteRuntimeSupported()) {
+			debug.info(
+				"memory-init",
+				"Memory system unavailable: mem0's local vector store depends on better-sqlite3, which is not supported in Bun"
+			);
+			this._isAvailable = false;
+			this._writeEnabled = false;
 			this.initPromise = null;
 			return;
 		}
@@ -415,5 +432,5 @@ export function getMemoryManager(): MemoryManager {
 
 /** Check if memory is available without full initialization */
 export function isMemoryAvailable(): boolean {
-	return Boolean(process.env.OPENAI_API_KEY);
+	return Boolean(process.env.OPENAI_API_KEY) && isBetterSqliteRuntimeSupported();
 }

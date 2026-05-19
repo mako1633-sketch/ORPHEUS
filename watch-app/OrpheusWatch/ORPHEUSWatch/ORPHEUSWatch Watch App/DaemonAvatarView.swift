@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 /// Native SwiftUI reproduction of the ORPHEUS daemon avatar rig.
 /// Optimized for the 40-46mm Watch screen — 30fps to conserve battery.
@@ -165,7 +166,7 @@ struct AvatarFragment: View {
 
     private var orbitAngle: Double { phase * 0.4 + (Double(index) / 6.0) * .pi * 2 }
     private var bob: CGFloat { CGFloat(sin(phase * (1.0 + Double(index) * 0.3)) * 3.0) }
-    private var size: CGFloat { CGFloat(3 + (index % 3) * 1.5) }
+    private var size: CGFloat { CGFloat(3 + Double(index % 3) * 1.5) }
     private var orbitRadius: CGFloat { 32 }
 
     var body: some View {

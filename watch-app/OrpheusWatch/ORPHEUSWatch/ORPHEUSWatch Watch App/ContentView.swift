@@ -8,12 +8,14 @@
 import SwiftUI
 import WatchKit
 import WatchConnectivity
+import Combine
 
 struct ContentView: View {
     @StateObject private var watchSession = WatchSessionManager.shared
     @StateObject private var viewModel = WatchViewModel()
     @State private var showingHostInput = false
     @State private var hostText = ""
+    @State private var tokenText = ""
     @State private var isTallScreen = false
 
     var body: some View {
@@ -23,9 +25,9 @@ struct ContentView: View {
                     // Connection status
                     HStack {
                         Circle()
-                            .fill(viewModel.isConnected ? Color.green : Color.red)
+                            .fill(viewModel.connectionColor)
                             .frame(width: 6, height: 6)
-                        Text(viewModel.isConnected ? "Connected" : "Disconnected")
+                        Text(viewModel.connectionLabel)
                             .font(.caption2)
                             .foregroundColor(.secondary)
                         Spacer()
@@ -89,17 +91,33 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showingHostInput) {
-            HostInputView(host: $hostText, onSave: {
+            HostInputView(host: $hostText, pairingToken: $tokenText, onSave: {
                 viewModel.connect(to: hostText)
                 showingHostInput = false
             })
         }
         .onAppear {
             watchSession.activate()
+            tokenText = UserDefaults.standard.string(forKey: "orpheus_pairing_token") ?? ""
             if let savedHost = UserDefaults.standard.string(forKey: "orpheus_host"), !savedHost.isEmpty {
                 hostText = savedHost
                 viewModel.connect(to: savedHost)
             }
+        }
+        .onReceive(watchSession.$receivedHost.compactMap { $0 }) { host in
+            hostText = host
+            UserDefaults.standard.set(host, forKey: "orpheus_host")
+            viewModel.connect(to: host)
+        }
+        .onReceive(watchSession.$receivedPairingToken.compactMap { $0 }) { token in
+            tokenText = token
+            UserDefaults.standard.set(token, forKey: "orpheus_pairing_token")
+            if !hostText.isEmpty {
+                viewModel.connect(to: hostText)
+            }
+        }
+        .onReceive(watchSession.$relayEnvelopeData.compactMap { $0 }) { data in
+            viewModel.processRelayedEnvelopeData(data)
         }
     }
 
@@ -125,6 +143,9 @@ struct ContentView: View {
     }
 
     private var mainButtonIcon: String {
+        if viewModel.isRecordingOnWatch {
+            return "stop.fill"
+        }
         switch viewModel.daemonState {
         case .listening:
             return "stop.fill"
@@ -136,6 +157,9 @@ struct ContentView: View {
     }
 
     private var mainButtonColor: Color {
+        if viewModel.isRecordingOnWatch {
+            return .red
+        }
         switch viewModel.daemonState {
         case .listening:
             return .red
@@ -147,9 +171,12 @@ struct ContentView: View {
     }
 
     private func handleMainAction() {
-        switch viewModel.daemonState {
-        case .listening:
+        if viewModel.isRecordingOnWatch {
             viewModel.stopListening()
+            return
+        }
+
+        switch viewModel.daemonState {
         case .transcribing, .responding, .speaking:
             viewModel.cancel()
         default:
@@ -200,6 +227,7 @@ struct StatePill: View {
 
 struct HostInputView: View {
     @Binding var host: String
+    @Binding var pairingToken: String
     let onSave: () -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -211,8 +239,13 @@ struct HostInputView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }
+                Section("Pairing Token") {
+                    SecureField("Optional", text: $pairingToken)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
                 Section {
-                    Text("Enter your Mac's IP address (e.g. 192.168.1.42)")
+                    Text("Enter your Mac's IP address and optional ORPHEUS_WATCH_TOKEN.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -226,6 +259,7 @@ struct HostInputView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         UserDefaults.standard.set(host, forKey: "orpheus_host")
+                        UserDefaults.standard.set(pairingToken, forKey: "orpheus_pairing_token")
                         onSave()
                     }
                 }
@@ -244,9 +278,12 @@ final class WatchViewModel: ObservableObject {
     @Published var lastResponse = ""
     @Published var connectionError: String?
     @Published var avatarIntensity: Double = 0
+    @Published var isRecordingOnWatch = false
+    @Published var relayAvailable = false
 
     private var timerCancellable: AnyCancellable?
     private let client = WatchAPIClient.shared
+    private let audioRecorder = WatchAudioRecorder()
     private let haptics = HapticsEngine()
     private var lastState: DaemonState = .idle
     private var intensityTarget: Double = 0
@@ -275,10 +312,26 @@ final class WatchViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.connectionError = $0 }
             .store(in: &cancellables)
+        c.$relayAvailable
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in self?.relayAvailable = $0 }
+            .store(in: &cancellables)
 
         timerCancellable = Timer.publish(every: 1.0 / 30.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.updateIntensity() }
+    }
+
+    var connectionLabel: String {
+        if isConnected { return "Direct" }
+        if relayAvailable || WatchSessionManager.shared.isReachable { return "iPhone Relay" }
+        return "Disconnected"
+    }
+
+    var connectionColor: Color {
+        if isConnected { return .green }
+        if relayAvailable || WatchSessionManager.shared.isReachable { return .yellow }
+        return .red
     }
 
     private func handleStateChange(_ newState: DaemonState) {
@@ -305,17 +358,68 @@ final class WatchViewModel: ObservableObject {
     }
 
     func startListening() {
+        guard isConnected else {
+            guard WatchSessionManager.shared.isReachable else {
+                connectionError = "Not connected"
+                return
+            }
+            relayAvailable = true
+            connectionError = nil
+            startRelayRecording()
+            return
+        }
+
+        startRelayRecording()
+    }
+
+    private func startRelayRecording() {
         lastTranscription = ""
         lastResponse = ""
-        client.toggleListening()
+        connectionError = nil
+        isRecordingOnWatch = true
+        handleStateChange(.listening)
+        haptics.feedback(for: .listening)
+
+        Task {
+            do {
+                try await audioRecorder.start()
+            } catch {
+                isRecordingOnWatch = false
+                handleStateChange(client.daemonState)
+                connectionError = error.localizedDescription
+            }
+        }
     }
 
     func stopListening() {
-        client.toggleListening()
+        guard isRecordingOnWatch else { return }
+
+        do {
+            let recording = try audioRecorder.stop()
+            isRecordingOnWatch = false
+            handleStateChange(.transcribing)
+            client.sendAudio(recording)
+        } catch {
+            isRecordingOnWatch = false
+            handleStateChange(client.daemonState)
+            connectionError = error.localizedDescription
+        }
     }
 
     func cancel() {
+        if isRecordingOnWatch {
+            audioRecorder.cancel()
+            isRecordingOnWatch = false
+            handleStateChange(client.daemonState)
+            return
+        }
+        WatchSpeechSpeaker.shared.stop()
         client.cancel()
+    }
+
+    func processRelayedEnvelopeData(_ data: Data) {
+        relayAvailable = true
+        client.processRelayedEnvelopeData(data)
     }
 
     private var cancellables = Set<AnyCancellable>()
@@ -348,6 +452,9 @@ final class HapticsEngine {
 final class WatchSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = WatchSessionManager()
     @Published var isReachable = false
+    @Published var receivedHost: String?
+    @Published var receivedPairingToken: String?
+    @Published var relayEnvelopeData: Data?
 
     private override init() { super.init() }
 
@@ -367,5 +474,39 @@ final class WatchSessionManager: NSObject, ObservableObject, WCSessionDelegate {
 
     func sessionReachabilityDidChange(_ session: WCSession) {
         DispatchQueue.main.async { self.isReachable = session.isReachable }
+    }
+
+    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        if let host = message["host"] as? String, !host.isEmpty {
+            DispatchQueue.main.async {
+                self.receivedHost = host
+            }
+        }
+        if let token = message["pairingToken"] as? String {
+            DispatchQueue.main.async {
+                self.receivedPairingToken = token
+            }
+        }
+        if let data = message["payloadData"] as? Data {
+            DispatchQueue.main.async {
+                self.relayEnvelopeData = data
+            }
+        }
+    }
+
+    func sendCommandThroughPhone(_ command: WatchCommand) -> Bool {
+        guard WCSession.isSupported(), WCSession.default.isReachable else { return false }
+        do {
+            let envelope = WatchSocketMessage(
+                id: UUID().uuidString,
+                timestamp: Date().timeIntervalSince1970,
+                payload: command
+            )
+            let data = try JSONEncoder().encode(envelope)
+            WCSession.default.sendMessage(["commandData": data], replyHandler: nil, errorHandler: nil)
+            return true
+        } catch {
+            return false
+        }
     }
 }

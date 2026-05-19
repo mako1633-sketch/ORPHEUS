@@ -8,6 +8,7 @@ import type { DaemonState, TokenUsage } from "../types";
 /** Command sent from the watch to ORPHEUS */
 export type WatchCommand =
 	| { type: "query"; text: string }
+	| { type: "audio"; audioBase64: string; mimeType?: string; duration?: number }
 	| { type: "cancel" }
 	| { type: "status" }
 	| { type: "history" }
@@ -67,10 +68,14 @@ export interface WatchServerConfig {
 	port: number;
 	host: string;
 	corsOrigin: string | null;
+	pairingToken?: string;
+	bonjourName: string;
 }
 
 export const DEFAULT_WATCH_SERVER_CONFIG: WatchServerConfig = {
 	port: 8472,
 	host: "0.0.0.0",
 	corsOrigin: null,
+	pairingToken: process.env.ORPHEUS_WATCH_TOKEN,
+	bonjourName: "ORPHEUS",
 };

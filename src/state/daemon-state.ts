@@ -279,6 +279,68 @@ class DaemonStateManager {
 	}
 
 	/**
+	 * Submit audio captured by a remote client, such as the Apple Watch companion.
+	 */
+	async submitAudio(audioBuffer: Buffer, duration?: number): Promise<void> {
+		if (
+			this._state !== DaemonState.IDLE &&
+			this._state !== DaemonState.TYPING &&
+			this._state !== DaemonState.SPEAKING
+		) {
+			return;
+		}
+
+		if (this._state === DaemonState.SPEAKING) {
+			this.stopSpeaking();
+		}
+
+		const minDuration = 0.5;
+		if (audioBuffer.length < 1000 || (duration !== undefined && duration < minDuration)) {
+			this.emitEvent(
+				"error",
+				new Error(
+					duration !== undefined
+						? `Recording too short (${duration.toFixed(1)}s). Hold longer.`
+						: "Recording too short. Hold longer."
+				)
+			);
+			this.setState(DaemonState.IDLE);
+			return;
+		}
+
+		this._transcription = "";
+		this._response = "";
+		this.setState(DaemonState.TRANSCRIBING);
+		this.transcriptionAbortController = new AbortController();
+
+		try {
+			const result = await transcribeAudio(audioBuffer, this.transcriptionAbortController.signal);
+			this.transcriptionAbortController = null;
+			this._transcription = result.text;
+
+			if (!result.text.trim()) {
+				this.setState(DaemonState.IDLE);
+				return;
+			}
+
+			this.emitEvent("transcriptionUpdate", result.text);
+			this.emitEvent("userMessage", result.text);
+			await this.generateResponseFromText(result.text);
+		} catch (error) {
+			if (error instanceof Error && error.name === "AbortError") {
+				this.transcriptionAbortController = null;
+				this.emitEvent("cancelled");
+				this.setState(DaemonState.IDLE);
+				return;
+			}
+			this.transcriptionAbortController = null;
+			const err = error instanceof Error ? error : new Error(String(error));
+			this.emitEvent("error", err);
+			this.setState(DaemonState.IDLE);
+		}
+	}
+
+	/**
 	 * Generate a response from text input
 	 */
 	private async generateResponseFromText(text: string): Promise<void> {

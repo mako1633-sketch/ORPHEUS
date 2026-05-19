@@ -7,8 +7,9 @@
 
 import Foundation
 import Combine
+import WidgetKit
 
-final class WatchAPIClient: ObservableObject {
+final class WatchAPIClient: NSObject, ObservableObject {
     static let shared = WatchAPIClient()
 
     @Published var isConnected = false
@@ -16,18 +17,36 @@ final class WatchAPIClient: ObservableObject {
     @Published var lastTranscription: String = ""
     @Published var lastResponse: String = ""
     @Published var connectionError: String?
+    @Published var relayAvailable = false
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var reconnectTimer: Timer?
     private let serverPort = 8472
     private var currentHost: String?
+    private lazy var urlSession = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+    private var queryFragmentHandler: ((String, Bool) -> Void)?
     private let sharedDefaults: UserDefaults? = UserDefaults(suiteName: "group.com.yourcompany.OrpheusWatch")
 
+    private override init() {
+        super.init()
+    }
+
     func connect(to host: String) {
+        disconnect()
         currentHost = host
-        let url = URL(string: "ws://\(host):\(serverPort)/ws")!
-        webSocketTask = URLSession.shared.webSocketTask(with: url)
-        webSocketTask?.delegate = self
+        var components = URLComponents()
+        components.scheme = "ws"
+        components.host = host
+        components.port = serverPort
+        components.path = "/ws"
+        if let token = UserDefaults.standard.string(forKey: "orpheus_pairing_token"), !token.isEmpty {
+            components.queryItems = [URLQueryItem(name: "token", value: token)]
+        }
+        guard let url = components.url else {
+            connectionError = "Invalid Mac address"
+            return
+        }
+        webSocketTask = urlSession.webSocketTask(with: url)
         webSocketTask?.resume()
     }
 
@@ -41,6 +60,11 @@ final class WatchAPIClient: ObservableObject {
 
     func send(command: WatchCommand) {
         guard isConnected else {
+            if WatchSessionManager.shared.sendCommandThroughPhone(command) {
+                relayAvailable = true
+                connectionError = nil
+                return
+            }
             connectionError = "Not connected"
             return
         }
@@ -62,7 +86,19 @@ final class WatchAPIClient: ObservableObject {
     }
 
     func query(_ text: String, onFragment: ((String, Bool) -> Void)? = nil) {
+        lastResponse = ""
+        queryFragmentHandler = onFragment
         send(command: .query(text: text))
+    }
+
+    func sendAudio(_ recording: WatchAudioRecording) {
+        lastResponse = ""
+        lastTranscription = ""
+        send(command: .audio(
+            audioBase64: recording.data.base64EncodedString(),
+            mimeType: recording.mimeType,
+            duration: recording.duration
+        ))
     }
 
     func cancel()  { send(command: .cancel) }
@@ -98,11 +134,22 @@ final class WatchAPIClient: ObservableObject {
                 lastResponse += f
                 syncToSharedDefaults(state: daemonState, preview: lastResponse)
             }
+            queryFragmentHandler?(f, done)
+            if done {
+                WatchSpeechSpeaker.shared.speak(lastResponse)
+                queryFragmentHandler = nil
+            }
         case .error(let msg):
             connectionError = msg
+            queryFragmentHandler?("", true)
+            queryFragmentHandler = nil
         default:
             break
         }
+    }
+
+    func processRelayedEnvelopeData(_ data: Data) {
+        handleMessage(data)
     }
 
     private func syncToSharedDefaults(state: DaemonState, preview: String) {
