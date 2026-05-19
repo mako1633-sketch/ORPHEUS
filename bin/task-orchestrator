@@ -1,0 +1,414 @@
+#!/usr/bin/env python3
+"""
+task-orchestrator — ORPHEUS persistent task management system
+Cross-session task trees with auto-decomposition, resume, and drift detection.
+Usage: task-orchestrator <command> [args]
+Commands:
+  create <name> [project]   Create a new task tree (auto-decomposes known patterns)
+  start <name>              Mark task as in_progress
+  block <name> <reason>     Mark task blocked with reason
+  resolve <name>            Unblock a task
+  done <name>               Mark task complete
+  cancel <name>             Cancel a task
+  subtask <parent> <name>   Add child task under parent
+  show <name>               Show task tree with progress
+  list [--all]              List active tasks (default) or all tasks
+  resume                    Resume the most recent active task
+  drift                     Check for context drift (multiple active tasks)
+  purge [days]              Remove completed/cancelled tasks older than N days
+  export                    Export all tasks as JSON
+"""
+import json, sys, os, uuid, argparse
+from datetime import datetime, timedelta
+
+ORPHEUS_HOME = os.path.expanduser("~/.config/orpheus")
+TASKS_FILE = os.path.join(ORPHEUS_HOME, "tasks.json")
+
+
+# ─── Helpers ──────────────────────────────────────────────
+
+def ensure():
+    os.makedirs(ORPHEUS_HOME, exist_ok=True)
+    if not os.path.exists(TASKS_FILE):
+        save({"tasks": {}, "active_stack": [], "version": 1})
+
+def load():
+    ensure()
+    with open(TASKS_FILE, 'r') as f:
+        return json.load(f)
+
+def save(data):
+    with open(TASKS_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
+
+def now():
+    return datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+def new_id():
+    return str(uuid.uuid4())[:8]
+
+def find_task(data, name):
+    for tid, t in data['tasks'].items():
+        if t['name'] == name or tid == name:
+            return tid, t
+    return None, None
+
+def task_progress(data, task_id):
+    task = data['tasks'].get(task_id)
+    if not task:
+        return 0, 0
+    if not task.get('children'):
+        return (1 if task['state'] == 'done' else 0), 1
+    total, done = 0, 0
+    for cid in task['children']:
+        d, t = task_progress(data, cid)
+        total += t
+        done += d
+    return done, total
+
+def format_tree(data, task_id, indent=0, prefix=''):
+    task = data['tasks'].get(task_id)
+    if not task:
+        return []
+    icon = {'pending': '○', 'in_progress': '▶', 'blocked': '✋',
+            'done': '✓', 'cancelled': '✗'}.get(task['state'], '?')
+    done, total = task_progress(data, task_id)
+    pct = f" ({done}/{total})" if total > 1 else ""
+    lines = [f"{'  '*indent}{prefix}{icon} {task['name']}{pct}"]
+    for i, cid in enumerate(task.get('children', [])):
+        cp = '└─ ' if i == len(task['children']) - 1 else '├─ '
+        lines.extend(format_tree(data, cid, indent + 1, cp))
+    return lines
+
+
+def auto_decompose(name):
+    n = name.lower()
+    if any(w in n for w in ['audit', 'scan', 'check', 'inspect', 'security']):
+        return ['Scan environment', 'Analyze findings', 'Generate report', 'Recommend fixes']
+    if any(w in n for w in ['refactor', 'rewrite', 'restructure']):
+        return ['Plan changes', 'Create test coverage', 'Implement refactor', 'Run tests', 'Verify no regressions']
+    if any(w in n for w in ['deploy', 'release', 'ship', 'publish']):
+        return ['Run pre-deploy checks', 'Run tests', 'Build artifacts', 'Deploy to staging', 'Smoke test', 'Deploy to production']
+    if any(w in n for w in ['migrate', 'migration']):
+        return ['Backup current state', 'Write migration script', 'Test on copy', 'Apply migration', 'Verify integrity']
+    if any(w in n for w in ['fix', 'repair', 'resolve', 'debug']):
+        return ['Reproduce issue', 'Identify root cause', 'Implement fix', 'Test fix', 'Verify resolution']
+    if any(w in n for w in ['setup', 'install', 'configure', 'init']):
+        return ['Review requirements', 'Install dependencies', 'Configure settings', 'Verify installation']
+    if any(w in n for w in ['add feature', 'implement', 'build', 'create']):
+        return ['Design approach', 'Write tests', 'Implement feature', 'Run tests', 'Code review']
+    return []
+
+
+# ─── Commands ─────────────────────────────────────────────
+
+def cmd_create(args):
+    data = load()
+    tid = new_id()
+    task = {
+        "id": tid, "name": args.name, "project": args.project,
+        "state": "pending", "created": now(), "started": None,
+        "completed": None, "blocker": None, "block_reason": None,
+        "notes": [], "children": []
+    }
+    data['tasks'][tid] = task
+    steps = auto_decompose(args.name)
+    if steps:
+        for s in steps:
+            cid = new_id()
+            data['tasks'][cid] = {
+                "id": cid, "name": s, "project": args.project,
+                "state": "pending", "created": now(), "started": None,
+                "completed": None, "blocker": None, "block_reason": None,
+                "notes": [], "children": []
+            }
+            task['children'].append(cid)
+        print(f"[NEW] Task created: {args.name}")
+        print(f"[AUTO] Decomposed into {len(steps)} subtasks:")
+        for line in format_tree(data, tid):
+            print(f"  {line}")
+        save(data)
+        return 2
+    print(f"[NEW] Task created: {args.name}")
+    save(data)
+    return 0
+
+
+def cmd_start(args):
+    data = load()
+    tid, task = find_task(data, args.name)
+    if not task:
+        print(f"Task not found: {args.name}"); return 1
+    task['state'] = 'in_progress'
+    if not task.get('started'):
+        task['started'] = now()
+    if tid not in data.get('active_stack', []):
+        data.setdefault('active_stack', []).append(tid)
+    save(data)
+    print(f"[▶] Started: {args.name}")
+    return 0
+
+
+def cmd_block(args):
+    data = load()
+    tid, task = find_task(data, args.name)
+    if not task:
+        print(f"Task not found: {args.name}"); return 1
+    task['state'] = 'blocked'
+    task['blocker'] = now()
+    task['block_reason'] = args.reason
+    save(data)
+    print(f"[✋] Blocked: {args.name} — {args.reason}")
+    return 0
+
+
+def cmd_resolve(args):
+    data = load()
+    tid, task = find_task(data, args.name)
+    if not task:
+        print(f"Task not found: {args.name}"); return 1
+    task['state'] = 'in_progress'
+    task['blocker'] = None
+    print(f"[▶] Resolved: {args.name}")
+    save(data)
+    return 0
+
+
+def cmd_done(args):
+    data = load()
+    tid, task = find_task(data, args.name)
+    if not task:
+        print(f"Task not found: {args.name}"); return 1
+    task['state'] = 'done'
+    task['completed'] = now()
+    data['active_stack'] = [a for a in data.get('active_stack', []) if a != tid]
+    save(data)
+    print(f"[✓] Completed: {args.name}")
+    # Check if parent is now complete
+    for pid, pt in data['tasks'].items():
+        if tid in pt.get('children', []) and all(
+            data['tasks'].get(c, {}).get('state') == 'done' for c in pt['children']
+        ):
+            pt['state'] = 'done'
+            pt['completed'] = now()
+            data['active_stack'] = [a for a in data.get('active_stack', []) if a != pid]
+            print(f"[✓] Parent also complete: {pt['name']}")
+    # Single save after checking parents
+    save(data)
+    return 0
+
+
+def cmd_cancel(args):
+    data = load()
+    tid, task = find_task(data, args.name)
+    if not task:
+        print(f"Task not found: {args.name}"); return 1
+    task['state'] = 'cancelled'
+    data['active_stack'] = [a for a in data.get('active_stack', []) if a != tid]
+    save(data)
+    print(f"[✗] Cancelled: {args.name}")
+    return 0
+
+
+def cmd_subtask(args):
+    data = load()
+    tid, task = find_task(data, args.parent)
+    if not task:
+        print(f"Parent not found: {args.parent}"); return 1
+    cid = new_id()
+    data['tasks'][cid] = {
+        "id": cid, "name": args.name, "project": task.get('project'),
+        "state": "pending", "created": now(), "started": None,
+        "completed": None, "blocker": None, "block_reason": None,
+        "notes": [], "children": []
+    }
+    if 'children' not in task:
+        task['children'] = []
+    task['children'].append(cid)
+    save(data)
+    print(f"[+] Subtask added: {args.name} → {args.parent}")
+    return 0
+
+
+def cmd_show(args):
+    data = load()
+    tid, task = find_task(data, args.name)
+    if not task:
+        print(f"Task not found: {args.name}"); return 1
+    print(f"== {task['name']} ==")
+    print(f"State:     {task['state']}")
+    print(f"Project:   {task.get('project') or '-'}")
+    print(f"Created:   {task['created']}")
+    print(f"Started:   {task.get('started') or '-'}")
+    print(f"Completed: {task.get('completed') or '-'}")
+    if task.get('block_reason'):
+        print(f"Blocker:   {task['block_reason']}")
+    done, total = task_progress(data, tid)
+    print(f"Progress:  {done}/{total}")
+    if task.get('children'):
+        print("")
+        for line in format_tree(data, tid):
+            print(line)
+    return 0
+
+
+def cmd_list(args):
+    data = load()
+    items = []
+    for tid, t in data['tasks'].items():
+        if not args.all and t['state'] in ('done', 'cancelled'):
+            continue
+        done, total = task_progress(data, tid)
+        pct = f"{int(done/total*100)}%" if total > 0 else "0%"
+        items.append((tid, t, pct))
+    if not items:
+        print("No tasks." if not args.all else "No tasks at all.")
+        return 0
+    print(f"{'Name':<30} {'State':<12} {'Progress':<10} {'Project':<15} {'Created'}")
+    print("-" * 85)
+    for tid, t, pct in sorted(items, key=lambda x: x[1]['created'], reverse=True):
+        proj = t.get('project') or '-'
+        print(f"{t['name']:<30} {t['state']:<12} {pct:<10} {proj:<15} {t['created'][:10]}")
+    return 0
+
+
+def cmd_drift(args):
+    data = load()
+    active = [tid for tid in data.get('active_stack', [])
+              if data['tasks'].get(tid, {}).get('state') in ('pending', 'in_progress', 'blocked')]
+    if len(active) > 1:
+        print("[DRIFT] Multiple active tasks detected:")
+        for tid in active:
+            t = data['tasks'][tid]
+            print(f"  • {t['name']} ({t['state']})")
+        print("")
+        print("Context drift: you have multiple tasks open simultaneously.")
+        print("Options: (1) focus on one, (2) park others, (3) close completed ones")
+        return 3
+    elif len(active) == 1:
+        t = data['tasks'][active[0]]
+        print(f"[FOCUS] Active task: {t['name']} ({t['state']})")
+        return 0
+    print("[CLEAR] No active tasks.")
+    return 0
+
+
+def cmd_resume(args):
+    data = load()
+    candidates = sorted(
+        [(tid, t) for tid, t in data['tasks'].items()
+         if t['state'] in ('in_progress', 'blocked', 'pending')],
+        key=lambda x: x[1].get('started', x[1]['created']) or x[1]['created'],
+        reverse=True
+    )
+    if not candidates:
+        print("No tasks to resume.")
+        return 0
+    tid, t = candidates[0]
+    if t['state'] == 'blocked':
+        print(f"Resuming blocked task: {t['name']}")
+        print(f"Blocker: {t.get('block_reason') or 'unknown'}")
+    else:
+        print(f"Resuming: {t['name']} ({t['state']})")
+    print("")
+    for line in format_tree(data, tid):
+        print(line)
+    return 0
+
+
+def cmd_purge(args):
+    data = load()
+    days = int(args.days) if args.days else 7
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    removed = []
+    for tid in list(data['tasks'].keys()):
+        t = data['tasks'][tid]
+        if t['state'] in ('done', 'cancelled'):
+            ts_str = t.get('completed') or t['created']
+            try:
+                ts = datetime.strptime(ts_str.replace('Z', ''), "%Y-%m-%dT%H:%M:%S")
+            except:
+                continue
+            if ts < cutoff:
+                removed.append(t['name'])
+                del data['tasks'][tid]
+                data['active_stack'] = [a for a in data.get('active_stack', []) if a != tid]
+    save(data)
+    ellipsis = '...' if len(removed) > 5 else ''
+    print(f"Purged {len(removed)} old task(s): {', '.join(removed[:5])}{ellipsis}")
+    return 0
+
+
+def cmd_export(args):
+    data = load()
+    print(json.dumps(data, indent=2))
+    return 0
+
+
+# ─── CLI ──────────────────────────────────────────────────
+
+def main():
+    parser = argparse.ArgumentParser(prog='task-orchestrator', description='ORPHEUS persistent task management')
+    sub = parser.add_subparsers(dest='cmd')
+
+    p = sub.add_parser('create', help='Create a task')
+    p.add_argument('name')
+    p.add_argument('project', nargs='?', default=None)
+    p.set_defaults(func=cmd_create)
+
+    p = sub.add_parser('start', help='Start a task')
+    p.add_argument('name')
+    p.set_defaults(func=cmd_start)
+
+    p = sub.add_parser('block', help='Block a task')
+    p.add_argument('name')
+    p.add_argument('reason')
+    p.set_defaults(func=cmd_block)
+
+    p = sub.add_parser('resolve', help='Resolve a blocked task')
+    p.add_argument('name')
+    p.set_defaults(func=cmd_resolve)
+
+    p = sub.add_parser('done', help='Complete a task')
+    p.add_argument('name')
+    p.set_defaults(func=cmd_done)
+
+    p = sub.add_parser('cancel', help='Cancel a task')
+    p.add_argument('name')
+    p.set_defaults(func=cmd_cancel)
+
+    p = sub.add_parser('subtask', help='Add a subtask')
+    p.add_argument('parent')
+    p.add_argument('name')
+    p.set_defaults(func=cmd_subtask)
+
+    p = sub.add_parser('show', help='Show task details')
+    p.add_argument('name')
+    p.set_defaults(func=cmd_show)
+
+    p = sub.add_parser('list', help='List tasks')
+    p.add_argument('--all', action='store_true')
+    p.set_defaults(func=cmd_list)
+
+    p = sub.add_parser('drift', help='Check for context drift')
+    p.set_defaults(func=cmd_drift)
+
+    p = sub.add_parser('resume', help='Resume latest active task')
+    p.set_defaults(func=cmd_resume)
+
+    p = sub.add_parser('purge', help='Purge old completed tasks')
+    p.add_argument('days', nargs='?', default='7')
+    p.set_defaults(func=cmd_purge)
+
+    p = sub.add_parser('export', help='Export tasks as JSON')
+    p.set_defaults(func=cmd_export)
+
+    args = parser.parse_args()
+    if not args.cmd:
+        parser.print_help()
+        return 1
+    return args.func(args)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

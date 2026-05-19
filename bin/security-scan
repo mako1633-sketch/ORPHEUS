@@ -1,0 +1,254 @@
+#!/usr/bin/env bash
+# security-scan — ORPHEUS cross-platform security audit
+# Runs defensive checks for macOS and Linux: credential hygiene, file integrity,
+# permissions, ports, startup items, and basic malware indicators.
+
+set -uo pipefail
+
+CRITICAL=0
+WARNINGS=0
+INFO=0
+
+log_ok()   { echo "  [OK]   $1"; }
+log_warn() { echo "  [WARN] $1"; ((WARNINGS++)); }
+log_crit() { echo "  [CRIT] $1"; ((CRITICAL++)); }
+log_info() { echo "  [INFO] $1"; ((INFO++)); }
+
+OS="$(uname -s)"
+TARGET="${1:-.}"
+if [ "$TARGET" = "." ]; then
+  SCAN_ROOT="${PWD}"
+else
+  SCAN_ROOT="$(cd "$TARGET" 2>/dev/null && pwd)" || SCAN_ROOT="$TARGET"
+fi
+
+echo "== ORPHEUS Security Scan =="
+echo "OS: $OS | Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo ""
+
+# --- 1. Credential Hygiene ---
+echo "--- Credential Hygiene ---"
+
+# 1a. High-entropy scan in src/ for actual secret material (known prefixes/base64)
+SRC_FOUND=0
+echo "          Scanning src/ for known secret formats..."
+if [ -d "$SCAN_ROOT/src" ]; then
+  # Known concrete prefix formats: sk-..., pk_..., Bearer ..., AKIA...
+  SECRET_PATTERN='\b(sk-[A-Za-z0-9]{20,}|pk_[A-Za-z0-9]{20,}|Bearer\s+[A-Za-z0-9_-]{20,}|AKIA[A-Z0-9]{16})\b'
+  SRC_MATCHES=$(grep -rE "$SECRET_PATTERN" --exclude-dir=__tests__ "$SCAN_ROOT/src" 2>/dev/null | grep -v 'process\.env' | grep -v '^[[:space:]]*import' | grep -v '//.*credential[-_]*scan.*ignore' | wc -l | tr -d ' ')
+  if [ "$SRC_MATCHES" -gt 0 ]; then
+    log_warn "$SRC_MATCHES secret pattern(s) in src/ look like actual keys"
+    grep -rE "$SECRET_PATTERN" --exclude-dir=__tests__ "$SCAN_ROOT/src" 2>/dev/null | grep -v 'process\.env' | grep -v '^[[:space:]]*import' | head -5 | sed 's/^/         /'
+    SRC_FOUND=1
+  fi
+
+  # Base64-like strings: require +, /, or trailing = to avoid camelCase false positives
+  BASE64_PATTERN='[A-Za-z0-9+/]{38,}[+/=]'
+  B64_MATCHES=$(grep -rE "$BASE64_PATTERN" --exclude-dir=__tests__ "$SCAN_ROOT/src" 2>/dev/null | grep -v 'process\.env' | grep -v '^[[:space:]]*import' | grep -v 'PSReadLine' | wc -l | tr -d ' ')
+  if [ "$B64_MATCHES" -gt 0 ]; then
+    if [ "$SRC_FOUND" -eq 0 ]; then
+      log_warn "$B64_MATCHES base64-entropy string(s) in src/ may be embedded secrets"
+    else
+      echo "         (+ $B64_MATCHES additional base64-entropy strings)"
+    fi
+    grep -rE "$BASE64_PATTERN" --exclude-dir=__tests__ "$SCAN_ROOT/src" 2>/dev/null | grep -v 'process\.env' | grep -v '^[[:space:]]*import' | grep -v 'PSReadLine' | head -3 | sed 's/^/         /'
+    SRC_FOUND=1
+  fi
+fi
+
+# 1b. Exposed env files (warn only if not gitignored)
+ENV_FILES=$(find "$SCAN_ROOT" -maxdepth 2 \( -name "*.env" -o -name ".env.*" -o -name ".env" \) 2>/dev/null | grep -v node_modules)
+ENV_UNTRACKED=0
+if [ -n "$ENV_FILES" ]; then
+  while IFS= read -r f; do
+    if [ -n "$f" ] && [ -f "$f" ]; then
+      # Check if gitignored (git check-ignore returns 0 if ignored)
+      if command -v git >/dev/null && [ -d "$SCAN_ROOT/.git" ]; then
+        if ! git -C "$SCAN_ROOT" check-ignore -q "$f" 2>/dev/null; then
+          ENV_UNTRACKED=$((ENV_UNTRACKED + 1))
+        fi
+      else
+        # No git: treat all env files as suspicious
+        ENV_UNTRACKED=$((ENV_UNTRACKED + 1))
+      fi
+    fi
+  done <<< "$ENV_FILES"
+fi
+
+if [ "$ENV_UNTRACKED" -gt 0 ]; then
+  log_warn "$ENV_UNTRACKED .env file(s) not gitignored — may leak secrets"
+  while IFS= read -r f; do
+    if [ -n "$f" ] && [ -f "$f" ]; then
+      if command -v git >/dev/null && [ -d "$SCAN_ROOT/.git" ]; then
+        if ! git -C "$SCAN_ROOT" check-ignore -q "$f" 2>/dev/null; then
+          echo "         $f"
+        fi
+      else
+        echo "         $f"
+      fi
+    fi
+  done <<< "$ENV_FILES"
+else
+  # Report covered env files as info, not warning
+  ENV_COUNT=$(echo "$ENV_FILES" | grep -c . | tr -d ' ')
+  if [ "$ENV_COUNT" -gt 0 ]; then
+    log_info "$ENV_COUNT .env file(s) found and properly gitignored"
+  fi
+fi
+
+if [ "$SRC_FOUND" -eq 0 ] && [ "$ENV_UNTRACKED" -eq 0 ]; then
+  log_ok "No credential leaks detected"
+fi
+
+# --- 2. File Integrity & Permissions ---
+echo ""
+echo "--- File Permissions ---"
+
+SUID_FILES=$(find /usr/bin /usr/sbin /bin /sbin /usr/local/bin /usr/local/sbin -perm /4000 2>/dev/null | wc -l | tr -d ' ')
+log_info "$SUID_FILES setuid binaries in common paths (review if unexpected)"
+
+WORLD_WRITABLE=$(find "$SCAN_ROOT" -maxdepth 2 -type f -perm -002 -not -path "*/.git/*" -not -path "*/node_modules/*" -not -path "*/vendor/*" -not -path "*/__pycache__/*" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$WORLD_WRITABLE" -gt 0 ]; then
+  log_warn "$WORLD_WRITABLE world-writable file(s) in project"
+  find "$SCAN_ROOT" -maxdepth 2 -type f -perm -002 -not -path "*/.git/*" -not -path "*/node_modules/*" -not -path "*/vendor/*" -not -path "*/__pycache__/*" 2>/dev/null | sed 's/^/         /'
+else
+  log_ok "No world-writable files in project"
+fi
+
+SSH_DIR="${HOME}/.ssh"
+if [ -d "$SSH_DIR" ]; then
+  PERM_ISSUES=$(find "$SSH_DIR" -maxdepth 1 -type f ! -perm 600 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$PERM_ISSUES" -gt 0 ]; then
+    log_warn "$PERM_ISSUES SSH key(s) with incorrect permissions (should be 600)"
+  else
+    log_ok "SSH key permissions correct (600)"
+  fi
+fi
+
+# --- 3. Listening Ports & Services ---
+echo ""
+echo "--- Network ---"
+
+if command -v lsof &>/dev/null; then
+  LISTENING=$(lsof -PiTCP -sTCP:LISTEN 2>/dev/null | grep LISTEN | wc -l | tr -d ' ')
+  if [ "$LISTENING" -gt 0 ]; then
+    log_info "$LISTENING listening port(s) active"
+    lsof -PiTCP -sTCP:LISTEN 2>/dev/null | grep LISTEN | awk '{print $1, $9}' | sort | uniq | sed 's/^/         /'
+  else
+    log_ok "No listening ports detected"
+  fi
+elif command -v ss &>/dev/null; then
+  LISTENING=$(ss -tln 2>/dev/null | wc -l | tr -d ' ')
+  log_info "$LISTENING listening socket entries (see: ss -tln)"
+elif command -v netstat &>/dev/null; then
+  LISTENING=$(netstat -an 2>/dev/null | grep LISTEN | wc -l | tr -d ' ')
+  log_info "$LISTENING listening socket entries (see: netstat -an | grep LISTEN)"
+else
+  log_info "No network inspection tool available (lsof, ss, netstat)"
+fi
+
+# --- 3.5 Firewall ---
+echo ""
+echo "--- Firewall ---"
+
+if [ "$OS" = "Darwin" ] && [ -x "/usr/libexec/ApplicationFirewall/socketfilterfw" ]; then
+  FW_STATE=$(/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null)
+  if echo "$FW_STATE" | grep -q "State = 1"; then
+    log_ok "Application Firewall enabled"
+  elif echo "$FW_STATE" | grep -q "State = 0"; then
+    log_warn "Application Firewall DISABLED. To enable: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on"
+  else
+    log_warn "Could not determine firewall state"
+  fi
+else
+  log_info "Firewall check skipped (non-macOS or socketfilterfw not available)"
+fi
+
+# --- 4. Startup Items & Persistence ---
+echo ""
+echo "--- Startup / Persistence ---"
+
+if [ "$OS" = "Darwin" ]; then
+  LAUNCHD_COUNT=$(find ~/Library/LaunchAgents /Library/LaunchAgents /Library/LaunchDaemons /System/Library/LaunchAgents /System/Library/LaunchDaemons -name "*.plist" 2>/dev/null | wc -l | tr -d ' ')
+  log_info "$LAUNCHD_COUNT launchd plist(s) registered"
+
+  LOGIN_ITEMS=$(osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null | tr ',' '\n' | wc -l | tr -d ' ')
+  log_info "$LOGIN_ITEMS login item(s) configured"
+
+  if [ -f "/etc/hosts" ]; then
+    HOSTS_SUSPICIOUS=$(grep -v "^#" /etc/hosts | grep -v "^127\.0\.0\.1" | grep -v "^::1" | grep -v "^255\.255\.255\.255" | grep -v "^fe80::" | grep -v "^ff02::" | grep -v "^[[:space:]]*$" | wc -l | tr -d ' ')
+    if [ "$HOSTS_SUSPICIOUS" -gt 0 ]; then
+      log_warn "$HOSTS_SUSPICIOUS non-standard /etc/hosts entries"
+    else
+      log_ok "/etc/hosts looks clean"
+    fi
+  fi
+
+elif [ "$OS" = "Linux" ]; then
+  SYSTEMD_COUNT=$(systemctl list-unit-files --type=service --state=enabled 2>/dev/null | grep enabled | wc -l | tr -d ' ')
+  log_info "$SYSTEMD_COUNT enabled systemd service(s)"
+
+  CRON_ENTRIES=$(find /etc/cron.d /etc/cron.daily /etc/cron.hourly /etc/cron.weekly /etc/cron.monthly /var/spool/cron -type f 2>/dev/null | wc -l | tr -d ' ')
+  log_info "$CRON_ENTRIES cron file(s) present"
+
+  if [ -d "$HOME/.config/autostart" ]; then
+    AUTOSTART=$(ls "$HOME/.config/autostart" 2>/dev/null | wc -l | tr -d ' ')
+    log_info "$AUTOSTART autostart desktop entry(ies)"
+  fi
+fi
+
+# --- 5. User Accounts & Privileges ---
+echo ""
+echo "--- Accounts ---"
+
+if [ "$OS" = "Darwin" ]; then
+  ADMIN_USERS=$(dscl . read /Groups/admin GroupMembership 2>/dev/null | tr ' ' '\n' | grep -v "GroupMembership" | wc -l | tr -d ' ')
+  log_info "$ADMIN_USERS user(s) in admin group"
+
+  CURRENT_PRIVS=$(groups 2>/dev/null)
+  log_info "Current user groups: $CURRENT_PRIVS"
+
+elif [ "$OS" = "Linux" ]; then
+  SUDOERS=$(grep -c "^" /etc/sudoers /etc/sudoers.d/* 2>/dev/null | wc -l | tr -d ' ')
+  log_info "sudo configuration lines across files"
+
+  if [ -f /etc/passwd ]; then
+    SHELL_USERS=$(grep -v "nologin\|false" /etc/passwd | wc -l | tr -d ' ')
+    log_info "$SHELL_USERS user(s) with login shells"
+  fi
+fi
+
+# --- 6. Disk & File Anomalies ---
+echo ""
+echo "--- Disk / File Anomalies ---"
+
+LARGE_FILES=$(find "$SCAN_ROOT" -maxdepth 2 -type f -size +50M -not -path "*/.git/*" -not -path "*/node_modules/*" -not -path "*/vendor/*" -not -path "*/__pycache__/*" 2>/dev/null | wc -l | tr -d ' ')
+if [ "$LARGE_FILES" -gt 0 ]; then
+  log_warn "$LARGE_FILES file(s) >50MB in project"
+  find "$SCAN_ROOT" -maxdepth 2 -type f -size +50M -not -path "*/.git/*" -not -path "*/node_modules/*" -not -path "*/vendor/*" -not -path "*/__pycache__/*" -exec ls -lh {} \; 2>/dev/null | awk '{print $5, $9}' | sed 's/^/         /'
+else
+  log_ok "No unusually large files in project"
+fi
+
+RECENT_SUSPICIOUS=$(find /tmp /var/tmp -maxdepth 1 -type f -mtime -1 2>/dev/null | wc -l | tr -d ' ')
+if [ "$RECENT_SUSPICIOUS" -gt 5 ]; then
+  log_warn "$RECENT_SUSPICIOUS recently modified files in temp directories"
+else
+  log_ok "Temp directories look normal"
+fi
+
+# --- Summary ---
+echo ""
+echo "== Scan Summary =="
+echo "Critical: $CRITICAL | Warnings: $WARNINGS | Info: $INFO"
+
+if [ "$CRITICAL" -gt 0 ]; then
+  echo "STATUS: ACTION REQUIRED — $CRITICAL critical issue(s) found."
+  exit 1
+elif [ "$WARNINGS" -gt 0 ]; then
+  echo "STATUS: REVIEW RECOMMENDED — $WARNINGS warning(s) to inspect."
+  exit 2
+else
+  echo "STATUS: CLEAN — no concerns detected."
+  exit 0
+fi

@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# health-check — ORPHEUS dependency status dashboard
+# Run this to see which external capabilities are healthy vs need attention.
+
+set -euo pipefail
+
+ERRORS=0
+WARNINGS=0
+
+echo "== ORPHEUS Health Check =="
+echo ""
+
+# 1. Shell readiness
+echo "--- Shell ---"
+if command -v bash &>/dev/null || command -v zsh &>/dev/null; then
+  echo "[OK] Shell available"
+else
+  echo "[FAIL] No usable shell detected"
+  ((ERRORS++))
+fi
+
+# 2. Git + GitHub reachability
+echo "--- Git / GitHub ---"
+if command -v git &>/dev/null; then
+  echo "[OK] git: $(git --version 2>/dev/null || echo 'unknown')"
+else
+  echo "[FAIL] git not installed"
+  ((ERRORS++))
+fi
+
+if command -v gh &>/dev/null; then
+  if gh auth status &>/dev/null; then
+    echo "[OK] GitHub CLI authenticated"
+  else
+    echo "[WARN] GitHub CLI not authenticated"
+    ((WARNINGS++))
+  fi
+else
+  echo "[INFO] GitHub CLI not installed (optional)"
+fi
+
+# 3. SSH
+echo "--- SSH ---"
+if command -v ssh &>/dev/null; then
+  echo "[OK] ssh installed"
+else
+  echo "[WARN] ssh not installed"
+  ((WARNINGS++))
+fi
+
+if [ -S "${SSH_AUTH_SOCK:-}" ] && ssh-add -l &>/dev/null; then
+  echo "[OK] SSH agent has keys"
+else
+  echo "[WARN] SSH agent empty or missing"
+  ((WARNINGS++))
+fi
+
+# 4. Python (for inline scripts)
+echo "--- Python ---"
+if command -v python3 &>/dev/null; then
+  echo "[OK] python3: $(python3 --version 2>/dev/null || echo 'unknown')"
+elif command -v python &>/dev/null; then
+  echo "[OK] python: $(python --version 2>/dev/null || echo 'unknown')"
+else
+  echo "[WARN] python not found"
+  ((WARNINGS++))
+fi
+
+# 5. Node / npm (common project tool)
+echo "--- Node ---"
+if command -v node &>/dev/null; then
+  echo "[OK] node: $(node --version 2>/dev/null || echo 'unknown')"
+else
+  echo "[INFO] node not installed (optional)"
+fi
+
+# 6. Network / API keys (lightweight probes)
+echo "--- Network / APIs ---"
+if curl -sI https://api.github.com &>/dev/null; then
+  echo "[OK] GitHub API reachable"
+else
+  echo "[WARN] GitHub API not reachable"
+  ((WARNINGS++))
+fi
+
+# 7. Persistent memory workspace
+echo "--- Workspace ---"
+WORKSPACE="${ORPHEUS_WORKSPACE:-${HOME}/.config/orpheus/workspaces/4225ca70-bc89-46be-99ef-d3e82098faf2}"
+if [ -d "$WORKSPACE" ]; then
+  echo "[OK] workspace exists: $WORKSPACE"
+else
+  echo "[WARN] workspace missing: $WORKSPACE"
+  ((WARNINGS++))
+fi
+
+# Summary
+echo ""
+echo "== Summary: $ERRORS error(s), $WARNINGS warning(s) =="
+if [ "$ERRORS" -gt 0 ]; then
+  echo "STATUS: DEGRADED — critical tools missing."
+  exit 1
+elif [ "$WARNINGS" -gt 0 ]; then
+  echo "STATUS: OK — some optional capabilities missing."
+  exit 2
+else
+  echo "STATUS: HEALTHY"
+  exit 0
+fi

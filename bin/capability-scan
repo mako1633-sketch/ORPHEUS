@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# capability-scan — auto-discover installed tools and update ORPHEUS playbooks
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HELPER="$SCRIPT_DIR/_cap_helper.py"
+
+cmd_help() {
+  cat <<'EOF'
+Usage: capability-scan [command]
+
+Commands:
+  (none)       Full scan — detect all tools and update registry
+  list         Show currently known capabilities
+  check <tool> Check if a specific tool is available
+
+Detected tools:
+  docker, kubectl, terraform, aws, gcloud, azure, npm, yarn, pnpm,
+  pip, poetry, cargo, rustc, go, ruby, gem, bundle, helm, minikube,
+  vagrant, ansible, packer, vault, consul, nomad, gh, bun
+EOF
+}
+
+TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+check_one() {
+  local name="$1"
+  local ver_cmd="$2"
+  
+  if command -v "$name" > /dev/null 2>&1; then
+    local ver
+    ver=$(eval "$ver_cmd" 2>/dev/null | head -1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || echo "installed")
+    python3 "$HELPER" update "$name" "found" "$ver" "$TIMESTAMP"
+  else
+    python3 "$HELPER" missing "$name" "$TIMESTAMP"
+  fi
+}
+
+cmd_scan() {
+  echo "== ORPHEUS Capability Scan =="
+  echo ""
+  
+  check_one docker "docker --version"
+  check_one kubectl "kubectl version --client"
+  check_one terraform "terraform version"
+  check_one aws "aws --version"
+  check_one gcloud "gcloud --version | head -1"
+  check_one az "az --version | head -1"
+  check_one npm "npm --version"
+  check_one yarn "yarn --version"
+  check_one pnpm "pnpm --version"
+  check_one pip "pip --version"
+  check_one poetry "poetry --version"
+  check_one cargo "cargo --version"
+  check_one rustc "rustc --version"
+  check_one go "go version"
+  check_one ruby "ruby --version"
+  check_one gem "gem --version"
+  check_one bundle "bundle --version"
+  check_one helm "helm version --short"
+  check_one minikube "minikube version"
+  check_one vagrant "vagrant --version"
+  check_one ansible "ansible --version | head -1"
+  check_one packer "packer version"
+  check_one vault "vault version"
+  check_one consul "consul version"
+  check_one nomad "nomad version"
+  check_one npx "npx --version"
+  check_one pyenv "pyenv --version"
+  check_one rbenv "rbenv --version"
+  check_one jenv "jenv --version"
+  check_one brew "brew --version | head -1"
+  check_one mas "mas version"
+  check_one bun "bun --version"
+  check_one gh "gh --version | head -1"
+  check_one git "git --version"
+  check_one ssh "ssh -V"
+  check_one python3 "python3 --version"
+  check_one node "node --version"
+  check_one lsof "lsof -v 2>&1 | head -1"
+  check_one curl "curl --version | head -1"
+  
+  python3 "$HELPER" summary "$TIMESTAMP"
+}
+
+cmd_list() {
+  python3 "$HELPER" list
+}
+
+cmd_check() {
+  local tool="$1"
+  if command -v "$tool" &>/dev/null; then
+    echo "[OK] $tool is available"
+  else
+    echo "[MISSING] $tool not found"
+  fi
+}
+
+case "${1:-scan}" in
+  help|--help|-h)
+    cmd_help
+    ;;
+  scan)
+    cmd_scan
+    ;;
+  list)
+    cmd_list
+    ;;
+  check)
+    shift; cmd_check "$1"
+    ;;
+  *)
+    echo "Unknown command: $1"
+    cmd_help
+    exit 1
+    ;;
+esac

@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+# orpheus — master command router for all ORPHEUS tools
+#
+# Usage:
+#   orpheus startup              # Run full startup protocol
+#   orpheus security             # Security scan + remediation
+#   orpheus project [detect|load|list|note]  # Project registry
+#   orpheus task [create|start|done|drift|resume]  # Task orchestrator
+#   orpheus workflow [list|run|create]  # Workflow engine
+#   orpheus scan capabilities    # Tool discovery
+#   orpheus scan files           # File guardian
+#   orpheus suggest              # Proactive suggestions
+#   orpheus diff [summary|staged|suggest]  # Diff review
+#   orpheus shell [aliases|summary]  # Shell optimizer
+#   orpheus remediate [security|file-guardian|dry-run]  # Auto-remediation
+#   orpheus scheduler [list|status|run]  # Scheduled background jobs
+#   orpheus status               # Full status dashboard
+
+set -uo pipefail
+
+# Resolve symlink if present to find real script location
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_SOURCE" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+    SCRIPT_SOURCE="$(readlink "$SCRIPT_SOURCE")"
+    # Handle relative symlinks
+    [[ $SCRIPT_SOURCE != /* ]] && SCRIPT_SOURCE="$SCRIPT_DIR/$SCRIPT_SOURCE"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+BIN_DIR="${SCRIPT_DIR}"
+
+show_help() {
+  cat <<'EOF'
+ORPHEUS — Your Operational AI Co-Pilot
+
+Usage: orpheus <category> <command> [args]
+
+Categories:
+  startup              Full session startup protocol
+  security [quick|full]  Security scan
+  project <cmd>        Project registry (detect|load|list|info|note|set-pref|forget)
+  task <cmd>           Task orchestration (create|start|done|block|resolve|cancel|subtask|show|list|drift|resume|purge)
+  workflow <cmd>       Automation workflows (list|run|show|create|delete)
+  scan capabilities    Discover installed tools
+  scan files           File guardian anomaly scan
+  suggest [--auto|--quiet]  Proactive next-action suggestions
+  diff <cmd>           Git diff review (summary|staged|suggest|since|last)
+  shell <cmd>          Shell history optimizer (aliases|repeats|summary)
+  remediate <cmd>      Auto-remediation (security|file-guardian|fix-world-writable|fix-env-leaks|review-creds|dry-run)
+  scheduler <cmd>      Scheduled background jobs (list|status|run [--job ID])
+  status               Full status dashboard
+  report [--output]    Generate Executive Dashboard HTML report
+
+Run any sub-command to execute the corresponding ORPHEUS tool.
+EOF
+}
+
+call() {
+  local cmd="$1"
+  shift
+  "$BIN_DIR/$cmd" "$@"
+}
+
+main() {
+  local category="${1:-help}"
+  shift 2>/dev/null || true
+
+  case "$category" in
+    help|--help|-h)
+      show_help
+      ;;
+    startup)
+      call orpheus-startup "$@"
+      ;;
+    health)
+      call health-check "$@"
+      ;;
+    security)
+      if [ "${1:-}" = "--full" ]; then
+        shift
+        call security-scan "$@"
+      else
+        call auto-remediate security --dry-run "$@"
+      fi
+      ;;
+    project)
+      call project-registry "$@"
+      ;;
+    task)
+      call task-orchestrator "$@"
+      ;;
+    workflow)
+      call workflow "$@"
+      ;;
+    scheduler)
+      call orpheus-scheduler "$@"
+      ;;
+    scan)
+      case "${1:-}" in
+        capabilities|caps|tools)
+          shift; call capability-scan "$@"
+          ;;
+        files|file|guardian)
+          shift; call file-guardian scan "$@"
+          ;;
+        *)
+          echo "Unknown scan type: ${1:-}"
+          echo "Options: capabilities, files"
+          exit 1
+          ;;
+      esac
+      ;;
+    suggest)
+      call suggest-next "$@"
+      ;;
+    diff)
+      call diff-review "$@"
+      ;;
+    shell)
+      call shell-optimizer "$@"
+      ;;
+    remediate)
+      call auto-remediate "$@"
+      ;;
+    report)
+      call orpheus-report "$@"
+      ;;
+    status)
+      call orpheus-startup --status 2>/dev/null || {
+        echo "== ORPHEUS Status Dashboard =="
+        echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo ""
+        echo "--- Dependencies ---"
+        call health-check 2>&1 | tail -3
+        echo ""
+        echo "--- Capabilities ---"
+        call capability-scan list 2>&1 | tail -3
+        echo ""
+        if git rev-parse --git-dir &>/dev/null; then
+          echo "--- Git ---"
+          echo "Branch: $(git rev-parse --abbrev-ref HEAD)"
+          local ahead behind
+          ahead=$(git log --oneline @{u}..HEAD 2>/dev/null | wc -l | tr -d ' ')
+          behind=$(git log --oneline HEAD..@{u} 2>/dev/null | wc -l | tr -d ' ')
+          echo "Ahead: $ahead | Behind: $behind"
+          if ! git diff --quiet 2>/dev/null || ! git diff --cached --quiet 2>/dev/null; then
+            echo "Changes: $(git status --short | wc -l | tr -d ' ') files modified"
+          else
+            echo "Changes: clean"
+          fi
+          echo ""
+        fi
+        echo "--- Tasks ---"
+        call task-orchestrator list 2>&1 | tail -5
+        echo ""
+        echo "--- Scheduler ---"
+        call orpheus-scheduler status 2>&1 | tail -5
+        echo ""
+        echo "Run 'orpheus suggest' for interactive suggestions."
+      }
+      ;;
+    *)
+      echo "Unknown command: $category"
+      show_help
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"
