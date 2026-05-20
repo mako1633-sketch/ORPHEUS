@@ -43,8 +43,6 @@ export function useConversationManager(
 		currentSessionId,
 		ensureSessionId,
 		setCurrentSessionIdSafe,
-		currentSessionIdRef,
-		setSessions,
 
 		hydrateConversationHistory,
 		setCurrentTranscription,

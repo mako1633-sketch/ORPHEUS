@@ -45,7 +45,6 @@ export function HudStatusBar({
 	errorText,
 	modelName,
 	sessionTitle,
-	hasInteracted,
 	healthSnapshot,
 	gitDirty,
 	gitBranch,

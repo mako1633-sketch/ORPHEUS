@@ -78,7 +78,7 @@ export function GroundingMenu({
 		return Math.max(80, Math.min(300, Math.floor(renderer.terminalWidth * 0.85)));
 	}, [renderer.terminalWidth]);
 
-	const { contentWidth, statementWidth, quoteWidth } = useMemo(() => {
+	const { statementWidth, quoteWidth } = useMemo(() => {
 		const cw = menuWidth - 6;
 		return {
 			contentWidth: cw,

@@ -105,7 +105,7 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 		currentModelProvider,
 		hasInteracted,
 		suppressStatusBar = false,
-		frostColor,
+
 		initialStatusTop,
 		hasGrounding,
 		groundingCount,
@@ -130,7 +130,6 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 		error,
 		resetNotification,
 		escPendingCancel,
-		yesNoPromptActive,
 	} = status;
 	const { showFullReasoning, showToolOutput, reasoningQueue, reasoningDisplay, fullReasoning } =
 		reasoning;
