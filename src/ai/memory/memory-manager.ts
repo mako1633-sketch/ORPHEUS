@@ -4,6 +4,7 @@
  */
 
 import path from "node:path";
+import type { MemoryClient as Mem0PlatformMemory } from "mem0ai";
 import type { Memory as Mem0Memory } from "mem0ai/oss";
 import type { MemoryAddResult, MemoryEntry } from "../../types";
 import { debug, memoryDebug } from "../../utils/debug-logger";
@@ -25,6 +26,8 @@ interface Mem0RawEntry {
 	hash?: string;
 	metadata?: Record<string, unknown>;
 	score?: number;
+	createdAt?: string;
+	updatedAt?: string;
 	created_at?: string;
 	updated_at?: string;
 }
@@ -36,11 +39,15 @@ interface Mem0RawSearchResult {
 
 /** Raw add result from mem0 API */
 interface Mem0RawAddResult {
-	results: Array<{
-		id: string;
-		memory: string;
-		event: "ADD" | "UPDATE" | "DELETE" | "NONE";
-	}>;
+	results: Mem0RawAddEntry[];
+}
+
+interface Mem0RawAddEntry {
+	id: string;
+	memory?: string;
+	data?: { memory?: string } | null;
+	event?: string;
+	metadata?: { event?: string };
 }
 
 /** Convert raw mem0 entry to our MemoryEntry type */
@@ -51,15 +58,36 @@ function toMemoryEntry(raw: Mem0RawEntry): MemoryEntry {
 		hash: raw.hash,
 		metadata: raw.metadata,
 		score: raw.score,
-		createdAt: raw.created_at,
-		updatedAt: raw.updated_at,
+		createdAt: raw.createdAt ?? raw.created_at,
+		updatedAt: raw.updatedAt ?? raw.updated_at,
 	};
+}
+
+function normalizeAddResults(
+	raw: Mem0RawAddResult | Mem0RawAddEntry[]
+): MemoryAddResult["results"] {
+	const results = Array.isArray(raw) ? raw : raw.results;
+
+	return results.map((entry) => {
+		const rawEvent = entry.metadata?.event ?? entry.event;
+		const validEvents = ["ADD", "UPDATE", "DELETE", "NONE"] as const;
+		const event = validEvents.includes(rawEvent as (typeof validEvents)[number])
+			? (rawEvent as (typeof validEvents)[number])
+			: "NONE";
+
+		return {
+			id: entry.id,
+			memory: entry.memory ?? entry.data?.memory ?? "",
+			event,
+		};
+	});
 }
 
 /** Singleton memory manager wrapping mem0 */
 class MemoryManager {
 	private static instance: MemoryManager | null = null;
-	private memory: Mem0Memory | null = null;
+	private memory: Mem0Memory | Mem0PlatformMemory | null = null;
+	private backend: "oss" | "platform" | null = null;
 	private initPromise: Promise<void> | null = null;
 	private _isAvailable = false;
 	private _writeEnabled = false;
@@ -97,11 +125,38 @@ class MemoryManager {
 	}
 
 	private async _doInitialize(): Promise<void> {
+		const mem0Key = process.env.MEM0_API_KEY;
 		const openaiKey = process.env.OPENAI_API_KEY;
 		const openrouterKey = process.env.OPENROUTER_API_KEY;
 
+		if (mem0Key) {
+			try {
+				const { default: MemoryClient } = await import("mem0ai");
+				this.memory = new MemoryClient({ apiKey: mem0Key });
+				this.backend = "platform";
+				this._isAvailable = true;
+				this._writeEnabled = true;
+				debug.info("memory-init", {
+					message: "Memory system initialized with mem0 Platform",
+				});
+			} catch (error) {
+				debug.error("memory-init", {
+					message: "mem0 Platform initialization failed",
+					error: error instanceof Error ? error.message : String(error),
+				});
+				this._isAvailable = false;
+				this._writeEnabled = false;
+				this.backend = null;
+				this.initPromise = null;
+			}
+			return;
+		}
+
 		if (!openaiKey) {
-			debug.info("memory-init", "Memory system unavailable: OPENAI_API_KEY not set");
+			debug.info(
+				"memory-init",
+				"Memory system unavailable: MEM0_API_KEY or OPENAI_API_KEY not set"
+			);
 			this._isAvailable = false;
 			this.initPromise = null;
 			return;
@@ -128,7 +183,7 @@ class MemoryManager {
 
 			this.memory = new Memory({
 				version: "v1.1",
-				customPrompt: `You are a Personal Information Organizer, specialized in extracting **enduring** facts, user memories, and preferences.
+				customInstructions: `You are a Personal Information Organizer, specialized in extracting **enduring** facts, user memories, and preferences.
 Your role is to extract **only** information that would be useful to recall in a conversation two weeks from now.
 
 # [IMPORTANT]: GENERATE FACTS SOLELY BASED ON THE USER'S MESSAGES.
@@ -223,6 +278,7 @@ Rules:
 					: {}),
 			});
 
+			this.backend = "oss";
 			this._isAvailable = true;
 			this._writeEnabled = writeEnabled;
 			debug.info("memory-init", {
@@ -238,6 +294,7 @@ Rules:
 			});
 			this._isAvailable = false;
 			this._writeEnabled = false;
+			this.backend = null;
 			this.initPromise = null;
 		}
 	}
@@ -252,8 +309,8 @@ Rules:
 		const startTime = Date.now();
 		try {
 			const result = (await this.memory.search(query, {
-				limit,
-				userId: MEMORY_USER_ID,
+				topK: limit,
+				filters: { user_id: MEMORY_USER_ID },
 			})) as Mem0RawSearchResult;
 
 			const durationMs = Date.now() - startTime;
@@ -329,26 +386,16 @@ Rules:
 			messages,
 		});
 
-		const result = (await this.memory.add(sanitizedMessages, {
-			userId: MEMORY_USER_ID,
-			metadata,
-			infer,
-		})) as Mem0RawAddResult;
+		const result = (await this.memory.add(
+			sanitizedMessages as Array<{ role: "user" | "assistant"; content: string }>,
+			{
+				userId: MEMORY_USER_ID,
+				metadata,
+				infer,
+			}
+		)) as Mem0RawAddResult | Mem0RawAddEntry[];
 
-		const extracted = result.results.map((r) => {
-			const rawEvent =
-				(r as unknown as { metadata?: { event?: string } }).metadata?.event ??
-				(r as { event?: string }).event;
-			const validEvents = ["ADD", "UPDATE", "DELETE", "NONE"] as const;
-			const event = validEvents.includes(rawEvent as (typeof validEvents)[number])
-				? (rawEvent as (typeof validEvents)[number])
-				: "NONE";
-			return {
-				id: r.id,
-				memory: r.memory,
-				event,
-			};
-		});
+		const extracted = normalizeAddResults(result);
 
 		const durationMs = Date.now() - startTime;
 		debug.info("memory-add", {
@@ -359,7 +406,7 @@ Rules:
 		memoryDebug.info("memory-add-result", {
 			events: extracted.map((r) => r.event),
 			extracted,
-			rawResults: result.results,
+			rawResults: Array.isArray(result) ? result : result.results,
 			durationMs,
 		});
 		return { results: extracted };
@@ -372,9 +419,11 @@ Rules:
 		}
 
 		try {
-			const result = (await this.memory.getAll({
-				userId: MEMORY_USER_ID,
-			})) as Mem0RawSearchResult;
+			const result = (await this.memory.getAll(
+				this.backend === "platform"
+					? { page: 1, pageSize: 1000, filters: { user_id: MEMORY_USER_ID } }
+					: { topK: 1000, filters: { user_id: MEMORY_USER_ID } }
+			)) as Mem0RawSearchResult;
 
 			return result.results.map(toMemoryEntry);
 		} catch (error) {
@@ -412,7 +461,11 @@ Rules:
 		}
 
 		try {
-			await this.memory.reset();
+			if (this.backend === "platform") {
+				await this.memory.deleteAll({ userId: MEMORY_USER_ID });
+			} else {
+				await (this.memory as Mem0Memory).reset();
+			}
 			debug.info("memory-reset", { message: "All memories cleared" });
 			return true;
 		} catch (error) {
@@ -432,5 +485,8 @@ export function getMemoryManager(): MemoryManager {
 
 /** Check if memory is available without full initialization */
 export function isMemoryAvailable(): boolean {
-	return Boolean(process.env.OPENAI_API_KEY) && isBetterSqliteRuntimeSupported();
+	return (
+		Boolean(process.env.MEM0_API_KEY) ||
+		(Boolean(process.env.OPENAI_API_KEY) && isBetterSqliteRuntimeSupported())
+	);
 }
