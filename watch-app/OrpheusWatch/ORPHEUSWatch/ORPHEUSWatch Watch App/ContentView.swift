@@ -17,6 +17,10 @@ struct ContentView: View {
     @State private var hostText = ""
     @State private var tokenText = ""
     @State private var isTallScreen = false
+    @State private var holdGestureActive = false
+    @State private var holdRecordingStarted = false
+    @State private var pendingLaunchAction: OrpheusLaunchAction?
+    @State private var pendingLaunchAttempts = 0
 
     var body: some View {
         NavigationStack {
@@ -59,19 +63,10 @@ struct ContentView: View {
                         Text(error)
                             .font(.caption2)
                             .foregroundColor(.red)
-                            .lineLimit(1)
+                            .lineLimit(2)
                     }
 
-                    // Main action button
-                    Button(action: handleMainAction) {
-                        Image(systemName: mainButtonIcon)
-                            .font(.system(size: isTallScreen ? 24 : 22, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(width: isTallScreen ? 52 : 46, height: isTallScreen ? 52 : 46)
-                            .background(mainButtonColor)
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                    mainActionButton
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -103,6 +98,7 @@ struct ContentView: View {
                 hostText = savedHost
                 viewModel.connect(to: savedHost)
             }
+            consumeQueuedLaunchAction()
         }
         .onReceive(watchSession.$receivedHost.compactMap { $0 }) { host in
             hostText = host
@@ -119,15 +115,34 @@ struct ContentView: View {
         .onReceive(watchSession.$relayEnvelopeData.compactMap { $0 }) { data in
             viewModel.processRelayedEnvelopeData(data)
         }
+        .onChange(of: viewModel.isConnected) { _, _ in
+            attemptPendingLaunchAction()
+        }
+        .onChange(of: watchSession.isReachable) { _, _ in
+            attemptPendingLaunchAction()
+        }
+        .onOpenURL { url in
+            if let action = OrpheusLaunchRouter.action(from: url) {
+                prepareLaunchAction(action)
+            }
+        }
     }
 
     @ViewBuilder
     private var responseDisplay: some View {
         if !viewModel.lastResponse.isEmpty {
-            ScrollView {
-                Text(viewModel.lastResponse)
-                    .font(.body)
-                    .multilineTextAlignment(.leading)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    Text(viewModel.lastResponse)
+                        .font(.body)
+                        .multilineTextAlignment(.leading)
+                        .id("response-end")
+                }
+                .onChange(of: viewModel.lastResponse) { _, _ in
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        proxy.scrollTo("response-end", anchor: .bottom)
+                    }
+                }
             }
         } else if !viewModel.lastTranscription.isEmpty {
             Text(viewModel.lastTranscription)
@@ -140,6 +155,60 @@ struct ContentView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
         }
+    }
+
+    private var mainActionButton: some View {
+        VStack(spacing: 4) {
+            ZStack {
+                Circle()
+                    .fill(mainButtonColor)
+                    .frame(width: isTallScreen ? 52 : 46, height: isTallScreen ? 52 : 46)
+                if viewModel.isRecordingOnWatch {
+                    Circle()
+                        .trim(from: 0, to: viewModel.recordingProgress)
+                        .stroke(Color.white.opacity(0.9), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: isTallScreen ? 58 : 52, height: isTallScreen ? 58 : 52)
+                }
+                Image(systemName: mainButtonIcon)
+                    .font(.system(size: isTallScreen ? 24 : 22, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            .contentShape(Circle())
+            .gesture(pressOrTapGesture)
+
+            if viewModel.isRecordingOnWatch {
+                Text(viewModel.recordingDurationLabel)
+                    .font(.caption2.monospacedDigit())
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private var pressOrTapGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { _ in
+                guard !holdGestureActive else { return }
+                holdGestureActive = true
+                holdRecordingStarted = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    guard holdGestureActive, !viewModel.isRecordingOnWatch, viewModel.daemonState == .idle else {
+                        return
+                    }
+                    holdRecordingStarted = true
+                    viewModel.startListening()
+                }
+            }
+            .onEnded { _ in
+                guard holdGestureActive else { return }
+                holdGestureActive = false
+                if holdRecordingStarted, viewModel.isRecordingOnWatch {
+                    viewModel.stopListening()
+                } else if !holdRecordingStarted {
+                    handleMainAction()
+                }
+                holdRecordingStarted = false
+            }
     }
 
     private var mainButtonIcon: String {
@@ -180,6 +249,46 @@ struct ContentView: View {
         case .transcribing, .responding, .speaking:
             viewModel.cancel()
         default:
+            viewModel.startListening()
+        }
+    }
+
+    private func consumeQueuedLaunchAction() {
+        guard let action = OrpheusLaunchRouter.consumePendingAction() else { return }
+        prepareLaunchAction(action)
+    }
+
+    private func prepareLaunchAction(_ action: OrpheusLaunchAction) {
+        pendingLaunchAction = action
+        pendingLaunchAttempts = 0
+        attemptPendingLaunchAction()
+    }
+
+    private func attemptPendingLaunchAction() {
+        guard let action = pendingLaunchAction else { return }
+
+        switch action {
+        case .listen:
+            guard !viewModel.isRecordingOnWatch else {
+                pendingLaunchAction = nil
+                return
+            }
+
+            if viewModel.isConnected || viewModel.relayAvailable || watchSession.isReachable {
+                pendingLaunchAction = nil
+                viewModel.startListening()
+                return
+            }
+
+            if pendingLaunchAttempts < 8 {
+                pendingLaunchAttempts += 1
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    attemptPendingLaunchAction()
+                }
+                return
+            }
+
+            pendingLaunchAction = nil
             viewModel.startListening()
         }
     }
@@ -280,13 +389,17 @@ final class WatchViewModel: ObservableObject {
     @Published var avatarIntensity: Double = 0
     @Published var isRecordingOnWatch = false
     @Published var relayAvailable = false
+    @Published var recordingElapsed: TimeInterval = 0
 
     private var timerCancellable: AnyCancellable?
+    private var recordingTimerCancellable: AnyCancellable?
     private let client = WatchAPIClient.shared
     private let audioRecorder = WatchAudioRecorder()
     private let haptics = HapticsEngine()
     private var lastState: DaemonState = .idle
     private var intensityTarget: Double = 0
+    private var recordingStartedAt: Date?
+    private let maxRecordingDuration: TimeInterval = 30
 
     func connect(to host: String) {
         client.connect(to: host)
@@ -328,6 +441,14 @@ final class WatchViewModel: ObservableObject {
         return "Disconnected"
     }
 
+    var recordingProgress: Double {
+        min(max(recordingElapsed / maxRecordingDuration, 0), 1)
+    }
+
+    var recordingDurationLabel: String {
+        "\(Int(recordingElapsed.rounded()))s"
+    }
+
     var connectionColor: Color {
         if isConnected { return .green }
         if relayAvailable || WatchSessionManager.shared.isReachable { return .yellow }
@@ -348,6 +469,9 @@ final class WatchViewModel: ObservableObject {
 
         if lastState != newState {
             haptics.feedback(for: newState)
+            if newState == .responding {
+                haptics.responseReady()
+            }
         }
         lastState = newState
     }
@@ -377,14 +501,18 @@ final class WatchViewModel: ObservableObject {
         lastResponse = ""
         connectionError = nil
         isRecordingOnWatch = true
+        recordingElapsed = 0
+        recordingStartedAt = Date()
         handleStateChange(.listening)
         haptics.feedback(for: .listening)
+        startRecordingTimer()
 
         Task {
             do {
                 try await audioRecorder.start()
             } catch {
                 isRecordingOnWatch = false
+                stopRecordingTimer()
                 handleStateChange(client.daemonState)
                 connectionError = error.localizedDescription
             }
@@ -397,10 +525,13 @@ final class WatchViewModel: ObservableObject {
         do {
             let recording = try audioRecorder.stop()
             isRecordingOnWatch = false
+            stopRecordingTimer()
             handleStateChange(.transcribing)
+            haptics.sent()
             client.sendAudio(recording)
         } catch {
             isRecordingOnWatch = false
+            stopRecordingTimer()
             handleStateChange(client.daemonState)
             connectionError = error.localizedDescription
         }
@@ -410,6 +541,7 @@ final class WatchViewModel: ObservableObject {
         if isRecordingOnWatch {
             audioRecorder.cancel()
             isRecordingOnWatch = false
+            stopRecordingTimer()
             handleStateChange(client.daemonState)
             return
         }
@@ -423,6 +555,25 @@ final class WatchViewModel: ObservableObject {
     }
 
     private var cancellables = Set<AnyCancellable>()
+
+    private func startRecordingTimer() {
+        recordingTimerCancellable?.cancel()
+        recordingTimerCancellable = Timer.publish(every: 0.25, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in
+                guard let self, let startedAt = self.recordingStartedAt else { return }
+                self.recordingElapsed = Date().timeIntervalSince(startedAt)
+                if self.recordingElapsed >= self.maxRecordingDuration {
+                    self.stopListening()
+                }
+            }
+    }
+
+    private func stopRecordingTimer() {
+        recordingTimerCancellable?.cancel()
+        recordingTimerCancellable = nil
+        recordingStartedAt = nil
+    }
 }
 
 // MARK: - Haptics Engine
@@ -445,6 +596,14 @@ final class HapticsEngine {
             device.play(.directionUp)
         }
     }
+
+    func sent() {
+        WKInterfaceDevice.current().play(.click)
+    }
+
+    func responseReady() {
+        WKInterfaceDevice.current().play(.success)
+    }
 }
 
 // MARK: - WatchConnectivity Manager
@@ -455,6 +614,7 @@ final class WatchSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var receivedHost: String?
     @Published var receivedPairingToken: String?
     @Published var relayEnvelopeData: Data?
+    @Published var pendingRelayCount = 0
 
     private override init() { super.init() }
 
@@ -477,6 +637,18 @@ final class WatchSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        process(message: message)
+    }
+
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        process(message: applicationContext)
+    }
+
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        process(message: userInfo)
+    }
+
+    private func process(message: [String: Any]) {
         if let host = message["host"] as? String, !host.isEmpty {
             DispatchQueue.main.async {
                 self.receivedHost = host
@@ -495,7 +667,7 @@ final class WatchSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     func sendCommandThroughPhone(_ command: WatchCommand) -> Bool {
-        guard WCSession.isSupported(), WCSession.default.isReachable else { return false }
+        guard WCSession.isSupported() else { return false }
         do {
             let envelope = WatchSocketMessage(
                 id: UUID().uuidString,
@@ -503,7 +675,16 @@ final class WatchSessionManager: NSObject, ObservableObject, WCSessionDelegate {
                 payload: command
             )
             let data = try JSONEncoder().encode(envelope)
-            WCSession.default.sendMessage(["commandData": data], replyHandler: nil, errorHandler: nil)
+            if WCSession.default.isReachable {
+                WCSession.default.sendMessage(["commandData": data], replyHandler: nil) { [weak self] _ in
+                    DispatchQueue.main.async {
+                        self?.pendingRelayCount += 1
+                    }
+                }
+            } else {
+                WCSession.default.transferUserInfo(["commandData": data])
+                pendingRelayCount += 1
+            }
             return true
         } catch {
             return false

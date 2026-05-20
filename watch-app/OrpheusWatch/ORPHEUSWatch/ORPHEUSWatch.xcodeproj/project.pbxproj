@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C97F30412FBAC0D0006A782A /* ORPHEUSWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = C97F30402FBAC0D0006A782A /* ORPHEUSWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D10000022FC1000000000001 /* ORPHEUSWatch Watch Widget Extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D10000012FC1000000000001 /* ORPHEUSWatch Watch Widget Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,6 +47,13 @@
 			remoteGlobalIDString = C97F303F2FBAC0D0006A782A;
 			remoteInfo = "ORPHEUSWatch Watch App";
 		};
+		D10000032FC1000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C97F30152FBAC0CD006A782A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D10000092FC1000000000001;
+			remoteInfo = "ORPHEUSWatch Watch Widget Extension";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -60,6 +68,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D10000042FC1000000000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				D10000022FC1000000000001 /* ORPHEUSWatch Watch Widget Extension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +88,7 @@
 		C97F30402FBAC0D0006A782A /* ORPHEUSWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ORPHEUSWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C97F304F2FBAC0D2006A782A /* ORPHEUSWatch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ORPHEUSWatch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C97F30592FBAC0D2006A782A /* ORPHEUSWatch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ORPHEUSWatch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D10000012FC1000000000001 /* ORPHEUSWatch Watch Widget Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "ORPHEUSWatch Watch Widget Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -100,6 +120,11 @@
 		C97F305C2FBAC0D2006A782A /* ORPHEUSWatch Watch AppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "ORPHEUSWatch Watch AppUITests";
+			sourceTree = "<group>";
+		};
+		D10000052FC1000000000001 /* ORPHEUSWatch Watch Widget Extension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "ORPHEUSWatch Watch Widget Extension";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -147,6 +172,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D10000062FC1000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -157,6 +189,7 @@
 				C97F302D2FBAC0D0006A782A /* ORPHEUSWatchTests */,
 				C97F30372FBAC0D0006A782A /* ORPHEUSWatchUITests */,
 				C97F30442FBAC0D0006A782A /* ORPHEUSWatch Watch App */,
+				D10000052FC1000000000001 /* ORPHEUSWatch Watch Widget Extension */,
 				C97F30522FBAC0D2006A782A /* ORPHEUSWatch Watch AppTests */,
 				C97F305C2FBAC0D2006A782A /* ORPHEUSWatch Watch AppUITests */,
 				C97F301E2FBAC0CD006A782A /* Products */,
@@ -170,6 +203,7 @@
 				C97F302A2FBAC0D0006A782A /* ORPHEUSWatchTests.xctest */,
 				C97F30342FBAC0D0006A782A /* ORPHEUSWatchUITests.xctest */,
 				C97F30402FBAC0D0006A782A /* ORPHEUSWatch Watch App.app */,
+				D10000012FC1000000000001 /* ORPHEUSWatch Watch Widget Extension.appex */,
 				C97F304F2FBAC0D2006A782A /* ORPHEUSWatch Watch AppTests.xctest */,
 				C97F30592FBAC0D2006A782A /* ORPHEUSWatch Watch AppUITests.xctest */,
 			);
@@ -317,6 +351,28 @@
 			productReference = C97F30592FBAC0D2006A782A /* ORPHEUSWatch Watch AppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		D10000092FC1000000000001 /* ORPHEUSWatch Watch Widget Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D10000102FC1000000000001 /* Build configuration list for PBXNativeTarget "ORPHEUSWatch Watch Widget Extension" */;
+			buildPhases = (
+				D100000A2FC1000000000001 /* Sources */,
+				D10000062FC1000000000001 /* Frameworks */,
+				D100000B2FC1000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D10000052FC1000000000001 /* ORPHEUSWatch Watch Widget Extension */,
+			);
+			name = "ORPHEUSWatch Watch Widget Extension";
+			packageProductDependencies = (
+			);
+			productName = "ORPHEUSWatch Watch Widget Extension";
+			productReference = D10000012FC1000000000001 /* ORPHEUSWatch Watch Widget Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -349,6 +405,9 @@
 						CreatedOnToolsVersion = 26.5;
 						TestTargetID = C97F303F2FBAC0D0006A782A;
 					};
+					D10000092FC1000000000001 = {
+						CreatedOnToolsVersion = 26.5;
+					};
 				};
 			};
 			buildConfigurationList = C97F30182FBAC0CD006A782A /* Build configuration list for PBXProject "ORPHEUSWatch" */;
@@ -369,6 +428,7 @@
 				C97F30292FBAC0D0006A782A /* ORPHEUSWatchTests */,
 				C97F30332FBAC0D0006A782A /* ORPHEUSWatchUITests */,
 				C97F303F2FBAC0D0006A782A /* ORPHEUSWatch Watch App */,
+				D10000092FC1000000000001 /* ORPHEUSWatch Watch Widget Extension */,
 				C97F304E2FBAC0D2006A782A /* ORPHEUSWatch Watch AppTests */,
 				C97F30582FBAC0D2006A782A /* ORPHEUSWatch Watch AppUITests */,
 			);
@@ -412,6 +472,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		C97F30572FBAC0D2006A782A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D100000B2FC1000000000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -463,6 +530,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D100000A2FC1000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -490,6 +564,11 @@
 			isa = PBXTargetDependency;
 			target = C97F303F2FBAC0D0006A782A /* ORPHEUSWatch Watch App */;
 			targetProxy = C97F305A2FBAC0D2006A782A /* PBXContainerItemProxy */;
+		};
+		D10000082FC1000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D10000092FC1000000000001 /* ORPHEUSWatch Watch Widget Extension */;
+			targetProxy = D10000032FC1000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -620,13 +699,13 @@
 				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/Watch-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = ORPHEUSWatch;
 				INFOPLIST_KEY_NSBonjourServices = "_orpheus-watch._tcp.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "ORPHEUS searches your local network for the Mac companion server.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ORPHEUS records your voice on Apple Watch so your Mac can transcribe and answer.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = Wintermute.ORPHEUSWatch;
-				INFOPLIST_FILE = "Config/Watch-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -643,7 +722,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Debug;
 		};
@@ -657,13 +736,13 @@
 				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/Watch-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = ORPHEUSWatch;
 				INFOPLIST_KEY_NSBonjourServices = "_orpheus-watch._tcp.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "ORPHEUS searches your local network for the Mac companion server.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ORPHEUS records your voice on Apple Watch so your Mac can transcribe and answer.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = Wintermute.ORPHEUSWatch;
-				INFOPLIST_FILE = "Config/Watch-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -681,7 +760,7 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
 			};
 			name = Release;
 		};
@@ -690,11 +769,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/iOS-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = ORPHEUSWatch;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSBonjourServices = "_orpheus-watch._tcp.";
@@ -704,7 +785,6 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_FILE = "Config/iOS-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -713,6 +793,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Wintermute.ORPHEUSWatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -729,11 +810,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/iOS-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = ORPHEUSWatch;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSBonjourServices = "_orpheus-watch._tcp.";
@@ -743,7 +826,6 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_FILE = "Config/iOS-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -752,6 +834,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Wintermute.ORPHEUSWatch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -768,14 +851,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Wintermute.ORPHEUSWatchTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -791,14 +875,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Wintermute.ORPHEUSWatchTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -814,14 +899,16 @@
 		C97F306E2FBAC0D2006A782A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Wintermute.ORPHEUSWatchUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -836,14 +923,16 @@
 		C97F306F2FBAC0D2006A782A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Wintermute.ORPHEUSWatchUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -859,14 +948,14 @@
 		C97F30712FBAC0D2006A782A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Wintermute.ORPHEUSWatch-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = watchos;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -882,14 +971,14 @@
 		C97F30722FBAC0D2006A782A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Wintermute.ORPHEUSWatch-Watch-AppTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = watchos;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -906,13 +995,14 @@
 		C97F30742FBAC0D2006A782A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Wintermute.ORPHEUSWatch-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = watchos;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -928,13 +1018,14 @@
 		C97F30752FBAC0D2006A782A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Wintermute.ORPHEUSWatch-Watch-AppUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = watchos;
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -943,6 +1034,73 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				TEST_TARGET_NAME = "ORPHEUSWatch Watch App";
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
+		D100000C2FC1000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/Widget-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Wintermute.ORPHEUSWatch.watchkitapp.widgetextension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		D100000D2FC1000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7BHM7MCJTZ;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/Widget-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Wintermute.ORPHEUSWatch.watchkitapp.widgetextension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
 				VALIDATE_PRODUCT = YES;
 				WATCHOS_DEPLOYMENT_TARGET = 11.0;
 			};
@@ -1010,6 +1168,15 @@
 			buildConfigurations = (
 				C97F30742FBAC0D2006A782A /* Debug */,
 				C97F30752FBAC0D2006A782A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D10000102FC1000000000001 /* Build configuration list for PBXNativeTarget "ORPHEUSWatch Watch Widget Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D100000C2FC1000000000001 /* Debug */,
+				D100000D2FC1000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

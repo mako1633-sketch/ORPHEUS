@@ -5,12 +5,12 @@
  * The watch sends commands; the server streams back status and responses.
  */
 
-import { randomUUID } from "node:crypto";
 import { type ChildProcess, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 
-import { DaemonState as DaemonStateEnum } from "../types";
 import { daemonEvents } from "../state/daemon-events";
 import { getDaemonManager } from "../state/daemon-state";
+import { DaemonState as DaemonStateEnum } from "../types";
 import { debug } from "../utils/debug-logger";
 import type {
 	WatchCommand,

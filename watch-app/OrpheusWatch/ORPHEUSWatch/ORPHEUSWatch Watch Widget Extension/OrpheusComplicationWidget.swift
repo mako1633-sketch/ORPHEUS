@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ComplicationProvider: TimelineProvider {
     func placeholder(in context: Context) -> ComplicationEntry {
-        ComplicationEntry(date: Date(), state: "idle", responsePreview: "Ready")
+        ComplicationEntry(date: Date(), state: "idle", responsePreview: "Ready", route: "disconnected")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (ComplicationEntry) -> Void) {
@@ -20,7 +20,8 @@ struct ComplicationProvider: TimelineProvider {
         let shared = UserDefaults(suiteName: "group.com.yourcompany.OrpheusWatch")
         let state = shared?.string(forKey: "daemonState") ?? "idle"
         let preview = shared?.string(forKey: "lastResponsePreview") ?? "Ready"
-        return ComplicationEntry(date: Date(), state: state, responsePreview: preview)
+        let route = shared?.string(forKey: "connectionRoute") ?? "disconnected"
+        return ComplicationEntry(date: Date(), state: state, responsePreview: preview, route: route)
     }
 }
 
@@ -28,6 +29,7 @@ struct ComplicationEntry: TimelineEntry {
     let date: Date
     let state: String
     let responsePreview: String
+    let route: String
 
     var color: Color {
         switch state {
@@ -39,6 +41,25 @@ struct ComplicationEntry: TimelineEntry {
         default: return .gray
         }
     }
+
+    var routeLabel: String {
+        switch route {
+        case "direct": return "Direct"
+        case "relay": return "Relay"
+        default: return "Offline"
+        }
+    }
+
+    var symbolName: String {
+        switch state {
+        case "listening": return "mic.fill"
+        case "transcribing": return "waveform"
+        case "responding": return "sparkles"
+        case "speaking": return "speaker.wave.2.fill"
+        case "typing": return "keyboard"
+        default: return "circle.fill"
+        }
+    }
 }
 
 struct OrpheusComplicationWidget: Widget {
@@ -48,9 +69,10 @@ struct OrpheusComplicationWidget: Widget {
         StaticConfiguration(kind: kind, provider: ComplicationProvider()) { entry in
             OrpheusComplicationView(entry: entry)
                 .containerBackground(.clear, for: .widget)
+                .widgetURL(URL(string: "orpheuswatch://listen"))
         }
         .configurationDisplayName("ORPHEUS Status")
-        .description("Shows daemon state at a glance.")
+        .description("Shows daemon state and connection route at a glance.")
         .supportedFamilies([
             .accessoryCircular,
             .accessoryRectangular,
@@ -85,8 +107,8 @@ struct OrpheusComplicationView: View {
             Circle()
                 .fill(entry.color.opacity(0.15))
                 .frame(width: 34, height: 34)
-            Text(initials(state: entry.state))
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+            Image(systemName: entry.symbolName)
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(entry.color)
         }
     }
@@ -104,6 +126,10 @@ struct OrpheusComplicationView: View {
                     .font(.system(size: 9))
                     .foregroundColor(.gray)
                     .lineLimit(1)
+                Text(entry.routeLabel)
+                    .font(.system(size: 8, weight: .medium))
+                    .foregroundColor(entry.color)
+                    .lineLimit(1)
             }
             Spacer()
         }
@@ -111,20 +137,8 @@ struct OrpheusComplicationView: View {
     }
 
     private var inlineLayout: some View {
-        Text("ORP • \(entry.state.capitalized)")
+        Text("ORP • \(entry.state.capitalized) • \(entry.routeLabel)")
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(entry.color)
-    }
-
-    private func initials(state: String) -> String {
-        switch state {
-        case "idle": return "O"
-        case "listening": return "🎙"
-        case "transcribing": return "✍️"
-        case "responding": return "⚡"
-        case "speaking": return "🔊"
-        case "typing": return "💬"
-        default: return "?"
-        }
     }
 }

@@ -10,6 +10,19 @@ import AppIntents
 import Foundation
 
 @available(watchOS 10.0, *)
+struct StartOrpheusVoiceIntent: AppIntent {
+    static var title: LocalizedStringResource = "Start Orpheus Voice"
+    static var description = IntentDescription("Open ORPHEUS and start listening on Apple Watch")
+    static var openAppWhenRun: Bool = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        OrpheusLaunchRouter.queue(.listen)
+        return .result(dialog: "Opening ORPHEUS.")
+    }
+}
+
+@available(watchOS 10.0, *)
 struct AskOrpheusIntent: AppIntent {
     static var title: LocalizedStringResource = "Ask Orpheus"
     static var description = IntentDescription("Ask ORPHEUS a question by voice or text")
@@ -28,14 +41,14 @@ struct AskOrpheusIntent: AppIntent {
         client.connect(to: host)
         try await Task.sleep(nanoseconds: 500_000_000)
 
-        guard client.isConnected else { throw IntentError.notConnected }
-
         var result = ""
         var isDone = false
         client.query(question) { fragment, done in
             result += fragment
             if done { isDone = true }
         }
+
+        guard client.isConnected || client.relayAvailable else { throw IntentError.notConnected }
 
         for _ in 0..<120 {
             if isDone { break }
@@ -63,7 +76,10 @@ struct OrpheusStatusIntent: AppIntent {
         try await Task.sleep(nanoseconds: 500_000_000)
 
         if !client.isConnected {
-            return .result(value: "ORPHEUS is offline. Check your Mac is awake and on the same Wi-Fi.")
+            if WatchSessionManager.shared.isReachable {
+                return .result(value: "ORPHEUS can use the iPhone relay. Open the watch app to ask by voice.")
+            }
+            return .result(value: "ORPHEUS is offline. Check your Mac is awake and the iPhone bridge is open.")
         }
 
         let label: String
@@ -83,10 +99,20 @@ struct OrpheusStatusIntent: AppIntent {
 struct OrpheusShortcutsProvider: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
+            intent: StartOrpheusVoiceIntent(),
+            phrases: [
+                "Start \(.applicationName)",
+                "Open \(.applicationName)",
+                "Talk to \(.applicationName)",
+            ],
+            shortTitle: "Start Voice",
+            systemImageName: "mic.circle.fill"
+        )
+        AppShortcut(
             intent: AskOrpheusIntent(),
             phrases: [
                 "Ask \(.applicationName)",
-                "Talk to \(.applicationName)",
+                "Ask \(.applicationName) a question",
             ],
             shortTitle: "Ask Orpheus",
             systemImageName: "mic.fill"

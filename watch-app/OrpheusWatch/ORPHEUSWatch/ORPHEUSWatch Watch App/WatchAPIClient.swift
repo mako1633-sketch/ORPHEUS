@@ -18,6 +18,7 @@ final class WatchAPIClient: NSObject, ObservableObject {
     @Published var lastResponse: String = ""
     @Published var connectionError: String?
     @Published var relayAvailable = false
+    @Published var activeRoute: WatchConnectionRoute = .disconnected
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var reconnectTimer: Timer?
@@ -26,6 +27,7 @@ final class WatchAPIClient: NSObject, ObservableObject {
     private lazy var urlSession = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
     private var queryFragmentHandler: ((String, Bool) -> Void)?
     private let sharedDefaults: UserDefaults? = UserDefaults(suiteName: "group.com.yourcompany.OrpheusWatch")
+    private var intentionallyClosedTaskIds = Set<Int>()
 
     private override init() {
         super.init()
@@ -46,6 +48,7 @@ final class WatchAPIClient: NSObject, ObservableObject {
             connectionError = "Invalid Mac address"
             return
         }
+        connectionError = "Connecting to Mac..."
         webSocketTask = urlSession.webSocketTask(with: url)
         webSocketTask?.resume()
     }
@@ -53,20 +56,29 @@ final class WatchAPIClient: NSObject, ObservableObject {
     func disconnect() {
         reconnectTimer?.invalidate()
         reconnectTimer = nil
-        webSocketTask?.cancel(with: .normalClosure, reason: nil)
+        if let webSocketTask {
+            intentionallyClosedTaskIds.insert(webSocketTask.taskIdentifier)
+            webSocketTask.cancel(with: .normalClosure, reason: nil)
+        }
         webSocketTask = nil
         isConnected = false
+        activeRoute = .disconnected
     }
 
-    func send(command: WatchCommand) {
+    @discardableResult
+    func send(command: WatchCommand) -> Bool {
         guard isConnected else {
             if WatchSessionManager.shared.sendCommandThroughPhone(command) {
                 relayAvailable = true
+                activeRoute = .relay
                 connectionError = nil
-                return
+                return true
             }
-            connectionError = "Not connected"
-            return
+            connectionError = WatchSessionManager.shared.isReachable
+                ? "iPhone relay is not ready"
+                : "Open the iPhone bridge or connect to your Mac"
+            activeRoute = .disconnected
+            return false
         }
         let envelope = WatchSocketMessage(
             id: UUID().uuidString,
@@ -77,12 +89,14 @@ final class WatchAPIClient: NSObject, ObservableObject {
             let data = try JSONEncoder().encode(envelope)
             webSocketTask?.send(.data(data)) { [weak self] error in
                 if let error = error {
-                    DispatchQueue.main.async { self?.connectionError = error.localizedDescription }
+                    DispatchQueue.main.async { self?.connectionError = Self.describe(error: error) }
                 }
             }
         } catch {
             connectionError = error.localizedDescription
+            return false
         }
+        return true
     }
 
     func query(_ text: String, onFragment: ((String, Bool) -> Void)? = nil) {
@@ -94,16 +108,16 @@ final class WatchAPIClient: NSObject, ObservableObject {
     func sendAudio(_ recording: WatchAudioRecording) {
         lastResponse = ""
         lastTranscription = ""
-        send(command: .audio(
+        _ = send(command: .audio(
             audioBase64: recording.data.base64EncodedString(),
             mimeType: recording.mimeType,
             duration: recording.duration
         ))
     }
 
-    func cancel()  { send(command: .cancel) }
-    func requestStatus() { send(command: .status) }
-    func toggleListening() { send(command: .listen) }
+    func cancel()  { _ = send(command: .cancel) }
+    func requestStatus() { _ = send(command: .status) }
+    func toggleListening() { _ = send(command: .listen) }
 
     // MARK: - Message handling
 
@@ -128,11 +142,11 @@ final class WatchAPIClient: NSObject, ObservableObject {
             daemonState = s
             if let t = t { lastTranscription = t }
             if let r = r { lastResponse = r }
-            syncToSharedDefaults(state: s, preview: r ?? lastResponse)
+            syncToSharedDefaults(state: s, preview: r ?? lastResponse, route: activeRoute)
         case .query(let f, let done, _):
             if !f.isEmpty {
                 lastResponse += f
-                syncToSharedDefaults(state: daemonState, preview: lastResponse)
+                syncToSharedDefaults(state: daemonState, preview: lastResponse, route: activeRoute)
             }
             queryFragmentHandler?(f, done)
             if done {
@@ -143,6 +157,9 @@ final class WatchAPIClient: NSObject, ObservableObject {
             connectionError = msg
             queryFragmentHandler?("", true)
             queryFragmentHandler = nil
+            if msg.localizedCaseInsensitiveContains("unauthorized") {
+                connectionError = "Pairing token rejected"
+            }
         default:
             break
         }
@@ -152,9 +169,10 @@ final class WatchAPIClient: NSObject, ObservableObject {
         handleMessage(data)
     }
 
-    private func syncToSharedDefaults(state: DaemonState, preview: String) {
+    private func syncToSharedDefaults(state: DaemonState, preview: String, route: WatchConnectionRoute) {
         sharedDefaults?.set(state.rawValue, forKey: "daemonState")
         sharedDefaults?.set(String(preview.prefix(120)), forKey: "lastResponsePreview")
+        sharedDefaults?.set(route.rawValue, forKey: "connectionRoute")
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -173,8 +191,10 @@ final class WatchAPIClient: NSObject, ObservableObject {
                 self.startListening()
             case .failure(let error):
                 DispatchQueue.main.async {
+                    guard !Self.isCancelled(error) else { return }
                     self.isConnected = false
-                    self.connectionError = error.localizedDescription
+                    self.activeRoute = WatchSessionManager.shared.isReachable ? .relay : .disconnected
+                    self.connectionError = Self.describe(error: error)
                 }
                 self.scheduleReconnect()
             }
@@ -200,6 +220,8 @@ extension WatchAPIClient: URLSessionWebSocketDelegate {
     ) {
         DispatchQueue.main.async { [weak self] in
             self?.isConnected = true
+            self?.relayAvailable = false
+            self?.activeRoute = .direct
             self?.connectionError = nil
             self?.startListening()
         }
@@ -207,11 +229,51 @@ extension WatchAPIClient: URLSessionWebSocketDelegate {
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         DispatchQueue.main.async { [weak self] in
-            self?.isConnected = false
+            guard let self else { return }
+            guard !self.shouldIgnoreClose(for: task, error: error) else { return }
+            self.isConnected = false
+            self.activeRoute = WatchSessionManager.shared.isReachable ? .relay : .disconnected
             if let error = error {
-                self?.connectionError = error.localizedDescription
+                self.connectionError = Self.describe(error: error)
             }
-            self?.scheduleReconnect()
+            self.scheduleReconnect()
         }
+    }
+
+    private func shouldIgnoreClose(for task: URLSessionTask, error: Error?) -> Bool {
+        if intentionallyClosedTaskIds.remove(task.taskIdentifier) != nil {
+            return true
+        }
+        let nsError = error as NSError?
+        return nsError?.domain == NSURLErrorDomain && nsError?.code == NSURLErrorCancelled
+    }
+
+    private static func isCancelled(_ error: Error) -> Bool {
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled
+    }
+
+    private static func describe(error: Error) -> String {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            switch nsError.code {
+            case NSURLErrorCannotConnectToHost:
+                return "Mac server is not reachable"
+            case NSURLErrorNetworkConnectionLost:
+                return "Connection dropped"
+            case NSURLErrorNotConnectedToInternet:
+                return "Watch is offline"
+            case NSURLErrorUserAuthenticationRequired:
+                return "Pairing token rejected"
+            case NSURLErrorCancelled:
+                return "Connection is reconnecting"
+            default:
+                break
+            }
+        }
+        if error.localizedDescription.localizedCaseInsensitiveContains("socket") {
+            return "Connection closed; reconnecting"
+        }
+        return error.localizedDescription
     }
 }

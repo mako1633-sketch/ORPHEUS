@@ -4,11 +4,11 @@ Apple Watch companion for ORPHEUS. Provides voice interaction, daemon status, an
 
 ## Features
 
-- **Voice queries** — tap the mic icon or use Siri
+- **Voice queries** — tap the mic icon, tap the complication, or use Siri to open ORPHEUS listening mode
 - **Live state display** — idle, listening, transcribing, responding, speaking, typing
 - **Haptic feedback** — state-specific taps for each transition
 - **Watch face complication** — circular, rectangular, inline, and corner layouts
-- **Siri Shortcuts** — "Ask Orpheus", "Check Orpheus status"
+- **Siri Shortcuts** — "Start Orpheus", "Ask Orpheus", "Check Orpheus status"
 - **Native avatar** — daemon rig recreated in SwiftUI for Series 7+ tall screens
 
 ## Architecture
@@ -51,6 +51,10 @@ If the Widget Extension target doesn't exist in your project yet:
 
 The `OrpheusShortcuts.swift` file uses `AppIntents` — no additional setup required on watchOS 10+. The shortcuts appear automatically once the app is installed.
 
+For the most Siri-like flow, say **"Start ORPHEUS"**, **"Open ORPHEUS"**, or **"Talk to ORPHEUS"**. The Watch app opens and immediately starts microphone capture once the direct Mac connection or iPhone relay is ready.
+
+Use **"Ask ORPHEUS"** when you want Siri to capture a dictated question and send it as text. Use **"Check ORPHEUS status"** for a hands-free connection/state check.
+
 ### 4. Build & Run
 
 1. Make sure ORPHEUS is running on your Mac (`bun run orpheus`)
@@ -60,6 +64,7 @@ The `OrpheusShortcuts.swift` file uses `AppIntents` — no additional setup requ
 5. Build and install
 6. On the Watch, open ORPHEUS, enter your Mac IP in Settings
 7. Long-press a watch face → Edit → Complications → pick **ORPHEUS Status**
+8. Tap the ORPHEUS complication to open the Watch app directly into listening mode
 
 ## File Overview
 
@@ -70,6 +75,7 @@ The `OrpheusShortcuts.swift` file uses `AppIntents` — no additional setup requ
 - `WatchAPIClient.swift` — WebSocket client, publishes to shared defaults
 - `WatchModels.swift` — shared types (state, commands, responses)
 - `OrpheusShortcuts.swift` — AppIntents for Siri shortcuts
+- `OrpheusLaunchAction.swift` — routes Siri and complication launches into app actions
 
 ### Widget Extension (`ORPHEUSWatch Watch Widget Extension/`)
 - `ComplicationWidgetBundle.swift` — `@main` widget bundle
@@ -86,6 +92,7 @@ The `OrpheusShortcuts.swift` file uses `AppIntents` — no additional setup requ
 | Issue | Fix |
 |-------|-----|
 | "Not configured" in shortcuts | Open the Watch app, set Mac IP in Settings |
+| Siri opens ORPHEUS but it does not listen | Confirm microphone permission is allowed and the Mac server or iPhone relay is reachable |
 | Complication not updating | Verify App Group is identical on both targets |
 | "Cannot connect" | Check Mac firewall, ensure ORPHEUS is running, same Wi-Fi |
 | Avatar not showing | Series 7 or later required for full avatar (falls back to state pill) |

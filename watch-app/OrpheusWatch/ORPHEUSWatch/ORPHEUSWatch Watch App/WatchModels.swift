@@ -13,6 +13,12 @@ enum DaemonState: String, Codable {
     case idle, listening, transcribing, responding, speaking, typing
 }
 
+enum WatchConnectionRoute: String {
+    case direct
+    case relay
+    case disconnected
+}
+
 // MARK: - Commands (Watch → Mac)
 
 enum WatchCommand: Codable {
