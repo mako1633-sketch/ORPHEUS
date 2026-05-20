@@ -1,0 +1,15 @@
+[
+  {
+    "id": "watch-sub-leak-fix-2026-05-20",
+    "title": "Fix WatchViewModel subscription leak in connect(to:)",
+    "status": "done",
+    "file": "watch-app/OrpheusWatch/ORPHEUSWatch/ORPHEUSWatch Watch App/ContentView.swift",
+    "description": "Removed old subscriptions before reconnect by adding cancellables.removeAll() and cancelling the old timerCancellable. Each call to connect(to:) previously accumulated 6 new Combine sinks into cancellables, growing unbounded and causing duplicate state updates, transcription text duplication, and leaked timers on host change or reconnect.",
+    "changed": [
+      "watch-app/OrpheusWatch/ORPHEUSWatch/ORPHEUSWatch Watch App/ContentView.swift"
+    ],
+    "verified": false,
+    "createdAt": "2026-05-20",
+    "completedAt": "2026-05-20"
+  }
+]

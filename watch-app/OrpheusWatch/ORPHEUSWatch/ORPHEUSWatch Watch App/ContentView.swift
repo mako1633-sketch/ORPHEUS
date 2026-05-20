@@ -402,6 +402,9 @@ final class WatchViewModel: ObservableObject {
     private let maxRecordingDuration: TimeInterval = 30
 
     func connect(to host: String) {
+        // Clear previous subscriptions on reconnection to prevent accumulation
+        cancellables.removeAll()
+        timerCancellable?.cancel()
         client.connect(to: host)
 
         let c = client
