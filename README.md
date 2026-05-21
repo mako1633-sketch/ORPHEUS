@@ -81,7 +81,7 @@ ORPHEUS stores chat sessions locally (SQLite) and lets you resume past conversat
 ### Persistent Context and Memory
 ORPHEUS can keep durable local context between sessions for setup choices, project facts, active coding work, and executive-assistant state. Local persistent context is stored under the ORPHEUS config directory and is injected only when relevant.
 
-ORPHEUS can persist user-specific facts across sessions using [mem0](https://github.com/mem0ai/mem0). Memory extraction runs automatically on user messages and relevant memories are injected into the conversation when helpful. 
+ORPHEUS can persist user-specific facts across sessions using [mem0](https://github.com/mem0ai/mem0). Memory extraction runs automatically on user messages, and relevant memories are injected into the conversation when helpful. 
 
 ORPHEUS can also mirror sanitized conversation turns into [Honcho](https://docs.honcho.dev/) for richer conversational context. Honcho is optional and loaded only when configured. Install `@honcho-ai/sdk`, then set `HONCHO_API_KEY` for managed Honcho or `HONCHO_BASE_URL` for a local Honcho server. Optional settings: `HONCHO_WORKSPACE_ID`, `HONCHO_USER_PEER_ID`, `HONCHO_ASSISTANT_PEER_ID`, or `HONCHO_ENABLED=true`.
 
@@ -98,7 +98,38 @@ QoL coding helpers include a project doctor for setup/readiness checks, coding m
 ORPHEUS can track durable priorities, follow-ups, decisions, waiting-on items, risks, notes, and a long-term task stack. It can produce a concise local briefing focused on overdue items, due-soon work, blocked or waiting-on tasks, queued ORPHEUS work, open decisions, and risks. This is local ORPHEUS state unless an external connector or MCP server is configured.
 
 ### Reliability and Control Centers
-ORPHEUS includes compact operational surfaces for higher-confidence work: a capability dashboard with fix actions, a context budget recommendation, a launch briefing that combines health, active coding work, executive state, and memory status, and persistent-context controls to view, replace, clear, or export local memory.
+ORPHEUS includes compact operational surfaces for higher-confidence work: a capability dashboard with fix actions, a context budget recommendation, a launch briefing that combines health, active coding work, executive state, and memory status, persistent-context controls to view, replace, clear, or export local memory, and an AI red-team assessment module with probe library, batch execution, reasoning traces, result persistence, self-check gates, and risk dashboards.
+
+### AI Red-Team Assessment
+ORPHEUS includes a defensive AI red-team capability for evaluating and probing the reasoning, safety boundaries, and refusal behavior of target AI systems. The module operates with an approval-gated design and is intended for **authorized defensive validation only**.
+
+**Core Capabilities:**
+- **26 built-in probes** across 4 categories (toxicity, jailbreak, bias, privacy)
+- **Batch execution runner** with configurable concurrency and per-probe timeouts
+- **Reasoning traces** — category-level and overall reasoning logs with configurable TTL
+- **Result persistence** — in-memory store for historical runs with trend comparison
+- **Self-check / verification** — confidence scoring, heuristic validation, and flagging of low-confidence probe results
+- **Completion gates** — mandatory post-batch validation (missing probes, duplicates, category coverage)
+- **Scheduler durability** — disk-persisted schedules that survive restarts
+- **Custom probe registry** — load custom probes from JSON/YAML definitions
+- **Dataset parser** — parse CSV/JSON datasets for probe substitution
+- **Multimodal harness** — prepare image, voice, and document inputs for probe testing
+- **Risk scoring + dashboards** — overall risk score, category breakdowns, and trend visualization
+- **Report generation** — markdown export of findings with evidence
+
+**Feature flags in `runBatch`:**
+```typescript
+await runBatch({
+  probes: ALL_PROBES,
+  enableSelfCheck: true,      // confidence scoring on each result
+  enableCompletionGates: true, // post-batch validation gate
+  enableTraces: true,          // generate reasoning traces
+  enableAutoPersist: true,     // save run for trend comparison
+  targetName: "gpt-4o-latest",
+}, sendPromptFn);
+```
+
+For usage details and API reference, see the module at `src/ai/red-team/`.
 
 ### Quick Actions
 The terminal UI includes an ORPHEUS quick-action menu for common maintenance and status workflows. Use `Cmd+Shift+O` on macOS, or `Ctrl+Shift+O` on non-macOS platforms, to open quick actions.
@@ -127,6 +158,12 @@ The terminal UI includes an ORPHEUS quick-action menu for common maintenance and
 | Local Shell Execution | PowerShell on Windows and bash on macOS/Linux, with approval scoping for potentially dangerous commands. |
 | ORPHEUS Quick Actions | Terminal quick-action menu for status, repo checks, task review, and maintenance workflows. |
 | JS Page Rendering | Optional Playwright renderer for SPA content. |
+| AI Red-Team Assessment | 26 probes across 4 categories, batch runner, risk scoring, custom registry, dataset parser, multimodal harness, scheduler, and dashboards. |
+| Reasoning Traces | Category-level and overall reasoning logs for red-team batch runs with configurable TTL. |
+| Result Persistence | In-memory historical run storage with trend comparison for red-team results. |
+| Self-Check / Verification | Confidence scoring, heuristic validation, and flagging for low-confidence probe results. |
+| Completion Gates | Post-batch validation: missing probes, duplicates, and category coverage checks. |
+| Scheduler Durability | Disk-persisted red-team schedules that survive restarts. |
 | MCP | Model Context Protocol tools. |
 
 ## Install
