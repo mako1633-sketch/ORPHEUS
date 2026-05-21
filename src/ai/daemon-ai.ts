@@ -3,8 +3,8 @@
  * Handles transcription and response generation.
  */
 
-import { createOpenAI } from "@ai-sdk/openai";
-import { type ModelMessage, experimental_transcribe as transcribe } from "ai";
+import { type ModelMessage } from "ai";
+import OpenAI, { toFile } from "openai";
 import { getDaemonManager } from "../state/daemon-state";
 import { getRuntimeContext } from "../state/runtime-context";
 import type {
@@ -34,7 +34,31 @@ import { setSubagentProgressEmitter } from "./tools/subagents";
 
 export type { ModelMessage } from "ai";
 
-const openai = createOpenAI({});
+let openaiClient: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+	if (!openaiClient) {
+		openaiClient = new OpenAI({});
+	}
+	return openaiClient;
+}
+
+function getAudioFileExtension(mimeType: string): string {
+	switch (mimeType) {
+		case "audio/mp4":
+			return "m4a";
+		case "audio/mpeg":
+			return "mp3";
+		case "audio/ogg":
+			return "ogg";
+		case "audio/webm":
+			return "webm";
+		case "audio/flac":
+			return "flac";
+		default:
+			return "wav";
+	}
+}
 
 function isMemoryPipelineUsableForCurrentProvider(): boolean {
 	return true;
@@ -66,14 +90,23 @@ async function buildMemoryInjectionForPrompt(userMessage: string): Promise<strin
  */
 export async function transcribeAudio(
 	audioBuffer: Buffer,
-	abortSignal?: AbortSignal
+	abortSignal?: AbortSignal,
+	mimeType = "audio/wav"
 ): Promise<TranscriptionResult> {
 	try {
-		const result = await transcribe({
-			model: openai.transcription(TRANSCRIPTION_MODEL),
-			audio: audioBuffer,
-			abortSignal,
-		});
+		const normalizedMimeType = mimeType.trim() || "audio/wav";
+		const extension = getAudioFileExtension(normalizedMimeType);
+		const file = await toFile(audioBuffer, `audio.${extension}`, { type: normalizedMimeType });
+		const result = await getOpenAIClient().audio.transcriptions.create(
+			{
+				model: TRANSCRIPTION_MODEL,
+				file,
+				response_format: "json",
+			},
+			{
+				signal: abortSignal,
+			}
+		);
 
 		return {
 			text: result.text,

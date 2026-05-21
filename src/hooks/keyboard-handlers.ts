@@ -467,6 +467,12 @@ export function handleSettingsMenuKey(key: KeyEvent, ctx: SettingsMenuContext): 
 		settingIdx++;
 
 		if (ctx.selectedIdx === settingIdx) {
+			key.preventDefault();
+			return true;
+		}
+		settingIdx++;
+
+		if (ctx.selectedIdx === settingIdx) {
 			if (ctx.interactionMode !== "voice") {
 				key.preventDefault();
 				return true;

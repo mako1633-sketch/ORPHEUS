@@ -122,6 +122,11 @@ describe("parsePreferences", () => {
 			expect(result?.modelId).toBe("gpt-4");
 		});
 
+		it("migrates the old Ollama default model to Kimi K2", () => {
+			const result = parsePreferences({ modelProvider: "ollama", modelId: "llama3.1:8b" });
+			expect(result?.modelId).toBe("kimi-k2.6:cloud");
+		});
+
 		it("omits modelId when not provided", () => {
 			const result = parsePreferences({});
 			expect(result?.modelId).toBeUndefined();

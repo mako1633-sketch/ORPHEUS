@@ -281,7 +281,7 @@ class DaemonStateManager {
 	/**
 	 * Submit audio captured by a remote client, such as the Apple Watch companion.
 	 */
-	async submitAudio(audioBuffer: Buffer, duration?: number): Promise<void> {
+	async submitAudio(audioBuffer: Buffer, duration?: number, mimeType = "audio/wav"): Promise<void> {
 		if (
 			this._state !== DaemonState.IDLE &&
 			this._state !== DaemonState.TYPING &&
@@ -314,7 +314,11 @@ class DaemonStateManager {
 		this.transcriptionAbortController = new AbortController();
 
 		try {
-			const result = await transcribeAudio(audioBuffer, this.transcriptionAbortController.signal);
+			const result = await transcribeAudio(
+				audioBuffer,
+				this.transcriptionAbortController.signal,
+				mimeType
+			);
 			this.transcriptionAbortController = null;
 			this._transcription = result.text;
 

@@ -19,6 +19,14 @@ final class WatchAPIClient: NSObject, ObservableObject {
     @Published var connectionError: String?
     @Published var relayAvailable = false
     @Published var activeRoute: WatchConnectionRoute = .disconnected
+    @Published var speakReplies = UserDefaults.standard.object(forKey: "orpheus_watch_speak_replies") as? Bool ?? true {
+        didSet {
+            UserDefaults.standard.set(speakReplies, forKey: "orpheus_watch_speak_replies")
+            if !speakReplies {
+                WatchSpeechSpeaker.shared.stop()
+            }
+        }
+    }
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var reconnectTimer: Timer?
@@ -28,6 +36,9 @@ final class WatchAPIClient: NSObject, ObservableObject {
     private var queryFragmentHandler: ((String, Bool) -> Void)?
     private let sharedDefaults: UserDefaults? = UserDefaults(suiteName: "group.com.yourcompany.OrpheusWatch")
     private var intentionallyClosedTaskIds = Set<Int>()
+    private var statusRefreshTimer: Timer?
+    private var awaitingAudioReply = false
+    private var lastSpokenResponse = ""
 
     private override init() {
         super.init()
@@ -56,6 +67,7 @@ final class WatchAPIClient: NSObject, ObservableObject {
     func disconnect() {
         reconnectTimer?.invalidate()
         reconnectTimer = nil
+        stopStatusRefresh()
         if let webSocketTask {
             intentionallyClosedTaskIds.insert(webSocketTask.taskIdentifier)
             webSocketTask.cancel(with: .normalClosure, reason: nil)
@@ -108,11 +120,15 @@ final class WatchAPIClient: NSObject, ObservableObject {
     func sendAudio(_ recording: WatchAudioRecording) {
         lastResponse = ""
         lastTranscription = ""
-        _ = send(command: .audio(
+        let sent = send(command: .audio(
             audioBase64: recording.data.base64EncodedString(),
             mimeType: recording.mimeType,
             duration: recording.duration
         ))
+        if sent {
+            awaitingAudioReply = true
+            startStatusRefresh()
+        }
     }
 
     func cancel()  { _ = send(command: .cancel) }
@@ -139,10 +155,17 @@ final class WatchAPIClient: NSObject, ObservableObject {
     private func processResponse(_ response: WatchResponse) {
         switch response {
         case .status(let s, let t, let r, _, _):
+            let previousState = daemonState
             daemonState = s
             if let t = t { lastTranscription = t }
             if let r = r { lastResponse = r }
             syncToSharedDefaults(state: s, preview: r ?? lastResponse, route: activeRoute)
+            speakCompletedAudioReplyIfNeeded(previousState: previousState, newState: s)
+            if s.isBusy {
+                startStatusRefresh()
+            } else {
+                stopStatusRefresh()
+            }
         case .query(let f, let done, _):
             if !f.isEmpty {
                 lastResponse += f
@@ -150,13 +173,15 @@ final class WatchAPIClient: NSObject, ObservableObject {
             }
             queryFragmentHandler?(f, done)
             if done {
-                WatchSpeechSpeaker.shared.speak(lastResponse)
+                speak(lastResponse)
                 queryFragmentHandler = nil
             }
         case .error(let msg):
             connectionError = msg
             queryFragmentHandler?("", true)
             queryFragmentHandler = nil
+            stopStatusRefresh()
+            awaitingAudioReply = false
             if msg.localizedCaseInsensitiveContains("unauthorized") {
                 connectionError = "Pairing token rejected"
             }
@@ -206,6 +231,53 @@ final class WatchAPIClient: NSObject, ObservableObject {
         guard let host = currentHost else { return }
         reconnectTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
             self?.connect(to: host)
+        }
+    }
+
+    private func startStatusRefresh() {
+        guard statusRefreshTimer == nil else { return }
+        statusRefreshTimer = Timer.scheduledTimer(withTimeInterval: 1.25, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            if self.daemonState.isBusy {
+                _ = self.send(command: .status)
+            } else {
+                self.stopStatusRefresh()
+            }
+        }
+    }
+
+    private func stopStatusRefresh() {
+        statusRefreshTimer?.invalidate()
+        statusRefreshTimer = nil
+    }
+
+    private func speakCompletedAudioReplyIfNeeded(previousState: DaemonState, newState: DaemonState) {
+        guard awaitingAudioReply else { return }
+        guard previousState.isBusy || newState == .idle else { return }
+        guard !newState.isBusy else { return }
+
+        let trimmed = lastResponse.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        awaitingAudioReply = false
+        speak(trimmed)
+    }
+
+    private func speak(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard speakReplies, !trimmed.isEmpty, trimmed != lastSpokenResponse else { return }
+        lastSpokenResponse = trimmed
+        WatchSpeechSpeaker.shared.speak(trimmed)
+    }
+}
+
+private extension DaemonState {
+    var isBusy: Bool {
+        switch self {
+        case .listening, .transcribing, .responding, .speaking:
+            return true
+        case .idle, .typing:
+            return false
         }
     }
 }

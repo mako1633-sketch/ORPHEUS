@@ -15,6 +15,10 @@ import type {
 } from "../types";
 import { BASH_APPROVAL_LABELS, REASONING_EFFORT_LABELS } from "../types";
 import { COLORS } from "../ui/constants";
+import {
+	OPENAI_REALTIME_SPEECH_MODEL,
+	OPENAI_REALTIME_SPEECH_VOICE,
+} from "../voice/tts/openai-tts-stream";
 
 interface SettingsMenuItem {
 	id: string;
@@ -230,6 +234,15 @@ export function SettingsMenu({
 			id: "header-audio",
 			label: "AUDIO PARAMETERS",
 			isHeader: true,
+		},
+		{
+			id: "speech-engine",
+			label: "Speech Engine",
+			value: audioSettingsDisabled ? "N/A" : OPENAI_REALTIME_SPEECH_MODEL.toUpperCase(),
+			description: audioSettingsDisabled
+				? "Enable voice mode to use OpenAI realtime speech"
+				: `OpenAI realtime speech output with ${OPENAI_REALTIME_SPEECH_VOICE.toUpperCase()} voice`,
+			disabled: true,
 		},
 		{
 			id: "speech-speed",

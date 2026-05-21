@@ -18,7 +18,7 @@ export const AVAILABLE_OPENROUTER_MODELS: ModelOption[] = [
 ];
 
 export const AVAILABLE_OLLAMA_MODELS: ModelOption[] = [
-	{ id: "llama3.1:8b", name: "Llama 3.1 8B" },
+	{ id: "kimi-k2.6:cloud", name: "Kimi K2.6 Cloud" },
 	{ id: "qwen3:8b", name: "Qwen3 8B" },
 	{ id: "mistral:7b", name: "Mistral 7B" },
 ];
@@ -27,7 +27,7 @@ export const AVAILABLE_OLLAMA_MODELS: ModelOption[] = [
 export const DEFAULT_OPENROUTER_MODEL_ID = "z-ai/glm-4.7";
 export const DEFAULT_CODEX_COPILOT_MODEL_ID = "gpt-5.2-codex";
 export const DEFAULT_COPILOT_MODEL_ID = DEFAULT_CODEX_COPILOT_MODEL_ID;
-export const DEFAULT_OLLAMA_MODEL_ID = "llama3.1:8b";
+export const DEFAULT_OLLAMA_MODEL_ID = "kimi-k2.6:cloud";
 export const DEFAULT_MODEL_ID = DEFAULT_OPENROUTER_MODEL_ID;
 export const DEFAULT_MODEL_PROVIDER: LlmProvider = "openrouter";
 
@@ -340,8 +340,9 @@ export function buildOpenRouterChatSettings(
 	return Object.keys(settings).length > 0 ? settings : undefined;
 }
 
-// Transcription model (OpenAI)
-export const TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe-2025-12-15";
+// Transcription model (OpenAI). Use the stable alias so the AI SDK applies the
+// supported response format for GPT-4o transcription models.
+export const TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe";
 
 // Default model for memory operations.
 export const DEFAULT_MEMORY_MODEL_OPENROUTER = "openai/gpt-5.4-nano";

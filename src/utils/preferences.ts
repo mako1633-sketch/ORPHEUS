@@ -6,6 +6,7 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { DEFAULT_OLLAMA_MODEL_ID } from "../ai/model-config";
 import type { AppPreferences } from "../types";
 
 const PREFERENCES_VERSION = 1;
@@ -14,6 +15,7 @@ const PREFERENCES_FILE = "preferences.json";
 const CREDENTIALS_FILE = "credentials.json";
 const CONFIG_DIR_ENV = "ORPHEUS_CONFIG_DIR";
 const LEGACY_CONFIG_DIR_ENV = "DAEMON_CONFIG_DIR";
+const LEGACY_OLLAMA_MODEL_IDS = new Set(["llama3.1:8b"]);
 
 /** Keys that belong in credentials.json (secrets) vs preferences.json (settings) */
 const CREDENTIAL_KEYS = ["openRouterApiKey", "openAiApiKey", "exaApiKey"] as const;
@@ -76,15 +78,18 @@ export function parsePreferences(raw: unknown): AppPreferences | null {
 	if (typeof raw.audioOutputDeviceName === "string") {
 		prefs.audioOutputDeviceName = raw.audioOutputDeviceName;
 	}
-	if (typeof raw.modelId === "string") {
-		prefs.modelId = raw.modelId;
-	}
 	if (
 		raw.modelProvider === "openrouter" ||
 		raw.modelProvider === "copilot" ||
 		raw.modelProvider === "ollama"
 	) {
 		prefs.modelProvider = raw.modelProvider;
+	}
+	if (typeof raw.modelId === "string") {
+		prefs.modelId =
+			prefs.modelProvider === "ollama" && LEGACY_OLLAMA_MODEL_IDS.has(raw.modelId)
+				? DEFAULT_OLLAMA_MODEL_ID
+				: raw.modelId;
 	}
 	if (typeof raw.openRouterProviderTag === "string") {
 		prefs.openRouterProviderTag = raw.openRouterProviderTag;

@@ -40,6 +40,8 @@ export class WatchServer {
 	private config: WatchServerConfig;
 	private stateChangeListener: ((state: DaemonStateEnum) => void) | null = null;
 	private transcriptionUpdateListener: ((text: string) => void) | null = null;
+	private responseTokenListener: ((token: string) => void) | null = null;
+	private responseCompleteListener: (() => void) | null = null;
 	private cancelledListener: (() => void) | null = null;
 	private errorListener: ((error: Error) => void) | null = null;
 	private queryListeners = new Map<
@@ -71,6 +73,8 @@ export class WatchServer {
 
 		this.stateChangeListener = () => this.broadcastToAll(this.buildStatusPayload());
 		this.transcriptionUpdateListener = () => this.broadcastToAll(this.buildStatusPayload());
+		this.responseTokenListener = () => this.broadcastToAll(this.buildStatusPayload());
+		this.responseCompleteListener = () => this.broadcastToAll(this.buildStatusPayload());
 		this.cancelledListener = () => this.broadcastToAll(this.buildStatusPayload());
 		this.errorListener = (error) => {
 			this.broadcastToAll({ type: "error", message: error.message } as WatchErrorResponse);
@@ -78,6 +82,8 @@ export class WatchServer {
 		};
 		daemonEvents.on("stateChange", this.stateChangeListener);
 		daemonEvents.on("transcriptionUpdate", this.transcriptionUpdateListener);
+		daemonEvents.on("responseToken", this.responseTokenListener);
+		daemonEvents.on("responseComplete", this.responseCompleteListener);
 		daemonEvents.on("cancelled", this.cancelledListener);
 		daemonEvents.on("error", this.errorListener);
 
@@ -100,10 +106,16 @@ export class WatchServer {
 		if (this.transcriptionUpdateListener) {
 			daemonEvents.off("transcriptionUpdate", this.transcriptionUpdateListener);
 		}
+		if (this.responseTokenListener) daemonEvents.off("responseToken", this.responseTokenListener);
+		if (this.responseCompleteListener) {
+			daemonEvents.off("responseComplete", this.responseCompleteListener);
+		}
 		if (this.cancelledListener) daemonEvents.off("cancelled", this.cancelledListener);
 		if (this.errorListener) daemonEvents.off("error", this.errorListener);
 		this.stateChangeListener = null;
 		this.transcriptionUpdateListener = null;
+		this.responseTokenListener = null;
+		this.responseCompleteListener = null;
 		this.cancelledListener = null;
 		this.errorListener = null;
 
@@ -366,10 +378,12 @@ export class WatchServer {
 
 				try {
 					const audioBuffer = Buffer.from(command.audioBase64, "base64");
-					void manager.submitAudio(audioBuffer, command.duration).catch((error) => {
-						const err = error instanceof Error ? error : new Error(String(error));
-						daemonEvents.emit("error", err);
-					});
+					void manager
+						.submitAudio(audioBuffer, command.duration, command.mimeType)
+						.catch((error) => {
+							const err = error instanceof Error ? error : new Error(String(error));
+							daemonEvents.emit("error", err);
+						});
 					return this.buildStatusPayload();
 				} catch {
 					return { type: "error", message: "Invalid audio payload" } as WatchErrorResponse;

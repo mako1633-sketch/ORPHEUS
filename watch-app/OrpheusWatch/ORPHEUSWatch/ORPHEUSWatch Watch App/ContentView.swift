@@ -21,6 +21,7 @@ struct ContentView: View {
     @State private var holdRecordingStarted = false
     @State private var pendingLaunchAction: OrpheusLaunchAction?
     @State private var pendingLaunchAttempts = 0
+    @AppStorage("orpheus_watch_speak_replies") private var speakReplies = true
 
     var body: some View {
         NavigationStack {
@@ -86,7 +87,7 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showingHostInput) {
-            HostInputView(host: $hostText, pairingToken: $tokenText, onSave: {
+            HostInputView(host: $hostText, pairingToken: $tokenText, speakReplies: $speakReplies, onSave: {
                 viewModel.connect(to: hostText)
                 showingHostInput = false
             })
@@ -98,7 +99,11 @@ struct ContentView: View {
                 hostText = savedHost
                 viewModel.connect(to: savedHost)
             }
+            viewModel.setSpeakReplies(speakReplies)
             consumeQueuedLaunchAction()
+        }
+        .onChange(of: speakReplies) { _, enabled in
+            viewModel.setSpeakReplies(enabled)
         }
         .onReceive(watchSession.$receivedHost.compactMap { $0 }) { host in
             hostText = host
@@ -337,6 +342,7 @@ struct StatePill: View {
 struct HostInputView: View {
     @Binding var host: String
     @Binding var pairingToken: String
+    @Binding var speakReplies: Bool
     let onSave: () -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -352,6 +358,9 @@ struct HostInputView: View {
                     SecureField("Optional", text: $pairingToken)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                }
+                Section("Audio") {
+                    Toggle("Speak Replies", isOn: $speakReplies)
                 }
                 Section {
                     Text("Enter your Mac's IP address and optional ORPHEUS_WATCH_TOKEN.")
@@ -369,6 +378,7 @@ struct HostInputView: View {
                     Button("Save") {
                         UserDefaults.standard.set(host, forKey: "orpheus_host")
                         UserDefaults.standard.set(pairingToken, forKey: "orpheus_pairing_token")
+                        UserDefaults.standard.set(speakReplies, forKey: "orpheus_watch_speak_replies")
                         onSave()
                     }
                 }
@@ -436,6 +446,10 @@ final class WatchViewModel: ObservableObject {
         timerCancellable = Timer.publish(every: 1.0 / 30.0, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in self?.updateIntensity() }
+    }
+
+    func setSpeakReplies(_ enabled: Bool) {
+        client.speakReplies = enabled
     }
 
     var connectionLabel: String {

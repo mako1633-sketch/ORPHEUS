@@ -56,7 +56,7 @@ For Ollama, ORPHEUS can use locally available models through `http://127.0.0.1:1
 SOTA transcription accuracy is achieved by using OpenAI's latest transcription model `gpt-4o-mini-transcribe-2025-03-20`.
 It features a large vocabulary and can transcribe multilingual inputs with complex terminology.
 
-OpenAI's TTS model `gpt-4o-mini-tts-2025-03-20` is used to generate voice output with as little latency as possible.
+OpenAI's Realtime speech model `gpt-realtime-2` is used to generate voice output with the `ballad` voice by default.
 
 ### Web Search with Grounding
 ORPHEUS uses the [Exa](https://exa.ai/) search and fetch API for retrieving **accurate** and **up-to-date information**.
@@ -222,7 +222,7 @@ ORPHEUS can use a local Ollama server for agent responses instead of OpenRouter 
 2. Pull a tool-capable local model:
 
 ```powershell
-ollama pull llama3.1:8b
+ollama pull kimi-k2.6:cloud
 ```
 
 3. Start ORPHEUS and choose **Ollama** during onboarding, or set preferences to use `modelProvider: "ollama"`.
