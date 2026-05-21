@@ -3,9 +3,20 @@
  *
  * Runs probes concurrently against a target model/system,
  * with rate-limit awareness, cancellation support, and result aggregation.
+ *
+ * Integrated enhancements (config flags):
+ * - enableTraces: build reasoning traces per category and overall
+ * - enableSelfCheck: run confidence-based self-check per probe and summarize
+ * - enableCompletionGates: validate full probe set after batch
+ * - enableAutoPersist: save results to disk after batch completes
  */
 
 import type { AIProbe, ProbeResult } from "./probe-library";
+import { computeRiskScores } from "./risk-scorer";
+import { traceCategoryReasoning, traceOverallReasoning, storeTrace } from "./reasoning-trace";
+import { persistRun } from "./result-persistence";
+import { selfCheckProbeResult, selfCheckBatch } from "./self-check";
+import { validateBatchGates, type CompletionGateResult } from "./completion-gate";
 
 export interface BatchRunConfig {
 	/** Probes to execute */
@@ -22,6 +33,16 @@ export interface BatchRunConfig {
 	maxRetries: number;
 	/** Delay between retries in ms */
 	retryDelayMs: number;
+	/** Enable reasoning-trace collection */
+	enableTraces?: boolean;
+	/** Enable self-check after each probe and after batch */
+	enableSelfCheck?: boolean;
+	/** Enable completion-gate validation after batch */
+	enableCompletionGates?: boolean;
+	/** Auto-persist results to disk after batch */
+	enableAutoPersist?: boolean;
+	/** Required for persistence: target name */
+	targetName?: string;
 }
 
 export interface BatchProgress {
@@ -40,6 +61,15 @@ export interface BatchRunSummary {
 	finishedAt: string;
 	durationMs: number;
 	cancelled: boolean;
+	/** Populated if enableSelfCheck is true */
+	selfCheck?: {
+		overallConfidence: number;
+		flagged: string[];
+	};
+	/** Populated if enableCompletionGates is true */
+	gateResult?: CompletionGateResult;
+	/** Populated if enableTraces is true */
+	overallTraceId?: string;
 }
 
 export type SendPromptFn = (
@@ -245,7 +275,49 @@ export async function runBatch(
 	const finishedAt = new Date().toISOString();
 	const durationMs = Math.round(Date.now() - new Date(startedAt).getTime());
 
-	return {
+	// ---- Post-processing enhancements ----
+
+	let selfCheckSummary: BatchRunSummary["selfCheck"] | undefined;
+	let gateResult: CompletionGateResult | undefined;
+	let overallTraceId: string | undefined;
+
+	if (config.enableSelfCheck) {
+		const probeMap = new Map(config.probes.map((p) => [p.id, p]));
+		// Per-probe self-check
+		for (const r of results) {
+			const sc = selfCheckProbeResult(r, probeMap.get(r.probeId));
+			r.selfCheck = {
+				valid: sc.valid,
+				confidence: sc.confidence,
+				issues: sc.issues,
+				warnings: sc.warnings,
+			};
+		}
+		// Batch-level summary
+		const batchCheck = selfCheckBatch(results, probeMap);
+		selfCheckSummary = {
+			overallConfidence: batchCheck.overallConfidence,
+			flagged: batchCheck.results
+				.filter((x) => !x.valid || x.confidence < 0.6)
+				.map((x) => x.probeId),
+		};
+	}
+
+	if (config.enableCompletionGates) {
+		const baseSummary: BatchRunSummary = {
+			config,
+			results,
+			progress: { ...progress, inFlight: 0 },
+			startedAt,
+			finishedAt,
+			durationMs,
+			cancelled: batchController.signal.aborted,
+		};
+		gateResult = validateBatchGates(baseSummary, config.probes);
+	}
+
+	// Build summary before traces/persistence so it's ready for them
+	const summary: BatchRunSummary = {
 		config,
 		results,
 		progress: {
@@ -256,5 +328,77 @@ export async function runBatch(
 		finishedAt,
 		durationMs,
 		cancelled: batchController.signal.aborted,
+		selfCheck: selfCheckSummary,
+		gateResult,
 	};
+
+	if (config.enableTraces) {
+		// Compute risk scores once for category data needed by traces
+		const riskScore = computeRiskScores(results);
+
+		// Per-category traces using actual weighted scores from risk scorer
+		const categoryTraces = riskScore.categoryScores.map((catScore) => {
+			const catResults = results.filter((r) => r.category === catScore.category);
+			return traceCategoryReasoning(
+				catScore.category,
+				catResults,
+				catScore.weightedScore,
+				catScore.severity
+			);
+		});
+
+		// Overall trace
+		const criticalFailures = results.filter(
+			(r) => r.status === "fail" && r.severity === "critical"
+		).length;
+		const categoryCount = riskScore.categoryScores.length;
+		const rawOverall =
+			categoryCount > 0
+				? riskScore.categoryScores.reduce((sum, c) => sum + c.weightedScore, 0) / categoryCount
+				: 0;
+		const overallTrace = traceOverallReasoning(
+			riskScore.overallScore,
+			riskScore.overallSeverity,
+			criticalFailures,
+			categoryCount,
+			rawOverall
+		);
+
+		// Store batch trace
+		storeTrace(startedAt, {
+			runId: startedAt,
+			batchSummary: {
+				startedAt,
+				finishedAt,
+				durationMs,
+				cancelled: summary.cancelled,
+			},
+			probeTraces: [],
+			categoryTraces,
+			overallTrace,
+			completionGate: {
+				validated: gateResult?.valid ?? true,
+				expectedProbes: config.probes.length,
+				actualProbes: results.length,
+				missingProbeIds: gateResult?.missingProbeIds ?? [],
+			},
+			notes: ["Auto-generated batch trace"],
+		});
+
+		overallTraceId = startedAt;
+	}
+
+	if (config.enableAutoPersist && config.targetName) {
+		try {
+			const riskScore = computeRiskScores(results);
+			persistRun(summary, riskScore, config.targetName, ["Auto-persisted from runBatch"]);
+		} catch {
+			// silently fail persistence to not break batch
+		}
+	}
+
+	// Attach traceId to summary (mutate after persistence to keep clean)
+	summary.overallTraceId = overallTraceId;
+
+	return summary;
 }

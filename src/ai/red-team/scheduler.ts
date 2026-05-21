@@ -5,6 +5,8 @@
  * drift detection, and configurable callbacks.
  */
 
+import { persistSchedules, loadSchedules } from "./scheduler-persistence";
+
 export interface ScheduleExpression {
 	/** Minutes (0-59) */
 	minute?: number;
@@ -127,6 +129,46 @@ export class ScheduleRunner {
 	private timers = new Map<string, ReturnType<typeof setTimeout>>();
 	private runCallbacks: RunCallback[] = [];
 	private activeRuns = new Set<string>();
+	private enablePersistence = false;
+
+	constructor(options?: { enablePersistence?: boolean }) {
+		this.enablePersistence = options?.enablePersistence ?? false;
+		if (this.enablePersistence) {
+			this.hydrateFromDisk();
+		}
+	}
+
+	/**
+	 * Enable or disable persistence at runtime.
+	 */
+	setPersistence(enabled: boolean): void {
+		this.enablePersistence = enabled;
+		if (enabled) {
+			this.saveToDisk();
+		}
+	}
+
+	private hydrateFromDisk(): void {
+		const configs = loadSchedules();
+		for (const config of configs) {
+			// Do not auto-start on hydration to avoid duplicate timers
+			this.configs.set(config.id, config);
+			if (!this.histories.has(config.id)) {
+				this.histories.set(config.id, {
+					config,
+					results: [],
+					totalRuns: 0,
+					isRunning: false,
+				});
+			}
+		}
+	}
+
+	private saveToDisk(): void {
+		if (this.enablePersistence) {
+			persistSchedules(Array.from(this.configs.values()));
+		}
+	}
 
 	/**
 	 * Register a scheduled run configuration.
@@ -144,6 +186,7 @@ export class ScheduleRunner {
 		if (config.autoStart !== false) {
 			this.start(config.id);
 		}
+		this.saveToDisk();
 	}
 
 	/**
@@ -153,6 +196,7 @@ export class ScheduleRunner {
 		this.stop(id);
 		this.configs.delete(id);
 		this.histories.delete(id);
+		this.saveToDisk();
 	}
 
 	/**
@@ -313,6 +357,7 @@ export class ScheduleRunner {
 
 	/**
 	 * Dispose all timers and clear state.
+	 * Does NOT clear persisted schedules on disk.
 	 */
 	dispose(): void {
 		for (const timer of this.timers.values()) {
@@ -324,13 +369,27 @@ export class ScheduleRunner {
 		this.activeRuns.clear();
 		this.runCallbacks = [];
 	}
+
+	/**
+	 * Clear all state AND remove persisted schedules.
+	 */
+	async clearAll(): Promise<void> {
+		this.dispose();
+		if (this.enablePersistence) {
+			const { clearPersistence } = await import("./scheduler-persistence");
+			clearPersistence();
+		}
+	}
 }
 
 /**
  * Factory: create a ScheduleRunner and optionally register configs.
  */
-export function createScheduledRunner(configs?: ScheduledRunConfig[]): ScheduleRunner {
-	const runner = new ScheduleRunner();
+export function createScheduledRunner(
+	configs?: ScheduledRunConfig[],
+	opts?: { enablePersistence?: boolean }
+): ScheduleRunner {
+	const runner = new ScheduleRunner(opts);
 	if (configs) {
 		for (const c of configs) {
 			runner.register(c);

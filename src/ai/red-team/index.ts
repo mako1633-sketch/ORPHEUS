@@ -11,6 +11,11 @@
  * - Multimodal execution harness (image / voice / document)
  * - Scheduling (cron / recurring runner)
  * - Live dashboard (visual risk charts)
+ * - Reasoning traces for auditability
+ * - Result persistence for trend comparison
+ * - Self-check / verification for probe scoring
+ * - Scheduler persistence across restarts
+ * - Completion gates for batch validation
  */
 
 export {
@@ -125,12 +130,26 @@ export type {
 	ScheduledRunHistory,
 } from "./scheduler";
 
+// ── Scheduler Persistence ──
+
+export {
+	setPersistencePath,
+	persistSchedules,
+	loadSchedules,
+	isPersistenceEnabled,
+	clearPersistence,
+	hydrateScheduleRunner,
+} from "./scheduler-persistence";
+
+export type { PersistedSchedule } from "./scheduler-persistence";
+
 // ── Live Dashboard ──
 
 export {
 	generateDashboardMarkdown,
 	generateDashboardJSON,
 	generateDashboardHTML,
+	buildDashboardData,
 } from "./dashboard";
 
 export type {
@@ -139,3 +158,72 @@ export type {
 	DashboardMetric,
 	DashboardSeverityBlock,
 } from "./dashboard";
+
+// ── Reasoning Traces ──
+
+export {
+	createProbeTracer,
+	traceCategoryReasoning,
+	traceOverallReasoning,
+	storeTrace,
+	getTrace,
+	listTraceIds,
+	purgeTracesOlderThan,
+	serializeTrace,
+	traceCount,
+} from "./reasoning-trace";
+
+export type {
+	ProbeReasoningTrace,
+	ReasoningStep,
+	CategoryReasoningTrace,
+	OverallReasoningTrace,
+	BatchReasoningTrace,
+} from "./reasoning-trace";
+
+// ── Result Persistence ──
+
+export {
+	persistRun,
+	loadRun,
+	listRunIds,
+	getRunsForTarget,
+	compareTrends,
+	autoCompare,
+	purgeOldRuns,
+	serializeAllRuns,
+	deserializeRuns,
+	persistedRunCount,
+} from "./result-persistence";
+
+export type {
+	PersistedRun,
+	TrendComparison,
+} from "./result-persistence";
+
+// ── Self-Check / Verification ──
+
+export {
+	selfCheckProbeResult,
+	selfCheckBatch,
+	validateScoringHeuristic,
+} from "./self-check";
+
+export type {
+	SelfCheckResult,
+	BatchSelfCheck,
+} from "./self-check";
+
+// ── Completion Gates ──
+
+export {
+	validateBatchGates,
+	resultsNotEmpty,
+	cancelledGate,
+	DEFAULT_GATE_CONFIG,
+} from "./completion-gate";
+
+export type {
+	CompletionGateResult,
+	CompletionGateConfig,
+} from "./completion-gate";
