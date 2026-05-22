@@ -22,6 +22,10 @@ export interface RouterDecision {
 	modelId: string;
 	reason: string;
 	useSubagents: boolean;
+	restoreAfterTurn?: {
+		provider: LlmProvider;
+		modelId: string;
+	};
 }
 
 const SENSITIVE_PATTERNS = [
@@ -114,13 +118,20 @@ export async function routeTask(userMessage: string): Promise<RouterDecision> {
 		};
 	}
 
-	// Priority 2: Coding tasks on Copilot -> Codex model
-	if (isCode && currentProvider === "copilot") {
+	// Priority 2: Coding tasks -> Copilot Codex, then restore the user's normal provider.
+	if (isCode) {
 		return {
 			provider: "copilot",
 			modelId: getCopilotCodingModel(),
-			reason: "Coding task detected on Copilot — using Copilot Codex",
-			useSubagents: needsParallel,
+			reason: "Coding task detected — using Copilot Codex",
+			useSubagents: false,
+			restoreAfterTurn:
+				currentProvider === "copilot"
+					? undefined
+					: {
+							provider: currentProvider,
+							modelId: getResponseModel(),
+						},
 		};
 	}
 

@@ -54,6 +54,8 @@ import {
 	buildUserMessageWithFollowUpContext,
 	resolveNumberedFollowUpPrompt,
 } from "./follow-up-context";
+import { setModelProvider, setResponseModelForProvider } from "./model-config";
+import type { RouterDecision } from "./model-router";
 import { applyRouterDecision, routeTask } from "./model-router";
 import { isVisionRequest } from "./vision-reasoning";
 import { buildUserMessageWithWindowsAssessmentContext } from "./windows-assessment-context";
@@ -100,6 +102,7 @@ export class AgentTurnRunner {
 
 		let result: AgentTurnResult | null = null;
 		let error: Error | null = null;
+		let routerDecision: RouterDecision | null = null;
 
 		const wrapped: StreamCallbacks = {
 			onReasoningToken: (token) => {
@@ -190,7 +193,7 @@ export class AgentTurnRunner {
 			const windowsDirectActionsAvailable = platform === "win32";
 
 			// Adaptive Model Router: auto-select provider before generating response
-			const routerDecision = await routeTask(routedUserText);
+			routerDecision = await routeTask(routedUserText);
 			applyRouterDecision(routerDecision);
 
 			const visionContext = buildVisionContextHint(routedUserText);
@@ -303,6 +306,13 @@ export class AgentTurnRunner {
 			error = e;
 			wrapped.onError?.(e);
 		} finally {
+			if (routerDecision?.restoreAfterTurn) {
+				setModelProvider(routerDecision.restoreAfterTurn.provider);
+				setResponseModelForProvider(
+					routerDecision.restoreAfterTurn.provider,
+					routerDecision.restoreAfterTurn.modelId
+				);
+			}
 			if (isActive()) {
 				this.abortController = null;
 			}

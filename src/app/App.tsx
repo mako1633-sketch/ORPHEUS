@@ -1,6 +1,5 @@
 import { extend } from "@opentui/react";
 import { Toaster } from "@opentui-ui/toast/react";
-import "opentui-spinner/react";
 
 import { DaemonAvatarRenderable } from "../avatar/DaemonAvatarRenderable";
 import { DaemonGifRenderable } from "../avatar/DaemonGifRenderable";
@@ -11,6 +10,7 @@ import { COLORS } from "../ui/constants";
 import { AppOverlays } from "./components/AppOverlays";
 import { AvatarLayer } from "./components/AvatarLayer";
 import { ConversationPane } from "./components/ConversationPane";
+import { SpinnerRenderable } from "../ui/SpinnerRenderable";
 
 const INITIAL_STATUS_TOP = "64%";
 
@@ -37,12 +37,14 @@ declare module "@opentui/react" {
 	interface OpenTUIComponents {
 		"daemon-avatar": typeof DaemonAvatarRenderable;
 		"daemon-gif": typeof DaemonGifRenderable;
+		spinner: typeof SpinnerRenderable;
 	}
 }
 
 extend({
 	"daemon-avatar": DaemonAvatarRenderable,
 	"daemon-gif": DaemonGifRenderable,
+	spinner: SpinnerRenderable,
 });
 
 export function App() {

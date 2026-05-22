@@ -13,14 +13,18 @@ describe("model router", () => {
 		setModelProvider(DEFAULT_MODEL_PROVIDER);
 	});
 
-	it("keeps coding tasks on Ollama when Ollama is the selected provider", async () => {
+	it("routes coding tasks from Ollama to Copilot Codex temporarily", async () => {
 		setModelProvider("ollama");
 		setResponseModelForProvider("ollama", "kimi-k2.6:cloud");
 
 		const decision = await routeTask("Please fix this TypeScript bug");
 
-		expect(decision.provider).toBe("ollama");
-		expect(decision.modelId).toBe("kimi-k2.6:cloud");
+		expect(decision.provider).toBe("copilot");
+		expect(decision.modelId).toBe(getResponseModelForProvider("copilot"));
+		expect(decision.restoreAfterTurn).toEqual({
+			provider: "ollama",
+			modelId: "kimi-k2.6:cloud",
+		});
 		expect(getModelProvider()).toBe("ollama");
 	});
 
@@ -53,5 +57,6 @@ describe("model router", () => {
 
 		expect(decision.provider).toBe("copilot");
 		expect(decision.modelId).toBe(getResponseModelForProvider("copilot"));
+		expect(decision.restoreAfterTurn).toBeUndefined();
 	});
 });

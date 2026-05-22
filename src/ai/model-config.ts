@@ -287,6 +287,20 @@ const CODING_CONTEXT_PATTERNS = [
 	/\b(stack trace|traceback|compiler error|type error|lint error|test failure|failing test)\b/i,
 ];
 
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function matchesCodingKeyword(normalizedMessage: string, keyword: string): boolean {
+	const normalizedKeyword = keyword.toLowerCase();
+	if (/^[a-z0-9_][a-z0-9_ ]*[a-z0-9_]$/.test(normalizedKeyword)) {
+		return new RegExp(`(^|[^a-z0-9_])${escapeRegExp(normalizedKeyword)}([^a-z0-9_]|$)`).test(
+			normalizedMessage
+		);
+	}
+	return normalizedMessage.includes(normalizedKeyword);
+}
+
 export function isCodingTask(userMessage: string): boolean {
 	const normalized = userMessage.toLowerCase();
 	if (STRONG_CODING_PATTERNS.some((pattern) => pattern.test(userMessage))) {
@@ -300,7 +314,7 @@ export function isCodingTask(userMessage: string): boolean {
 	// Count keyword matches
 	let matches = 0;
 	for (const keyword of CODING_KEYWORDS) {
-		if (normalized.includes(keyword)) {
+		if (matchesCodingKeyword(normalized, keyword)) {
 			matches++;
 			if (matches >= 2) return true;
 		}

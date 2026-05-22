@@ -14,7 +14,8 @@ import { getProviderCapabilities } from "./capabilities";
 import type { LlmProviderAdapter, ProviderStreamRequest, ProviderStreamResult } from "./types";
 
 const DEFAULT_COPILOT_SEND_TIMEOUT_MS = 20000;
-const DEFAULT_COPILOT_IDLE_TIMEOUT_MS = 60000;
+const DEFAULT_COPILOT_IDLE_TIMEOUT_MS = 180000;
+const COPILOT_CODING_FALLBACK_MODELS = ["gpt-5-mini", "gpt-4.1"];
 
 function buildCopilotModelsListErrorMessage(): string {
 	return [
@@ -217,6 +218,7 @@ async function streamCopilotSession(params: {
 	abortSignal?: AbortSignal;
 	reasoningEffort?: ReasoningEffort;
 	memoryInjection?: string;
+	modelOverride?: string;
 }): Promise<{ fullText: string; finalText: string } | null> {
 	const {
 		userMessage,
@@ -226,6 +228,7 @@ async function streamCopilotSession(params: {
 		abortSignal,
 		reasoningEffort,
 		memoryInjection,
+		modelOverride,
 	} = params;
 
 	const { sessionId } = getRuntimeContext();
@@ -235,7 +238,7 @@ async function streamCopilotSession(params: {
 	const toolAvailability =
 		getCachedToolAvailability() ?? (await resolveToolAvailability(getDaemonManager().toolToggles));
 	const workspacePath = sessionId ? getWorkspacePath(sessionId) : undefined;
-	const selectedModel = selectCopilotModel(userMessage);
+	const selectedModel = modelOverride ?? selectCopilotModel(userMessage);
 	const copilotCodingMode =
 		isCodingTask(userMessage) || selectedModel.toLowerCase().includes("codex");
 
@@ -549,7 +552,7 @@ async function streamCopilotSession(params: {
 		);
 		const sendTimeoutMessage = "Copilot request timed out while submitting prompt.";
 		const idleTimeoutMessage =
-			"Copilot request timed out due to inactivity while waiting for response completion.";
+			"Copilot request timed out due to inactivity while waiting for response completion. Set COPILOT_IDLE_TIMEOUT_MS to a larger value if Codex needs more time for coding turns.";
 
 		sendStartedAt = Date.now();
 		await withTimeout(
@@ -650,15 +653,50 @@ async function streamCopilotSession(params: {
 async function streamCopilotResponse(
 	request: ProviderStreamRequest
 ): Promise<ProviderStreamResult | null> {
-	const result = await streamCopilotSession({
-		userMessage: request.userMessage,
-		callbacks: request.callbacks,
-		conversationHistory: request.conversationHistory,
-		interactionMode: request.interactionMode,
-		abortSignal: request.abortSignal,
-		reasoningEffort: request.reasoningEffort,
-		memoryInjection: request.memoryInjection,
-	});
+	const codingTask = isCodingTask(request.userMessage);
+	const primaryModel = selectCopilotModel(request.userMessage);
+	const candidateModels = codingTask
+		? Array.from(new Set([primaryModel, ...COPILOT_CODING_FALLBACK_MODELS]))
+		: [primaryModel];
+
+	let result: Awaited<ReturnType<typeof streamCopilotSession>> = null;
+	let lastError: Error | null = null;
+
+	for (const model of candidateModels) {
+		try {
+			result = await streamCopilotSession({
+				userMessage: request.userMessage,
+				callbacks: request.callbacks,
+				conversationHistory: request.conversationHistory,
+				interactionMode: request.interactionMode,
+				abortSignal: request.abortSignal,
+				reasoningEffort: request.reasoningEffort,
+				memoryInjection: request.memoryInjection,
+				modelOverride: model,
+			});
+			if (result) break;
+		} catch (error) {
+			const err = error instanceof Error ? error : new Error(String(error));
+			lastError = err;
+			if (!codingTask || request.abortSignal?.aborted) {
+				throw err;
+			}
+			debug.warn("copilot-coding-model-fallback", {
+				failedModel: model,
+				nextModel: candidateModels[candidateModels.indexOf(model) + 1] ?? null,
+				message: err.message,
+			});
+		}
+	}
+
+	if (!result && lastError) {
+		request.callbacks.onError?.(
+			new Error(
+				`Copilot coding models failed (${candidateModels.join(", ")}). Last error: ${lastError.message}`
+			)
+		);
+		return null;
+	}
 
 	if (!result) {
 		return null;

@@ -377,4 +377,124 @@ describe("system prompt", () => {
 		expect(prompt).toContain("For critical tool results, verify with a second check");
 		expect(prompt).toContain("Before declaring work done, confirm every sub-task has evidence");
 	});
+
+	// ====== RED-TEAM, FORENSICS & PERSISTENCE (RTFM-derived) ======
+
+	it("includes red-team assessment scoping in text mode", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("# Red-Team Assessment Integration");
+		expect(prompt).toContain("Use the redTeamAssessment tool to build scope packets");
+		expect(prompt).toContain("Required engagement fields: target owner");
+		expect(prompt).toContain("authorization, targets, dates");
+		expect(prompt).toContain("allowed activities, forbidden activities");
+		expect(prompt).toContain(
+			"Treat external domains, network ranges, cloud accounts, and third-party systems as out of scope"
+		);
+	});
+
+	it("includes persistence hunt indicators in text mode", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("# Persistence \u0026 Indicator Hunt (Defensive)");
+		expect(prompt).toContain("Windows: Startup folders");
+		expect(prompt).toContain("Run/RunOnce registry keys");
+		expect(prompt).toContain("scheduled tasks (Task Scheduler / SCHTASKS)");
+		expect(prompt).toContain("WMI event subscriptions");
+		expect(prompt).toContain("Prefetch dir, %WINDIR%");
+		expect(prompt).toContain("Linux: cron files");
+		expect(prompt).toContain("~/.bash_profile, ~/.bashrc, /etc/rc.local");
+		expect(prompt).toContain("systemd unit files");
+		expect(prompt).toContain("/var/log/auth.log, /var/log/syslog");
+		expect(prompt).toContain("established TCP connections (ss, netstat)");
+		expect(prompt).toContain("setuid/setgid bits (Linux)");
+		expect(prompt).toContain("world-writable files");
+		expect(prompt).toContain("Summarize counts and indicators");
+		expect(prompt).toContain(
+			"do not dump raw credential material, hashes, or full registry contents"
+		);
+	});
+
+	it("includes digital forensics guidance in text mode", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("# Digital Forensics \u0026 Evidence Hygiene");
+		expect(prompt).toContain("create hashes (SHA-256 preferred");
+		expect(prompt).toContain("MD5 acceptable for legacy compatibility");
+		expect(prompt).toContain("Linux file hash commands: sha256sum, sha1sum, md5sum");
+		expect(prompt).toContain("Metadata extraction: file");
+		expect(prompt).toContain("Get-ItemProperty (Windows PowerShell)");
+		expect(prompt).toContain("Time analysis: use stat (Linux)");
+		expect(prompt).toContain("Get-Item (Windows) to check MAC times");
+		expect(prompt).toContain("ls -lt, find / -newer");
+		expect(prompt).toContain("grep for keyword across multiple logs");
+		expect(prompt).toContain("shadow copies (vssadmin, vssown.vbs)");
+		expect(prompt).toContain("Report only: counts, hashes (not full values unless needed)");
+		expect(prompt).toContain("do not dump sensitive content");
+	});
+
+	it("includes red-team and forensics guidance in voice mode", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "voice",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("RED-TEAM \u0026 PERSISTENCE HUNTING:");
+		expect(prompt).toContain(
+			"Scope before acting; validate authorization and forbidden activities"
+		);
+		expect(prompt).toContain(
+			"Hunt persistence: startup items, registry Run keys, scheduled tasks, services, cron files"
+		);
+		expect(prompt).toContain("hash files first (SHA-256), preserve timestamps");
+		expect(prompt).toContain("report counts and indicators only");
+	});
+
+	it("includes offensive red-team reference gated by authorization in text mode", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "text",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain("# Offensive Techniques Reference (Authorized Testing Only)");
+		expect(prompt).toContain("Authorization gate");
+		expect(prompt).toContain(
+			"These techniques may only be discussed or executed when a redTeamAssessment scope packet is active and validated"
+		);
+		expect(prompt).toContain("Reconnaissance & Discovery");
+		expect(prompt).toContain("Host discovery: ping sweeps");
+		expect(prompt).toContain("Privilege Escalation");
+		expect(prompt).toContain("unquoted service paths");
+		expect(prompt).toContain("Credential Access");
+		expect(prompt).toContain("LSASS/SAM dump concepts");
+		expect(prompt).toContain("Defense Evasion");
+		expect(prompt).toContain("AMSI / CLM concept references");
+		expect(prompt).toContain("Persistence");
+		expect(prompt).toContain("WMI event subscriptions");
+		expect(prompt).toContain("Lateral Movement");
+		expect(prompt).toContain("Pass-the-Hash / Pass-the-Ticket concepts");
+	});
+
+	it("includes offensive reference in voice mode", () => {
+		const prompt = buildDaemonSystemPrompt({
+			mode: "voice",
+			currentDate: new Date("2026-05-03T12:00:00"),
+		});
+
+		expect(prompt).toContain(
+			"Offensive reference (authorized only): recon, privilege escalation concepts, credential access concepts"
+		);
+		expect(prompt).toContain(
+			"Execute only via runBash after redTeamAssessment scope and explicit user approval"
+		);
+	});
 });
