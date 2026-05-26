@@ -14,6 +14,7 @@ import { coordinateToolApprovals } from "../tool-approval-coordinator";
 import { getCachedToolAvailability, getDaemonTools } from "../tools/index";
 import { createToolAvailabilitySnapshot, resolveToolAvailability } from "../tools/tool-registry";
 import { getProviderCapabilities } from "./capabilities";
+import { buildUserModelMessage } from "./build-user-message";
 import {
 	addTransientProviderContext,
 	isTransientProviderStreamError,
@@ -87,10 +88,11 @@ async function streamOllamaResponse(
 		interactionMode,
 		abortSignal,
 		memoryInjection,
+		attachments,
 	} = request;
 
 	const messages: ModelMessage[] = [...conversationHistory];
-	messages.push({ role: "user" as const, content: userMessage });
+	messages.push(buildUserModelMessage(userMessage, attachments));
 
 	for (let attempt = 1; attempt <= MAX_TRANSIENT_STREAM_ATTEMPTS; attempt++) {
 		const agent = await createDaemonAgent(

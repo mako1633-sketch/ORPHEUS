@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 
 import type {
+	AttachmentInfo,
 	MemoryToastPreview,
 	ModelMessage,
 	TokenUsage,
@@ -40,7 +41,7 @@ export type DaemonStateEvents = {
 		usage?: TokenUsage,
 		finalText?: string
 	) => void;
-	userMessage: (text: string) => void;
+	userMessage: (text: string, attachments?: AttachmentInfo[]) => void;
 	speakingStart: () => void;
 	speakingComplete: () => void;
 	groundingSaved: (sessionId: string, messageId: number, mapId: string) => void;

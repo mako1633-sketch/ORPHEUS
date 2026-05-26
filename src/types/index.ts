@@ -89,6 +89,18 @@ export interface ToolCall {
 	approvalResult?: "approved" | "denied";
 }
 
+/** File attachment uploaded by the user via /attach <path> */
+export interface AttachmentInfo {
+	name: string;
+	mimeType: string;
+	size: number;
+	isImage: boolean;
+	/** Base64-encoded file data (for API usage) */
+	data: string;
+	/** Absolute file path */
+	path: string;
+}
+
 /**
  * Content block types for interleaved UI display.
  * These are derived from ModelMessage content for rendering.
@@ -110,6 +122,8 @@ export interface ConversationMessage {
 	messages: ModelMessage[];
 	contentBlocks?: ContentBlock[];
 	pending?: boolean;
+	/** File attachments for this user message */
+	attachments?: AttachmentInfo[];
 }
 
 /**
@@ -422,6 +436,8 @@ export interface ModelOption {
 	supportsReasoningEffort?: boolean;
 	/** Whether this model supports Copilot's `xhigh` reasoning effort tier. */
 	supportsReasoningEffortXHigh?: boolean;
+	/** Whether this model supports vision / image input */
+	supportsVision?: boolean;
 }
 
 /**

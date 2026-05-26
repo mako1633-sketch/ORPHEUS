@@ -5,7 +5,41 @@ import {
 	createTurnCounter,
 	type TurnCounter,
 } from "../ai/proactive-summary";
-import type { ModelMessage } from "../types";
+import type { AttachmentInfo, ModelMessage } from "../types";
+
+/** Build AI SDK user message content parts from text + attachments */
+function buildUserContentParts(
+	text: string,
+	attachments?: AttachmentInfo[]
+):
+	| string
+	| Array<
+			| { type: "text"; text: string }
+			| { type: "image"; image: string; mediaType?: string }
+			| { type: "file"; data: string; filename?: string; mediaType: string }
+	  > {
+	if (!attachments || attachments.length === 0) return text;
+
+	const parts: Array<
+		| { type: "text"; text: string }
+		| { type: "image"; image: string; mediaType?: string }
+		| { type: "file"; data: string; filename?: string; mediaType: string }
+	> = [];
+
+	if (text.trim()) {
+		parts.push({ type: "text", text });
+	}
+
+	for (const att of attachments) {
+		if (att.isImage) {
+			parts.push({ type: "image", image: att.data, mediaType: att.mimeType });
+		} else {
+			parts.push({ type: "file", data: att.data, filename: att.name, mediaType: att.mimeType });
+		}
+	}
+
+	return parts;
+}
 
 export class ModelHistoryStore {
 	private history: ModelMessage[] = [];
@@ -24,9 +58,14 @@ export class ModelHistoryStore {
 		this.turnCounter = createTurnCounter();
 	}
 
-	appendTurn(userText: string, responseMessages: ModelMessage[]): void {
+	appendTurn(
+		userText: string,
+		responseMessages: ModelMessage[],
+		attachments?: AttachmentInfo[]
+	): void {
+		const content = buildUserContentParts(userText, attachments);
 		this.history.push(
-			{ role: "user", content: userText },
+			{ role: "user", content },
 			...sanitizeAssistantMessagesForModelHistory(responseMessages)
 		);
 		this.turnCounter.count += 1;

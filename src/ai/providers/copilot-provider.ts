@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { ModelMessage } from "ai";
 import { getDaemonManager } from "../../state/daemon-state";
 import { getRuntimeContext } from "../../state/runtime-context";
-import type { ReasoningEffort, StreamCallbacks } from "../../types";
+import type { AttachmentInfo, ReasoningEffort, StreamCallbacks } from "../../types";
 import { debug, toolDebug } from "../../utils/debug-logger";
 import { getWorkspacePath } from "../../utils/workspace-manager";
 import { convertToolSetToCopilotTools, getOrCreateCopilotSession } from "../copilot-client";
@@ -167,6 +167,7 @@ function buildHistoryPreamble(messages: ModelMessage[]): string {
 function buildCopilotPrompt(
 	userMessage: string,
 	conversationHistory: ModelMessage[],
+	attachments: AttachmentInfo[] | undefined,
 	includeHistory: boolean
 ): string {
 	const sections: string[] = [];
@@ -176,6 +177,15 @@ function buildCopilotPrompt(
 		if (history) {
 			sections.push(history);
 		}
+	}
+
+	// Copilot does not natively support image/file parts via its SDK.
+	// We include a text description of attachments so the model is aware of them.
+	if (attachments && attachments.length > 0) {
+		const desc = attachments
+			.map((a) => `[Attachment: ${a.name} (${a.mimeType}, ${a.size} bytes)]`)
+			.join("\n");
+		sections.push(`The user has included the following files:\n${desc}`);
 	}
 
 	sections.push(userMessage);
@@ -218,6 +228,7 @@ async function streamCopilotSession(params: {
 	abortSignal?: AbortSignal;
 	reasoningEffort?: ReasoningEffort;
 	memoryInjection?: string;
+	attachments?: AttachmentInfo[];
 	modelOverride?: string;
 }): Promise<{ fullText: string; finalText: string } | null> {
 	const {
@@ -228,6 +239,7 @@ async function streamCopilotSession(params: {
 		abortSignal,
 		reasoningEffort,
 		memoryInjection,
+		attachments,
 		modelOverride,
 	} = params;
 
@@ -557,7 +569,7 @@ async function streamCopilotSession(params: {
 		sendStartedAt = Date.now();
 		await withTimeout(
 			session.send({
-				prompt: buildCopilotPrompt(userMessage, conversationHistory, created),
+				prompt: buildCopilotPrompt(userMessage, conversationHistory, attachments, created),
 			}),
 			sendTimeoutMs,
 			sendTimeoutMessage
@@ -672,6 +684,7 @@ async function streamCopilotResponse(
 				abortSignal: request.abortSignal,
 				reasoningEffort: request.reasoningEffort,
 				memoryInjection: request.memoryInjection,
+				attachments: request.attachments,
 				modelOverride: model,
 			});
 			if (result) break;

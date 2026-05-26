@@ -8,6 +8,7 @@ import OpenAI, { toFile } from "openai";
 import { getDaemonManager } from "../state/daemon-state";
 import { getRuntimeContext } from "../state/runtime-context";
 import type {
+	AttachmentInfo,
 	MemoryToastOperation,
 	MemoryToastPreview,
 	ReasoningEffort,
@@ -131,7 +132,8 @@ export async function generateResponse(
 	interactionMode: InteractionMode = "text",
 	abortSignal?: AbortSignal,
 	reasoningEffort?: ReasoningEffort,
-	userMessageForMemory: string = userMessage
+	userMessageForMemory: string = userMessage,
+	attachments?: AttachmentInfo[]
 ): Promise<void> {
 	setSubagentProgressEmitter({
 		onSubagentToolCall: (toolCallId: string, toolName: string, input?: unknown) => {
@@ -159,6 +161,7 @@ export async function generateResponse(
 			abortSignal,
 			reasoningEffort,
 			memoryInjection,
+			attachments,
 		});
 
 		if (!result) {

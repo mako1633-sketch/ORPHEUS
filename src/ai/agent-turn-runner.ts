@@ -5,6 +5,7 @@ import type {
 	StreamCallbacks,
 	TokenUsage,
 } from "../types";
+import type { AttachmentInfo } from "../types";
 import { guardAssistantResponse } from "./assistant-response-guard";
 import { generateResponse } from "./daemon-ai";
 import { runDirectDaemonDoctor, shouldRunDirectDaemonDoctor } from "./direct-daemon-doctor-runner";
@@ -71,6 +72,7 @@ export interface AgentTurnParams {
 	interactionMode: InteractionMode;
 	reasoningEffort: ReasoningEffort;
 	platform?: NodeJS.Platform;
+	attachments?: AttachmentInfo[];
 }
 
 export interface AgentTurnResult {
@@ -193,7 +195,7 @@ export class AgentTurnRunner {
 			const windowsDirectActionsAvailable = platform === "win32";
 
 			// Adaptive Model Router: auto-select provider before generating response
-			routerDecision = await routeTask(routedUserText);
+			routerDecision = await routeTask(routedUserText, params.attachments);
 			applyRouterDecision(routerDecision);
 
 			const visionContext = buildVisionContextHint(routedUserText);
@@ -299,7 +301,8 @@ export class AgentTurnRunner {
 				params.interactionMode,
 				this.abortController.signal,
 				params.reasoningEffort,
-				params.userText
+				params.userText,
+				params.attachments
 			);
 		} catch (err) {
 			const e = err instanceof Error ? err : new Error(String(err));

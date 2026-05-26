@@ -407,6 +407,19 @@ function ConversationPaneImpl(props: ConversationPaneProps) {
 											<span fg={COLORS.USER_LABEL}>OPERATOR: </span>
 											<span fg={COLORS.USER_TEXT}>{msg.content}</span>
 										</text>
+										{msg.attachments && msg.attachments.length > 0 && (
+											<text>
+												<span fg={COLORS.REASONING}> 📎 </span>
+												{msg.attachments.map((att) => (
+													<span
+														key={att.path}
+														fg={att.isImage ? COLORS.DAEMON_TEXT : COLORS.REASONING_DIM}
+													>
+														{att.name} ({Math.round(att.size / 1024)}KB){" "}
+													</span>
+												))}
+											</text>
+										)}
 									</box>
 								) : msg.contentBlocks && msg.contentBlocks.length > 0 ? (
 									<>

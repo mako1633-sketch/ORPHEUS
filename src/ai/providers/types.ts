@@ -1,5 +1,11 @@
 import type { ModelMessage } from "ai";
-import type { LlmProvider, ReasoningEffort, StreamCallbacks, TokenUsage } from "../../types";
+import type {
+	AttachmentInfo,
+	LlmProvider,
+	ReasoningEffort,
+	StreamCallbacks,
+	TokenUsage,
+} from "../../types";
 import type { InteractionMode } from "../system-prompt";
 
 export interface ProviderCapabilities {
@@ -14,6 +20,7 @@ export interface ProviderStreamRequest {
 	abortSignal?: AbortSignal;
 	reasoningEffort?: ReasoningEffort;
 	memoryInjection?: string;
+	attachments?: AttachmentInfo[];
 }
 
 export interface ProviderStreamResult {

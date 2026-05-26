@@ -6,6 +6,7 @@
 import { AgentTurnRunner } from "../ai/agent-turn-runner";
 import { transcribeAudio } from "../ai/daemon-ai";
 import type {
+	AttachmentInfo,
 	BashApprovalLevel,
 	InteractionMode,
 	ModelMessage,
@@ -16,6 +17,7 @@ import type {
 } from "../types";
 import { DaemonState, DEFAULT_TOOL_TOGGLES } from "../types";
 import { debug, messageDebug } from "../utils/debug-logger";
+import { parseUserInputWithAttachments } from "../utils/file-attachment";
 import { SpeechController } from "../voice/tts/speech-controller";
 import { VoiceInputController } from "../voice/voice-input-controller";
 import { type DaemonStateEvents, daemonEvents } from "./daemon-events";
@@ -249,7 +251,7 @@ class DaemonStateManager {
 				this.emitEvent("transcriptionReady", result.text);
 			} else {
 				this.emitEvent("transcriptionUpdate", result.text);
-				this.emitEvent("userMessage", result.text);
+				this.emitEvent("userMessage", result.text, []);
 				await this.generateResponseFromText(result.text);
 			}
 		} catch (error) {
@@ -272,10 +274,11 @@ class DaemonStateManager {
 	async submitText(text: string): Promise<void> {
 		if (!text.trim()) return;
 
-		this._transcription = text;
-		this.emitEvent("transcriptionUpdate", text);
-		this.emitEvent("userMessage", text);
-		await this.generateResponseFromText(text);
+		const { text: cleanText, attachments } = parseUserInputWithAttachments(text);
+		this._transcription = cleanText || text;
+		this.emitEvent("transcriptionUpdate", cleanText || text);
+		this.emitEvent("userMessage", cleanText || text, attachments);
+		await this.generateResponseFromText(cleanText || text, attachments);
 	}
 
 	/**
@@ -328,7 +331,7 @@ class DaemonStateManager {
 			}
 
 			this.emitEvent("transcriptionUpdate", result.text);
-			this.emitEvent("userMessage", result.text);
+			this.emitEvent("userMessage", result.text, []);
 			await this.generateResponseFromText(result.text);
 		} catch (error) {
 			if (error instanceof Error && error.name === "AbortError") {
@@ -347,7 +350,10 @@ class DaemonStateManager {
 	/**
 	 * Generate a response from text input
 	 */
-	private async generateResponseFromText(text: string): Promise<void> {
+	private async generateResponseFromText(
+		text: string,
+		attachments: AttachmentInfo[] = []
+	): Promise<void> {
 		const ok = await this.ensureSessionId();
 		if (!ok) {
 			this.setState(DaemonState.IDLE);
@@ -362,6 +368,7 @@ class DaemonStateManager {
 			text,
 			mode: this._interactionMode,
 			reasoningEffort: this._reasoningEffort,
+			attachments: attachments.length,
 		});
 
 		try {
@@ -371,6 +378,7 @@ class DaemonStateManager {
 					conversationHistory: this.modelHistory.get(),
 					interactionMode: this._interactionMode,
 					reasoningEffort: this._reasoningEffort,
+					attachments,
 				},
 				{
 					onReasoningToken: (token) => this.emitEvent("reasoningToken", token),
@@ -413,7 +421,7 @@ class DaemonStateManager {
 				responseMessages: result.responseMessages,
 				usage: result.usage,
 			});
-			this.modelHistory.appendTurn(text, result.responseMessages);
+			this.modelHistory.appendTurn(text, result.responseMessages, attachments);
 			this.emitEvent(
 				"responseComplete",
 				result.fullText,

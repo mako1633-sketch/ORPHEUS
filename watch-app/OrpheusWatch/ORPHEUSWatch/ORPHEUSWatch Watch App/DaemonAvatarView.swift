@@ -18,6 +18,25 @@ struct DaemonAvatarView: View {
     @State private var phase: Double = 0
     @State private var spawnProgress: Double = 0
 
+    // MARK: - Glitch State
+    @State private var glitchTimer: Double = 0
+    @State private var glitchActive: Bool = false
+    @State private var glitchDuration: Double = 0
+    @State private var glitchInterval: Double = 3.0
+    @State private var glitchOffsetX: Double = 0
+    @State private var glitchOffsetY: Double = 0
+    @State private var glitchFragmentScale: Double = 1.0
+    @State private var glitchRingFlicker: Double = 1.0
+
+    // MARK: - Idle Micro-Glitch
+    @State private var microGlitchTimer: Double = 0
+    @State private var microGlitchCooldown: Double = 3.0 + Double.random(in: 0...5)
+    @State private var microGlitchActive: Bool = false
+    @State private var microGlitchDuration: Double = 0
+
+    // MARK: - Typing Pulse
+    @State private var typingPulsePhase: Double = 0
+
     private let timer = Timer.publish(every: 1.0 / 30.0, on: .main, in: .common).autoconnect()
 
     private var theme: AvatarTheme { AvatarTheme.forState(state, connected: isConnected) }
@@ -26,12 +45,28 @@ struct DaemonAvatarView: View {
         1.0 + intensity * 2.0 + (state == .listening ? 1.5 : 0)
     }
 
+    // MARK: - Breathing Helpers
+    private var breathe: Double {
+        sin(phase) * 0.5 + sin(phase * 1.31 + 0.7) * 0.5
+    }
+    private var breatheSlow: Double {
+        sin(phase * 0.7) * 0.6 + sin(phase * 0.53 + 1.2) * 0.4
+    }
+
+    // MARK: - Typing Pulse
+    private var isTyping: Bool { state == .typing }
+    private var typingPulse: Double {
+        guard isTyping else { return 0 }
+        return max(0, sin(typingPulsePhase))
+    }
+
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 ambientGlow
                 ringLayer
                 fragmentLayer(in: geo)
+                typingFlashLayer
                 coreLayer
                 eyeLayer
                 particleLayer
@@ -44,35 +79,146 @@ struct DaemonAvatarView: View {
             if spawnProgress < 1.0 {
                 spawnProgress = min(1.0, spawnProgress + dt * 1.5)
             }
+            if isTyping {
+                typingPulsePhase += dt * 12.0
+            } else {
+                typingPulsePhase = 0
+            }
+            updateGlitch(dt: dt)
+            updateMicroGlitch(dt: dt)
         }
         .onAppear { spawnProgress = 0 }
         .opacity(isConnected ? 1.0 : 0.3)
+    }
+
+    // MARK: - Glitch Logic
+
+    private func updateGlitch(dt: Double) {
+        guard isConnected else {
+            glitchActive = false
+            resetGlitch()
+            return
+        }
+
+        let effectiveIntensity = max(0.1, intensity)
+        let baseInterval = 3.0 / effectiveIntensity
+
+        if !glitchActive {
+            glitchTimer += dt
+            if glitchTimer > glitchInterval {
+                triggerGlitch(intensity: effectiveIntensity)
+            }
+        } else {
+            glitchDuration -= dt
+            if glitchDuration <= 0 {
+                glitchActive = false
+                resetGlitch()
+                glitchTimer = 0
+                glitchInterval = baseInterval * (0.5 + Double.random(in: 0...1.0))
+            }
+        }
+    }
+
+    private func triggerGlitch(intensity: Double) {
+        glitchActive = true
+        glitchDuration = 0.05 + Double.random(in: 0...0.1) + intensity * 0.05
+        let displaceMult = intensity * 0.5
+        glitchOffsetX = (Double.random(in: -1...1) - 0.5) * 6.0 * displaceMult
+        glitchOffsetY = (Double.random(in: -1...1) - 0.5) * 6.0 * displaceMult
+        glitchFragmentScale = 1.0 + (Double.random(in: -1...1) - 0.5) * intensity * 0.3
+        glitchRingFlicker = 1.0 - intensity * 0.2 + Double.random(in: 0...(intensity * 0.4))
+    }
+
+    private func resetGlitch() {
+        glitchOffsetX = 0
+        glitchOffsetY = 0
+        glitchFragmentScale = 1.0
+        glitchRingFlicker = 1.0
+    }
+
+    // MARK: - Idle Micro-Glitch
+
+    private func updateMicroGlitch(dt: Double) {
+        guard isConnected, !glitchActive else { return }
+
+        if !microGlitchActive {
+            microGlitchTimer += dt
+            if microGlitchTimer > microGlitchCooldown {
+                microGlitchActive = true
+                microGlitchDuration = 0.02 + Double.random(in: 0...0.04)
+                microGlitchTimer = 0
+            }
+        } else {
+            microGlitchDuration -= dt
+            if microGlitchDuration <= 0 {
+                microGlitchActive = false
+                microGlitchCooldown = 3.0 + Double.random(in: 0...5)
+            }
+        }
+    }
+
+    private var microGlitchOffset: (Double, Double) {
+        guard microGlitchActive else { return (0, 0) }
+        return (
+            (Double.random(in: -1...1) - 0.5) * 1.5,
+            (Double.random(in: -1...1) - 0.5) * 1.5
+        )
     }
 
     // MARK: - Layers
 
     private var ambientGlow: some View {
         Circle()
-            .fill(theme.glowColor.opacity(0.08 + spawnProgress * 0.12))
+            .fill(theme.glowColor.opacity(0.08 + spawnProgress * 0.12 + (isTyping ? typingPulse * 0.08 : 0)))
             .frame(width: 70, height: 70)
             .blur(radius: 8)
-            .scaleEffect(1.0 + sin(phase * 0.7) * 0.08 * spawnProgress)
+            .scaleEffect(1.0 + breatheSlow * 0.08 * spawnProgress + (isTyping ? typingPulse * 0.06 : 0))
+    }
+
+    private var typingFlashLayer: some View {
+        guard isTyping else { return AnyView(EmptyView()) }
+        return AnyView(
+            Circle()
+                .fill(Color.white.opacity(0.25 * typingPulse * spawnProgress))
+                .frame(width: 34 + typingPulse * 6, height: 34 + typingPulse * 6)
+                .blur(radius: 4)
+                .offset(
+                    x: (sin(phase * 0.3 + 1.0) * 1.5 * spawnProgress) + glitchOffsetX + microGlitchOffset.0,
+                    y: (cos(phase * 0.4 + 2.0) * 1.5 * spawnProgress) + glitchOffsetY + microGlitchOffset.1
+                )
+        )
     }
 
     private var coreLayer: some View {
-        ZStack {
+        let pulseGlow = isTyping ? typingPulse * 0.5 : 0
+        let baseFill = theme.primaryColor.opacity(0.5 + spawnProgress * 0.3)
+        let typingTint = Color.white.opacity(pulseGlow)
+
+        return ZStack {
             Circle()
-                .fill(theme.primaryColor.opacity(0.5 + spawnProgress * 0.3))
+                .fill(baseFill)
+                .overlay(Circle().fill(typingTint).blendMode(.screen))
                 .frame(width: 28, height: 28)
-                .shadow(color: theme.glowColor.opacity(0.6), radius: 6 + intensity * 4)
+                .shadow(
+                    color: isTyping
+                        ? Color.cyan.opacity(0.6 + pulseGlow * 0.4)
+                        : theme.glowColor.opacity(0.6),
+                    radius: 6 + intensity * 4 + (isTyping ? typingPulse * 3 : 0)
+                )
 
             Circle()
-                .stroke(theme.primaryColor.opacity(0.3 + spawnProgress * 0.3), lineWidth: 1)
-                .frame(width: 32 + sin(phase) * 2 * spawnProgress, height: 32 + sin(phase) * 2 * spawnProgress)
+                .stroke(
+                    baseFill.opacity(0.3 + spawnProgress * 0.3),
+                    lineWidth: 1
+                )
+                .frame(
+                    width: 32 + breathe * 2.5 * spawnProgress,
+                    height: 32 + breathe * 2.5 * spawnProgress
+                )
         }
         .offset(
-            x: sin(phase * 0.3 + 1.0) * 1.5 * spawnProgress,
-            y: cos(phase * 0.4 + 2.0) * 1.5 * spawnProgress
+            x: (sin(phase * 0.3 + 1.0) * 1.5 * spawnProgress) + glitchOffsetX + microGlitchOffset.0,
+            y: (cos(phase * 0.4 + 2.0) * 1.5 * spawnProgress) + glitchOffsetY + microGlitchOffset.1
         )
     }
 
@@ -89,14 +235,21 @@ struct DaemonAvatarView: View {
                 .fill(theme.eyeColor)
                 .frame(width: 4 * blink, height: 4 * blink)
         }
-        .offset(x: eyeX, y: eyeY)
+        .offset(
+            x: eyeX + glitchOffsetX * 0.5 + microGlitchOffset.0 * 0.5,
+            y: eyeY + glitchOffsetY * 0.5 + microGlitchOffset.1 * 0.5
+        )
         .opacity(spawnProgress)
     }
 
     private var ringLayer: some View {
         ZStack {
             ForEach(0..<3, id: \.self) { i in
-                AvatarRing(index: i, phase: phase, theme: theme, intensity: intensity, spawnProgress: spawnProgress)
+                AvatarRing(
+                    index: i, phase: phase, theme: theme,
+                    intensity: intensity, spawnProgress: spawnProgress,
+                    flicker: glitchActive ? glitchRingFlicker : 1.0
+                )
             }
         }
     }
@@ -109,7 +262,8 @@ struct DaemonAvatarView: View {
                 AvatarFragment(
                     index: i, phase: phase, theme: theme,
                     intensity: intensity, spawnProgress: spawnProgress,
-                    cx: cx, cy: cy
+                    cx: cx, cy: cy,
+                    scale: glitchFragmentScale * (microGlitchActive ? 1.02 : 1.0)
                 )
             }
         }
@@ -132,6 +286,7 @@ struct AvatarRing: View {
     let theme: AvatarTheme
     let intensity: Double
     let spawnProgress: Double
+    let flicker: Double
 
     private var radius: CGFloat { CGFloat(22 + index * 12) }
     private var rotation: Angle { .radians(phase * (0.3 + Double(index) * 0.15) + Double(index) * .pi / 3) }
@@ -140,7 +295,9 @@ struct AvatarRing: View {
     var body: some View {
         Ellipse()
             .stroke(
-                theme.primaryColor.opacity(0.25 + Double(index) * 0.1 + intensity * 0.15),
+                theme.primaryColor.opacity(
+                    min(1.0, (0.25 + Double(index) * 0.1 + intensity * 0.15) * flicker)
+                ),
                 style: StrokeStyle(lineWidth: 1, dash: [4, index == 1 ? 2 : 6])
             )
             .frame(
@@ -163,10 +320,11 @@ struct AvatarFragment: View {
     let spawnProgress: Double
     let cx: CGFloat
     let cy: CGFloat
+    let scale: Double
 
     private var orbitAngle: Double { phase * 0.4 + (Double(index) / 6.0) * .pi * 2 }
     private var bob: CGFloat { CGFloat(sin(phase * (1.0 + Double(index) * 0.3)) * 3.0) }
-    private var size: CGFloat { CGFloat(3 + Double(index % 3) * 1.5) }
+    private var size: CGFloat { CGFloat(3 + Double(index % 3) * 1.5) * CGFloat(scale) }
     private var orbitRadius: CGFloat { 32 }
 
     var body: some View {

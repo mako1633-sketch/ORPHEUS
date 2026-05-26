@@ -13,6 +13,7 @@ import type { DaemonAvatarRenderable, ToolCategory } from "../avatar/DaemonAvata
 import { clearRuntimeContext, setRuntimeContext } from "../state/runtime-context";
 import { saveSessionSnapshot } from "../state/session-store";
 import type {
+	AttachmentInfo,
 	ContentBlock,
 	ConversationMessage,
 	MemoryToastPreview,
@@ -97,6 +98,33 @@ export function createMemorySavedHandler() {
 		if (!description) return;
 		toast.success(`Memory saved (${preview.operation})`, { description });
 	};
+}
+
+/** Build a user ModelMessage with attachment content parts */
+function buildUserModelMessage(text: string, attachments?: AttachmentInfo[]): ModelMessage {
+	if (!attachments || attachments.length === 0) {
+		return { role: "user", content: text };
+	}
+
+	const parts: Array<
+		| { type: "text"; text: string }
+		| { type: "image"; image: string; mediaType?: string }
+		| { type: "file"; data: string; filename?: string; mediaType: string }
+	> = [];
+
+	if (text.trim()) {
+		parts.push({ type: "text", text });
+	}
+
+	for (const att of attachments) {
+		if (att.isImage) {
+			parts.push({ type: "image", image: att.data, mediaType: att.mimeType });
+		} else {
+			parts.push({ type: "file", data: att.data, filename: att.name, mediaType: att.mimeType });
+		}
+	}
+
+	return { role: "user", content: parts };
 }
 
 function finalizePendingUserMessage(
@@ -276,8 +304,8 @@ export function createUserMessageHandler(
 	setters: EventHandlerSetters,
 	deps: EventHandlerDeps
 ) {
-	return (text: string) => {
-		if (!text.trim()) return;
+	return (text: string, attachments?: AttachmentInfo[]) => {
+		if (!text.trim() && (!attachments || attachments.length === 0)) return;
 
 		deps.addToHistory(text);
 
@@ -289,7 +317,8 @@ export function createUserMessageHandler(
 			id: refs.messageIdRef.current++,
 			type: "user",
 			content: text,
-			messages: [{ role: "user", content: text }],
+			messages: [buildUserModelMessage(text, attachments)],
+			attachments: attachments ?? undefined,
 			pending: true,
 		};
 		refs.currentUserInputRef.current = text;

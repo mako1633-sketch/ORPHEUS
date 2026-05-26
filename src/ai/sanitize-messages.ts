@@ -21,6 +21,7 @@ const KNOWN_CONTENT_PART_TYPES = new Set([
 	"tool-result",
 	"text",
 	"reasoning",
+	"image",
 	"file",
 	"source",
 ]);
