@@ -12,7 +12,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { extname, resolve } from "node:path";
+import { basename, extname, resolve } from "node:path";
 import { debug } from "./debug-logger";
 
 /** Maximum file size we will read into memory (10 MB) */
@@ -100,7 +100,7 @@ export function readAttachment(filePath: string): FileAttachment | null {
 			path: absolutePath,
 			mimeType,
 			data,
-			name: absolutePath.split("/").pop() ?? absolutePath,
+			name: basename(absolutePath),
 			size: buffer.length,
 			isImage: isImageMimeType(mimeType),
 		};
