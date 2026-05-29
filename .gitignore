@@ -3,10 +3,15 @@
 *.md
 !README.md
 !CHANGELOG.md
+!FIND_EVIL.md
+!docs/
+!docs/find-evil/
+!docs/find-evil/*.md
 # Build artifacts
 .env
 dist/
 node_modules/
+find-evil-runs/
 
 # macOS system files
 .DS_Store

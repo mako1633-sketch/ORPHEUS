@@ -131,6 +131,14 @@ await runBatch({
 
 For usage details and API reference, see the module at `src/ai/red-team/`.
 
+### FIND EVIL SIFT MCP Submission
+ORPHEUS includes a FIND EVIL submission path for disk-image incident response on SANS SIFT.
+It exposes a small custom MCP server with typed, read-only tools for hashing evidence,
+inspecting partitions, listing files, extracting metadata, building timelines, searching indicators,
+and summarizing findings with structured execution logs.
+
+Start here: [FIND_EVIL.md](./FIND_EVIL.md).
+
 ### Quick Actions
 The terminal UI includes an ORPHEUS quick-action menu for common maintenance and status workflows. Use `Cmd+Shift+O` on macOS, or `Ctrl+Shift+O` on non-macOS platforms, to open quick actions.
 
