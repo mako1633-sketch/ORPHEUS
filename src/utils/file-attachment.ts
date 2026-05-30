@@ -12,7 +12,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { basename, extname, resolve } from "node:path";
+import { extname, resolve } from "node:path";
 import { debug } from "./debug-logger";
 
 /** Maximum file size we will read into memory (10 MB) */
@@ -51,6 +51,14 @@ function detectMimeType(filePath: string): string {
 
 function isImageMimeType(mimeType: string): boolean {
 	return mimeType.startsWith("image/");
+}
+
+/** Cross-platform filename extraction — works with both / and \ separators */
+function getFileName(filePath: string): string {
+	// Normalize all separators to /, then split
+	const normalized = filePath.replace(/\\/g, "/");
+	const parts = normalized.split("/");
+	return parts[parts.length - 1] ?? filePath;
 }
 
 /** File attachment result from reading a local file */
@@ -100,7 +108,7 @@ export function readAttachment(filePath: string): FileAttachment | null {
 			path: absolutePath,
 			mimeType,
 			data,
-			name: basename(absolutePath),
+			name: getFileName(absolutePath),
 			size: buffer.length,
 			isImage: isImageMimeType(mimeType),
 		};
