@@ -251,6 +251,25 @@ async function commandArtifact(
 	return writeArtifact(ctx, name, content);
 }
 
+/** Parse partitions.txt to auto-extract the first data partition offset (sectors). */
+async function readAutoPartitionOffset(ctx: FindEvilContext): Promise<number | undefined> {
+	const partitionsPath = path.join(ctx.runDir, "partitions.txt");
+	const content = await readFile(partitionsPath, "utf8").catch(() => null);
+	if (!content) return undefined;
+
+	// mmls data-partition lines look like:
+	// 01:  00:00   0000002048   0000974847   0000972800   Linux (0x83)
+	// We skip metadata lines (slot has "-----") and capture the Start column.
+	for (const line of content.split(/\r?\n/)) {
+		const match = line.match(/^\s*\d+:\s+\d+:\d+\s+(\d+)\s+/);
+		if (match && match[1]) {
+			const offset = parseInt(match[1], 10);
+			if (!Number.isNaN(offset) && offset > 0) return offset;
+		}
+	}
+	return undefined;
+}
+
 export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 	hash_evidence: async (ctx, input) => {
 		const startedAt = ctx.now().toISOString();
@@ -288,18 +307,34 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 
 	list_files: async (ctx, input) => {
 		const startedAt = ctx.now().toISOString();
-		const offset = typeof input.offset === "number" ? String(input.offset) : undefined;
+		let offset = typeof input.offset === "number" ? String(input.offset) : undefined;
+		let autoOffsetWarning: string | undefined;
+
+		if (!offset) {
+			const autoOffset = await readAutoPartitionOffset(ctx);
+			if (autoOffset !== undefined) {
+				offset = String(autoOffset);
+				autoOffsetWarning = `Auto-extracted partition offset ${autoOffset} from prior inspect_partitions result.`;
+			}
+		}
+
 		const command = "fls";
 		const args = ["-r", "-p", ...(offset ? ["-o", offset] : []), ctx.imagePath];
 		const commandResult = await ctx.commandRunner(command, args);
 		const artifact = await commandArtifact(ctx, "file-list.txt", command, args, commandResult);
+
+		const warnings = commandResult.stderr ? [commandResult.stderr] : [];
+		if (autoOffsetWarning) warnings.unshift(autoOffsetWarning);
+
 		return finalizeToolResult(ctx, "list_files", startedAt, input, {
 			success: commandResult.success,
 			artifacts: [artifact],
 			summary: commandResult.success
-				? "Enumerated files recursively with fls."
+				? autoOffsetWarning
+					? `Enumerated files recursively with fls using auto-extracted partition offset ${offset}.`
+					: "Enumerated files recursively with fls."
 				: "File listing failed; provide a valid partition offset if the image has partitions.",
-			warnings: commandResult.stderr ? [commandResult.stderr] : [],
+			warnings,
 			error: commandResult.error,
 		});
 	},
@@ -340,7 +375,17 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 
 	build_timeline: async (ctx, input) => {
 		const startedAt = ctx.now().toISOString();
-		const offset = typeof input.offset === "number" ? String(input.offset) : undefined;
+		let offset = typeof input.offset === "number" ? String(input.offset) : undefined;
+		let autoOffsetWarning: string | undefined;
+
+		if (!offset) {
+			const autoOffset = await readAutoPartitionOffset(ctx);
+			if (autoOffset !== undefined) {
+				offset = String(autoOffset);
+				autoOffsetWarning = `Auto-extracted partition offset ${autoOffset} from prior inspect_partitions result.`;
+			}
+		}
+
 		const flsArgs = ["-r", "-m", "/", ...(offset ? ["-o", offset] : []), ctx.imagePath];
 		const flsResult = await ctx.commandRunner("fls", flsArgs);
 		const bodyArtifact = await commandArtifact(ctx, "timeline.body", "fls", flsArgs, flsResult);
@@ -365,13 +410,19 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 			mactimeArgs,
 			mactimeResult
 		);
+
+		const warnings = mactimeResult.stderr ? [mactimeResult.stderr] : [];
+		if (autoOffsetWarning) warnings.unshift(autoOffsetWarning);
+
 		return finalizeToolResult(ctx, "build_timeline", startedAt, input, {
 			success: mactimeResult.success,
 			artifacts: [bodyArtifact, timelineArtifact],
 			summary: mactimeResult.success
-				? "Built a filesystem timeline from fls bodyfile output."
+				? autoOffsetWarning
+					? `Built a filesystem timeline from fls bodyfile using auto-extracted partition offset ${offset}.`
+					: "Built a filesystem timeline from fls bodyfile output."
 				: "Bodyfile was created, but mactime conversion failed.",
-			warnings: mactimeResult.stderr ? [mactimeResult.stderr] : [],
+			warnings,
 			error: mactimeResult.error,
 		});
 	},

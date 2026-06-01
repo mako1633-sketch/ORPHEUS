@@ -153,4 +153,121 @@ describe("FIND EVIL SIFT MCP readiness", () => {
 		]);
 		expect(calls[1]?.args).toContain("2048");
 	});
+
+	it("auto-extracts partition offset for list_files when no offset is provided", async () => {
+		const tmp = await mkdtemp(path.join(os.tmpdir(), "orpheus-find-evil-"));
+		const imagePath = await makeReadOnlyImage(tmp);
+		const calls: Array<{ command: string; args: string[] }> = [];
+		const ctx = await createFindEvilContext(
+			{ imagePath, caseId: "auto-offset", outputDir: path.join(tmp, "runs") },
+			{ commandRunner: mockRunner(calls) }
+		);
+
+		// Simulate a prior inspect_partitions that wrote partitions.txt with a data partition
+		await writeFile(
+			path.join(ctx.runDir, "partitions.txt"),
+			[
+				"$ mmls /abs/case.dd",
+				"exitCode: 0",
+				"",
+				"## stdout",
+				"DOS Partition Table",
+				"Offset Sector: 0",
+				"Units are in 512-byte sectors",
+				"     Slot    Start        End          Length       Description",
+				"00:  -----   0000000000   0000002047   0000002048   Primary Table (#0)",
+				"01:  00:00   0000002048   0000974847   0000972800   Linux (0x83)",
+				"02:  00:01   0000974848   0001953791   0000978944   Extended Partition (0x05)",
+			].join("\n")
+		);
+
+		const result = await callFindEvilTool(ctx, "list_files", {});
+		expect(result.success).toBe(true);
+		expect(result.warnings?.some((w) => w.includes("Auto-extracted partition offset 2048"))).toBe(
+			true
+		);
+		expect(result.summary).toContain("auto-extracted partition offset 2048");
+
+		// Find the fls call and verify it used the auto-extracted offset
+		const flsCall = calls.find((c) => c.command === "fls");
+		expect(flsCall).toBeDefined();
+		expect(flsCall?.args).toContain("-o");
+		expect(flsCall?.args).toContain("2048");
+	});
+
+	it("auto-extracts partition offset for build_timeline when no offset is provided", async () => {
+		const tmp = await mkdtemp(path.join(os.tmpdir(), "orpheus-find-evil-"));
+		const imagePath = await makeReadOnlyImage(tmp);
+		const calls: Array<{ command: string; args: string[] }> = [];
+		const ctx = await createFindEvilContext(
+			{ imagePath, caseId: "auto-timeline", outputDir: path.join(tmp, "runs") },
+			{ commandRunner: mockRunner(calls) }
+		);
+
+		// Simulate a prior inspect_partitions result
+		await writeFile(
+			path.join(ctx.runDir, "partitions.txt"),
+			[
+				"## stdout",
+				"     Slot    Start        End          Length       Description",
+				"01:  00:00   0000002048   0000974847   0000972800   Linux (0x83)",
+			].join("\n")
+		);
+
+		const result = await callFindEvilTool(ctx, "build_timeline", {});
+		expect(result.success).toBe(true);
+		expect(result.warnings?.some((w) => w.includes("Auto-extracted partition offset 2048"))).toBe(
+			true
+		);
+		expect(result.summary).toContain("auto-extracted partition offset 2048");
+
+		// Verify fls was called with the auto-extracted offset
+		const flsCall = calls.find((c) => c.command === "fls");
+		expect(flsCall).toBeDefined();
+		expect(flsCall?.args).toContain("-o");
+		expect(flsCall?.args).toContain("2048");
+	});
+
+	it("prefers explicit offset over auto-extracted offset", async () => {
+		const tmp = await mkdtemp(path.join(os.tmpdir(), "orpheus-find-evil-"));
+		const imagePath = await makeReadOnlyImage(tmp);
+		const calls: Array<{ command: string; args: string[] }> = [];
+		const ctx = await createFindEvilContext(
+			{ imagePath, caseId: "explicit-offset", outputDir: path.join(tmp, "runs") },
+			{ commandRunner: mockRunner(calls) }
+		);
+
+		await writeFile(
+			path.join(ctx.runDir, "partitions.txt"),
+			["## stdout", "01:  00:00   0000002048   0000974847   0000972800   Linux (0x83)"].join("\n")
+		);
+
+		const result = await callFindEvilTool(ctx, "list_files", { offset: 4096 });
+		expect(result.success).toBe(true);
+		expect(result.warnings?.some((w) => w.includes("Auto-extracted"))).toBe(false);
+
+		const flsCall = calls.find((c) => c.command === "fls");
+		expect(flsCall?.args).toContain("4096");
+		expect(flsCall?.args).not.toContain("2048");
+	});
+
+	it("gracefully falls back when partitions.txt is missing and no offset is given", async () => {
+		const tmp = await mkdtemp(path.join(os.tmpdir(), "orpheus-find-evil-"));
+		const imagePath = await makeReadOnlyImage(tmp);
+		const calls: Array<{ command: string; args: string[] }> = [];
+		const ctx = await createFindEvilContext(
+			{ imagePath, caseId: "no-offset", outputDir: path.join(tmp, "runs") },
+			{ commandRunner: mockRunner(calls) }
+		);
+
+		// partitions.txt does not exist — auto-extraction should silently skip
+		const result = await callFindEvilTool(ctx, "list_files", {});
+		expect(result.success).toBe(true);
+		expect(result.warnings?.some((w) => w.includes("Auto-extracted"))).toBe(false);
+
+		// fls should be called without -o
+		const flsCall = calls.find((c) => c.command === "fls");
+		expect(flsCall).toBeDefined();
+		expect(flsCall?.args).not.toContain("-o");
+	});
 });
