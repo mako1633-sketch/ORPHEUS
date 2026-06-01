@@ -12,6 +12,10 @@ function parseArgs(args: string[]) {
 			out.allowWritableImage = true;
 			continue;
 		}
+		if (key === "enable-reasoning") {
+			out.enableReasoning = true;
+			continue;
+		}
 		const value = args[i + 1];
 		if (value && !value.startsWith("--")) {
 			out[key] = value;
@@ -32,6 +36,7 @@ async function validate(args: string[]) {
 		caseId: typeof parsed["case-id"] === "string" ? parsed["case-id"] : undefined,
 		outputDir: typeof parsed["output-dir"] === "string" ? parsed["output-dir"] : undefined,
 		allowWritableImage: parsed.allowWritableImage === true,
+		enableReasoning: parsed.enableReasoning === true,
 	});
 	const ctx = await createFindEvilContext(config);
 	const tools = ["mmls", "fls", "istat", "mactime", "strings"];
@@ -50,6 +55,7 @@ async function validate(args: string[]) {
 				imagePath: ctx.imagePath,
 				runDir: ctx.runDir,
 				allowWritableImage: ctx.allowWritableImage,
+				enableReasoning: ctx.enableReasoning,
 				tools: checks,
 			},
 			null,
@@ -66,6 +72,7 @@ async function demo(args: string[]) {
 		caseId: typeof parsed["case-id"] === "string" ? parsed["case-id"] : undefined,
 		outputDir: typeof parsed["output-dir"] === "string" ? parsed["output-dir"] : undefined,
 		allowWritableImage: parsed.allowWritableImage === true,
+		enableReasoning: parsed.enableReasoning === true,
 	});
 	const offset = typeof parsed.offset === "string" ? Number(parsed.offset) : undefined;
 	const indicators =
@@ -104,7 +111,9 @@ async function main() {
 		console.log(
 			"  bun run src/find-evil/cli.ts validate -- --image /abs/case.dd --case-id case-001"
 		);
-		console.log("  bun run src/find-evil/cli.ts demo -- --image /abs/case.dd --case-id case-001");
+		console.log(
+			"  bun run src/find-evil/cli.ts demo -- --image /abs/case.dd --case-id case-001 [--enable-reasoning]"
+		);
 		process.exit(command ? 1 : 0);
 	} catch (error) {
 		console.error(error instanceof Error ? error.message : String(error));

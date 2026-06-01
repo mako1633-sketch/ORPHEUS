@@ -4,6 +4,21 @@ import { createReadStream } from "node:fs";
 import { access, appendFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FindEvilArtifact, FindEvilToolName, FindEvilToolResult } from "./types";
+import {
+	createTriageTracer,
+	selfCheckToolResult,
+	selfCheckRun,
+	validateCompletionGate,
+	persistCaseRun,
+	autoCompareCase,
+	writeReasoningArtifact,
+	writeSelfCheckArtifact,
+	writeCompletionGateArtifact,
+	writeTrendArtifact,
+	pushDfirTask,
+	type CaseReasoningTrace,
+	type ToolReasoningTrace,
+} from "./reasoning-enhancements";
 
 const DEFAULT_OUTPUT_DIR = "find-evil-runs";
 const DEFAULT_TIMEOUT_MS = 120000;
@@ -23,6 +38,7 @@ export interface FindEvilConfigInput {
 	caseId?: string;
 	outputDir?: string;
 	allowWritableImage?: boolean;
+	enableReasoning?: boolean;
 }
 
 export interface FindEvilContext {
@@ -33,6 +49,11 @@ export interface FindEvilContext {
 	allowWritableImage: boolean;
 	commandRunner: CommandRunner;
 	now: () => Date;
+	enableReasoning: boolean;
+	/** Mutable accumulation of results for a single reasoning-gated run. Populated by callFindEvilTool when reasoning is on. */
+	reasoningResults?: FindEvilToolResult[];
+	/** Triage tracer for step-by-step audit trail. Present when reasoning is enabled. */
+	tracer?: ReturnType<typeof createTriageTracer>;
 }
 
 export interface CommandResult {
@@ -79,6 +100,7 @@ export function resolveFindEvilConfig(
 		outputDir: input.outputDir ?? env.ORPHEUS_FIND_EVIL_OUTPUT_DIR ?? DEFAULT_OUTPUT_DIR,
 		allowWritableImage:
 			input.allowWritableImage ?? env.ORPHEUS_FIND_EVIL_ALLOW_WRITABLE_IMAGE === "true",
+		enableReasoning: input.enableReasoning ?? env.ORPHEUS_FIND_EVIL_ENABLE_REASONING === "true",
 	};
 }
 
@@ -115,7 +137,8 @@ export async function createFindEvilContext(
 	const runDir = path.join(outputDir, caseId);
 	await mkdir(runDir, { recursive: true });
 
-	return {
+	const enableReasoning = resolved.enableReasoning === true;
+	const ctx: FindEvilContext = {
 		imagePath,
 		caseId,
 		outputDir,
@@ -123,7 +146,16 @@ export async function createFindEvilContext(
 		allowWritableImage,
 		commandRunner: options.commandRunner ?? runCommand,
 		now: options.now ?? (() => new Date()),
+		enableReasoning,
 	};
+
+	if (enableReasoning) {
+		ctx.tracer = createTriageTracer(caseId);
+		ctx.reasoningResults = [];
+		await pushDfirTask(caseId, "case_opened", "open", `Image: ${imagePath}`);
+	}
+
+	return ctx;
 }
 
 export async function runCommand(
@@ -226,7 +258,19 @@ async function finalizeToolResult(
 		inputs,
 		...partial,
 	};
+
+	// 1. Self-check enhancement
+	if (ctx.enableReasoning) {
+		result.selfCheck = selfCheckToolResult(result);
+	}
+
 	await appendExecutionLog(ctx, result);
+
+	// Accumulate for gate check
+	if (ctx.reasoningResults) {
+		ctx.reasoningResults.push(result);
+	}
+
 	return result;
 }
 
@@ -273,11 +317,26 @@ async function readAutoPartitionOffset(ctx: FindEvilContext): Promise<number | u
 export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 	hash_evidence: async (ctx, input) => {
 		const startedAt = ctx.now().toISOString();
+		ctx.tracer?.logStep(
+			"hash_evidence",
+			"Compute SHA-256 of evidence image",
+			`Image: ${ctx.imagePath}`,
+			"Integrity baseline before any tool execution"
+		);
+
 		const artifact = await writeArtifact(
 			ctx,
 			"evidence-hash.json",
 			JSON.stringify({ imagePath: ctx.imagePath, ...(await sha256File(ctx.imagePath)) }, null, 2)
 		);
+
+		ctx.tracer?.logStep(
+			"hash_evidence",
+			"Artifact written",
+			`Path: ${artifact.path}, SHA-256: ${artifact.sha256?.slice(0, 16)}...`,
+			"Hash artifact is immutable and verifiable"
+		);
+
 		return finalizeToolResult(ctx, "hash_evidence", startedAt, input, {
 			success: true,
 			artifacts: [artifact],
@@ -290,9 +349,26 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 
 	inspect_partitions: async (ctx, input) => {
 		const startedAt = ctx.now().toISOString();
+		ctx.tracer?.logStep(
+			"inspect_partitions",
+			"Run mmls",
+			`Image: ${ctx.imagePath}`,
+			"Partition layout required for subsequent offset-dependent tools"
+		);
+
 		const command = "mmls";
 		const args = [ctx.imagePath];
 		const commandResult = await ctx.commandRunner(command, args);
+
+		ctx.tracer?.logStep(
+			"inspect_partitions",
+			"Capture mmls output",
+			`exitCode=${commandResult.exitCode}, stdout.length=${commandResult.stdout.length}`,
+			commandResult.success
+				? "Partition table readable"
+				: "mmls failed — may need sleuthkit install"
+		);
+
 		const artifact = await commandArtifact(ctx, "partitions.txt", command, args, commandResult);
 		return finalizeToolResult(ctx, "inspect_partitions", startedAt, input, {
 			success: commandResult.success,
@@ -311,16 +387,62 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 		let autoOffsetWarning: string | undefined;
 
 		if (!offset) {
+			ctx.tracer?.logStep(
+				"list_files",
+				"Attempt auto-extract partition offset",
+				"No explicit offset provided",
+				"Checking prior inspect_partitions artifact"
+			);
 			const autoOffset = await readAutoPartitionOffset(ctx);
 			if (autoOffset !== undefined) {
 				offset = String(autoOffset);
 				autoOffsetWarning = `Auto-extracted partition offset ${autoOffset} from prior inspect_partitions result.`;
+				ctx.tracer?.logStep(
+					"list_files",
+					"Auto-extracted offset",
+					`offset=${autoOffset}`,
+					"Using first data partition found in partitions.txt"
+				);
+				await pushDfirTask(ctx.caseId, "partition_auto_extracted", "done", `offset=${autoOffset}`);
+			} else {
+				ctx.tracer?.logStep(
+					"list_files",
+					"No auto-offset available",
+					"partitions.txt missing or no data partition",
+					"Will run fls without -o flag"
+				);
 			}
+		} else {
+			ctx.tracer?.logStep(
+				"list_files",
+				"Use explicit offset",
+				`offset=${offset}`,
+				"Explicit offset overrides auto-extraction"
+			);
 		}
 
 		const command = "fls";
 		const args = ["-r", "-p", ...(offset ? ["-o", offset] : []), ctx.imagePath];
 		const commandResult = await ctx.commandRunner(command, args);
+
+		ctx.tracer?.logStep(
+			"list_files",
+			"Run fls",
+			`exitCode=${commandResult.exitCode}, stdout.lines=${commandResult.stdout.split(/\r?\n/).length}`,
+			commandResult.success
+				? "File enumeration succeeded"
+				: "fls failed — likely wrong partition offset"
+		);
+
+		if (!commandResult.success && !offset) {
+			await pushDfirTask(
+				ctx.caseId,
+				"self_correction_triggered",
+				"open",
+				"list_files failed without offset — rerun with --offset recommended"
+			);
+		}
+
 		const artifact = await commandArtifact(ctx, "file-list.txt", command, args, commandResult);
 
 		const warnings = commandResult.stderr ? [commandResult.stderr] : [];
@@ -383,6 +505,12 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 			if (autoOffset !== undefined) {
 				offset = String(autoOffset);
 				autoOffsetWarning = `Auto-extracted partition offset ${autoOffset} from prior inspect_partitions result.`;
+				ctx.tracer?.logStep(
+					"build_timeline",
+					"Auto-extracted offset",
+					`offset=${autoOffset}`,
+					"Reusing partition offset from prior inspect_partitions"
+				);
 			}
 		}
 
@@ -442,6 +570,13 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 			});
 		}
 
+		ctx.tracer?.logStep(
+			"search_indicators",
+			"Run strings",
+			`Indicators: ${indicators.join(", ")}`,
+			"Searching raw image for suspicious printable strings"
+		);
+
 		const commandResult = await ctx.commandRunner("strings", ["-a", ctx.imagePath], {
 			timeoutMs: typeof input.timeoutMs === "number" ? input.timeoutMs : DEFAULT_TIMEOUT_MS,
 		});
@@ -457,6 +592,14 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 			"indicator-search.json",
 			JSON.stringify(matches, null, 2)
 		);
+
+		ctx.tracer?.logStep(
+			"search_indicators",
+			"Indicator search complete",
+			`Total matches: ${matches.reduce((s, m) => s + m.matches.length, 0)}`,
+			"Matches capped at 25 per indicator to limit noise"
+		);
+
 		return finalizeToolResult(ctx, "search_indicators", startedAt, input, {
 			success: commandResult.success,
 			artifacts: [artifact],
@@ -473,6 +616,19 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 		const logPath = path.join(ctx.runDir, "execution-log.ndjson");
 		const log = await readFile(logPath, "utf8").catch(() => "");
 		const notes = typeof input.notes === "string" ? input.notes : "";
+
+		// Build execution trace for summary
+		const executionTrace =
+			log
+				.split(/\r?\n/)
+				.filter(Boolean)
+				.map((line) => {
+					const entry = JSON.parse(line) as FindEvilToolResult;
+					return `- ${entry.finishedAt} ${entry.tool}: ${entry.success ? "success" : "failed"} - ${entry.summary}`;
+				})
+				.join("\n") || "No tool executions were logged.";
+
+		// Build markdown first (no reasoning section yet; will be inserted after gate runs)
 		const markdown = [
 			`# ORPHEUS FIND EVIL Findings - ${ctx.caseId}`,
 			"",
@@ -483,14 +639,7 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 			notes || "No analyst notes supplied.",
 			"",
 			"## Tool Execution Trace",
-			log
-				.split(/\r?\n/)
-				.filter(Boolean)
-				.map((line) => {
-					const entry = JSON.parse(line) as FindEvilToolResult;
-					return `- ${entry.finishedAt} ${entry.tool}: ${entry.success ? "success" : "failed"} - ${entry.summary}`;
-				})
-				.join("\n") || "No tool executions were logged.",
+			executionTrace,
 			"",
 			"## Evidence Integrity",
 			"- Original image path was supplied externally and never written by ORPHEUS.",
@@ -498,12 +647,87 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 			"- The full execution trace is stored as NDJSON beside these artifacts.",
 		].join("\n");
 		const artifact = await writeArtifact(ctx, "findings-summary.md", markdown);
-		return finalizeToolResult(ctx, "summarize_findings", startedAt, input, {
+
+		// Finalize so summarize_findings enters reasoningResults BEFORE gate runs
+		const result = await finalizeToolResult(ctx, "summarize_findings", startedAt, input, {
 			success: true,
 			artifacts: [artifact],
 			summary: "Generated a findings summary from the structured execution log.",
 			warnings: [],
 		});
+
+		// ── Reasoning enhancements post-processing ──
+		// NOW the gate sees summarize_findings in reasoningResults
+		if (ctx.enableReasoning && ctx.reasoningResults) {
+			// 3. Completion gate
+			const gate = validateCompletionGate(ctx.reasoningResults);
+			// 1. Self-check batch
+			const selfCheck = selfCheckRun(ctx.reasoningResults);
+			// 4. Persist & trend
+			const persisted = persistCaseRun(ctx, ctx.reasoningResults, selfCheck, gate);
+			const trend = autoCompareCase(persisted);
+
+			// 2. Build case reasoning trace
+			const toolTraces: ToolReasoningTrace[] = ctx.reasoningResults.map((r) =>
+				ctx.tracer!.buildToolTrace(r.tool, r.selfCheck?.confidence ?? 1.0)
+			);
+			const caseTrace = ctx.tracer!.buildCaseTrace(selfCheck, {
+				validated: gate.valid,
+				expectedTools: gate.expectedTools,
+				actualTools: gate.actualTools,
+				missingTools: gate.missingTools,
+			});
+			caseTrace.toolTraces = toolTraces;
+			caseTrace.finishedAt = new Date().toISOString();
+
+			// 4. Write reasoning artifacts
+			await writeReasoningArtifact(ctx, caseTrace);
+			await writeSelfCheckArtifact(ctx, selfCheck);
+			await writeCompletionGateArtifact(ctx, gate);
+			if (trend) await writeTrendArtifact(ctx, trend);
+
+			// 5. Executive
+			await pushDfirTask(
+				ctx.caseId,
+				"findings_ready",
+				"done",
+				`Gate valid=${gate.valid}, confidence=${selfCheck.overallConfidence}`
+			);
+			await pushDfirTask(ctx.caseId, "artifacts_persisted", "done", `Artifacts in ${ctx.runDir}`);
+
+			// Rewrite findings summary WITH reasoning section
+			const reasoningSection = [
+				"",
+				"## Reasoning Enhancements",
+				"",
+				"### Completion Gate",
+				`- Valid: ${gate.valid}`,
+				`- Expected tools: ${gate.expectedTools}`,
+				`- Actual tools: ${gate.actualTools}`,
+				`- Missing: ${gate.missingTools.join(", ") || "none"}`,
+				`- Warnings: ${gate.warnings.join("; ") || "none"}`,
+				"",
+				"### Self-Check",
+				`- Overall valid: ${selfCheck.overallValid}`,
+				`- Overall confidence: ${selfCheck.overallConfidence}`,
+				`- Anomalies: ${selfCheck.anomalies.join("; ") || "none"}`,
+				"",
+				"### Trend Comparison",
+				`- Trend: ${trend.trend}`,
+				`- Success change: ${trend.successChange}`,
+				`- Failure change: ${trend.failureChange}`,
+				`- New failures: ${trend.newFailures.join(", ") || "none"}`,
+				"",
+			].join("\n");
+
+			const updatedMarkdown = markdown.replace(
+				"## Evidence Integrity",
+				reasoningSection + "\n\n## Evidence Integrity"
+			);
+			await writeArtifact(ctx, "findings-summary.md", updatedMarkdown);
+		}
+
+		return result;
 	},
 };
 

@@ -13,6 +13,14 @@ export interface FindEvilArtifact {
 	bytes?: number;
 }
 
+export interface FindEvilToolSelfCheck {
+	valid: boolean;
+	confidence: number;
+	issues: string[];
+	warnings: string[];
+	recommendation: string;
+}
+
 export interface FindEvilToolResult {
 	success: boolean;
 	caseId: string;
@@ -24,4 +32,5 @@ export interface FindEvilToolResult {
 	summary: string;
 	warnings: string[];
 	error?: string;
+	selfCheck?: FindEvilToolSelfCheck;
 }
