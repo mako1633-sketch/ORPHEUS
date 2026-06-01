@@ -7,12 +7,11 @@
  */
 
 import path from "node:path";
-import { appendFile, readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import type { FindEvilToolName, FindEvilToolResult } from "./types";
 import type { FindEvilContext } from "./core";
 import {
 	addExecutiveItem,
-	updateExecutiveItem,
 	type ExecutiveItemKind,
 	type ExecutiveItemStatus,
 } from "../ai/executive-state";
@@ -130,10 +129,12 @@ export function selfCheckRun(results: FindEvilToolResult[]): RunSelfCheck {
 		"summarize_findings",
 	];
 	for (let i = 1; i < results.length; i++) {
-		const prevIdx = expectedOrder.indexOf(results[i - 1].tool);
-		const currIdx = expectedOrder.indexOf(results[i].tool);
+		const prevIdx = expectedOrder.indexOf(results[i - 1]!.tool);
+		const currIdx = expectedOrder.indexOf(results[i]!.tool);
 		if (currIdx !== -1 && prevIdx !== -1 && currIdx < prevIdx) {
-			anomalies.push(`Out-of-order execution: ${results[i].tool} ran after ${results[i - 1].tool}`);
+			anomalies.push(
+				`Out-of-order execution: ${results[i]!.tool} ran after ${results[i - 1]!.tool}`
+			);
 		}
 	}
 

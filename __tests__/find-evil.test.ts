@@ -14,7 +14,6 @@ import {
 	selfCheckRun,
 	validateCompletionGate,
 	createTriageTracer,
-	getCaseTrace,
 } from "../src/find-evil/reasoning-enhancements";
 
 async function makeReadOnlyImage(tmp: string) {

@@ -16,7 +16,6 @@ import {
 	writeCompletionGateArtifact,
 	writeTrendArtifact,
 	pushDfirTask,
-	type CaseReasoningTrace,
 	type ToolReasoningTrace,
 } from "./reasoning-enhancements";
 
