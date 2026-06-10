@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ORPHEUS Investigation Timeline</title>
+  <style>
+    :root {
+      --primary: #667eea;
+      --secondary: #764ba2;
+      --success: #28a745;
+      --danger: #dc3545;
+      --warning: #ffc107;
+      --dark: #2d2d2d;
+      --light: #f5f7fa;
+      --text: #333;
+      --text-muted: #666;
+      --card-bg: #ffffff;
+      --shadow: 0 4px 20px rgba(0,0,0,0.08);
+      --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+      --radius: 12px;
+      --transition: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 20% 30%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 70%, rgba(255,255,255,0.06) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    header h1 { font-size: 1.8em; font-weight: 700; position: relative; }
+    header p { opacity: 0.9; margin-top: 8px; font-size: 0.95em; position: relative; }
+
+    /* Case Summary */
+    .case-summary {
+      max-width: 900px;
+      margin: -30px auto 30px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+      position: relative;
+      z-index: 2;
+    }
+    .summary-item { text-align: center; }
+    .summary-item .label { font-size: 0.75em; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 6px; }
+    .summary-item .value { font-size: 1.25em; font-weight: 700; color: var(--primary); }
+    .summary-item .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8em;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .badge-success { background: #d4edda; color: #155724; }
+    .badge-danger { background: #f8d7da; color: #721c24; }
+    .badge-warning { background: #fff3cd; color: #856404; }
+    .badge-info { background: #d1ecf1; color: #0c5460; }
+
+    /* Controls */
+    .controls {
+      max-width: 900px;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 0 20px;
+    }
+    .controls-left, .controls-right { display: flex; align-items: center; gap: 12px; }
+    .case-input {
+      padding: 8px 14px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.95em;
+      min-width: 220px;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+    .case-input:focus { border-color: var(--primary); }
+    button {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button:active { transform: scale(0.97); }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; box-shadow: 0 4px 12px rgba(102,126,234,0.35); }
+    .btn-primary:hover { box-shadow: 0 6px 18px rgba(102,126,234,0.45); }
+    .btn-ghost { background: white; color: var(--primary); border: 2px solid var(--primary); }
+    .btn-ghost:hover { background: var(--primary); color: white; }
+    .btn-toggle {
+      background: #e9ecef;
+      color: var(--text);
+      position: relative;
+    }
+    .btn-toggle.active { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+    .judge-label { font-size: 0.85em; color: var(--text-muted); }
+
+    /* Timeline */
+    .timeline-wrapper { max-width: 900px; margin: 0 auto; padding: 0 20px; }
+    .timeline { position: relative; padding: 20px 0; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 28px;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(to bottom, var(--primary), var(--secondary));
+      border-radius: 2px;
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 28px;
+      padding-left: 70px;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeInUp 0.5s forwards;
+    }
+    @keyframes fadeInUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .timeline-dot {
+      position: absolute;
+      left: 18px;
+      top: 14px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: white;
+      border: 4px solid var(--primary);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 1;
+      transition: transform var(--transition), border-color var(--transition);
+    }
+    .timeline-dot.success { border-color: var(--success); }
+    .timeline-dot.danger { border-color: var(--danger); }
+    .timeline-dot.warning { border-color: var(--warning); }
+    .timeline-dot.active { transform: scale(1.35); box-shadow: 0 0 0 6px rgba(102,126,234,0.2); }
+
+    .timeline-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: box-shadow var(--transition), transform var(--transition);
+      position: relative;
+    }
+    .timeline-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+    .timeline-card.active-card { box-shadow: 0 0 0 3px rgba(102,126,234,0.35); }
+    .timeline-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      background: var(--primary);
+    }
+    .timeline-card.success::before { background: var(--success); }
+    .timeline-card.danger::before { background: var(--danger); }
+    .timeline-card.warning::before { background: var(--warning); }
+
+    .card-header {
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      gap: 12px;
+    }
+    .card-header-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .tool-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1em;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+    }
+    .tool-icon.success { background: linear-gradient(135deg, var(--success), #1e7e34); }
+    .tool-icon.danger { background: linear-gradient(135deg, var(--danger), #a71d2a); }
+    .tool-icon.warning { background: linear-gradient(135deg, var(--warning), #d39e00); color: #333; }
+
+    .tool-name { font-weight: 700; font-size: 1.05em; color: var(--dark); }
+    .tool-time { font-size: 0.8em; color: var(--text-muted); margin-top: 2px; }
+    .status-badge {
+      font-size: 0.75em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 10px;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+    .status-success { background: #d4edda; color: #155724; }
+    .status-danger { background: #f8d7da; color: #721c24; }
+    .status-warning { background: #fff3cd; color: #856404; }
+
+    .card-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height var(--transition), padding var(--transition);
+      padding: 0 22px;
+    }
+    .card-body.open { max-height: 800px; padding: 0 22px 18px; }
+
+    .reasoning-step {
+      background: var(--light);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 10px;
+      border-left: 3px solid var(--primary);
+    }
+    .reasoning-step:last-child { margin-bottom: 0; }
+    .step-order {
+      display: inline-block;
+      width: 22px;
+      height: 22px;
+      line-height: 22px;
+      text-align: center;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      font-size: 0.75em;
+      font-weight: 700;
+      margin-right: 8px;
+    }
+    .step-action { font-weight: 700; color: var(--dark); margin-bottom: 6px; display: flex; align-items: center; }
+    .step-observation, .step-inference { font-size: 0.9em; color: var(--text); margin-bottom: 4px; line-height: 1.5; }
+    .step-observation::before { content: '👁 '; opacity: 0.6; }
+    .step-inference::before { content: '💡 '; opacity: 0.6; }
+    .step-inference { color: var(--secondary); font-weight: 500; }
+
+    .hash-row {
+      margin-top: 10px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.8em;
+      background: #eef;
+      padding: 8px 10px;
+      border-radius: 6px;
+      color: var(--secondary);
+      word-break: break-all;
+      display: none;
+    }
+    .timeline-card:hover .hash-row { display: block; }
+
+    .empty-steps {
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 0.9em;
+      padding: 10px 0;
+    }
+
+    .error-banner {
+      max-width: 900px;
+      margin: 20px auto;
+      background: #f8d7da;
+      color: #721c24;
+      padding: 16px 20px;
+      border-radius: var(--radius);
+      border-left: 4px solid var(--danger);
+    }
+
+    .progress-bar {
+      max-width: 900px;
+      margin: 0 auto 20px;
+      height: 6px;
+      background: #e9ecef;
+      border-radius: 3px;
+      overflow: hidden;
+      padding: 0 20px;
+      box-sizing: content-box;
+    }
+    .progress-bar > div {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .case-summary { grid-template-columns: 1fr 1fr; margin: -20px 12px 20px; padding: 16px; }
+      header h1 { font-size: 1.4em; }
+      .controls { flex-direction: column; align-items: stretch; }
+      .timeline::before { left: 18px; }
+      .timeline-item { padding-left: 50px; }
+      .timeline-dot { left: 8px; width: 20px; height: 20px; border-width: 3px; }
+      .card-header { padding: 14px 16px; }
+      .card-body.open { padding: 0 16px 14px; }
+    }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #ddd;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🔍 ORPHEUS Investigation Timeline</h1>
+    <p>Visual reasoning trace for autonomous DFIR runs</p>
+  </header>
+
+  <div class="case-summary" id="caseSummary">
+    <div class="loading" style="grid-column: 1 / -1; padding: 20px;">
+      <div class="spinner"></div>
+      <p>Loading case data...</p>
+    </div>
+  </div>
+
+  <div class="progress-bar" id="progressBar" style="display:none;"><div></div></div>
+
+  <div class="controls">
+    <div class="controls-left">
+      <input type="text" class="case-input" id="caseInput" placeholder="Case ID (e.g. demo-reasoning-001)" value="demo-reasoning-001">
+      <button class="btn-primary" onclick="loadCase()">Load</button>
+    </div>
+    <div class="controls-right">
+      <span class="judge-label">Judge Mode</span>
+      <button class="btn-toggle" id="judgeToggle" onclick="toggleJudgeMode()">Off</button>
+      <button class="btn-ghost" id="playBtn" onclick="togglePlay()">▶ Play</button>
+    </div>
+  </div>
+
+  <div class="timeline-wrapper">
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <div id="errorArea"></div>
+
+  <script>
+    (function() {
+      const params = new URLSearchParams(location.search);
+      const defaultCase = params.get('case') || 'demo-reasoning-001';
+      document.getElementById('caseInput').value = defaultCase;
+
+      let reasoningData = null;
+      let selfCheckData = null;
+      let gateData = null;
+      let isPlaying = false;
+      let judgeMode = false;
+      let playInterval = null;
+      let currentStep = -1;
+      let cards = [];
+
+      function fmtTime(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }
+
+      function extractHash(text) {
+        if (!text) return null;
+        const m = text.match(/[a-f0-9]{64}/i);
+        return m ? m[0] : null;
+      }
+
+      function determineStatus(toolTrace, gate, selfCheck) {
+        const steps = toolTrace.steps || [];
+        let hasFailure = false;
+        let hasWarning = false;
+        steps.forEach(s => {
+          const obs = (s.observation || '').toLowerCase();
+          if (obs.includes('fail') || obs.includes('error') || obs.includes('null') && obs.includes('exitcode')) {
+            hasFailure = true;
+          }
+          if (obs.includes('may need') || obs.includes('warning') || obs.includes('incomplete')) {
+            hasWarning = true;
+          }
+        });
+        if (steps.length === 0) {
+          if (gate && gate.missingTools && gate.missingTools.includes(toolTrace.tool)) hasFailure = true;
+        }
+        if (gate && gate.warnings) {
+          gate.warnings.forEach(w => {
+            if (w.toLowerCase().includes(toolTrace.tool.replace(/_/g, ' '))) {
+              if (w.toLowerCase().includes('fail')) hasFailure = true;
+              else hasWarning = true;
+            }
+          });
+        }
+        if (hasFailure) return 'danger';
+        if (hasWarning) return 'warning';
+        return 'success';
+      }
+
+      function statusLabel(status) {
+        return status === 'success' ? 'Success' : status === 'danger' ? 'Failure' : 'Warning';
+      }
+
+      function toolIcon(tool) {
+        const map = {
+          hash_evidence: '🔐',
+          inspect_partitions: '💾',
+          list_files: '📁',
+          extract_file_metadata: '📄',
+          build_timeline: '📅',
+          search_indicators: '🎯',
+          summarize_findings: '📝'
+        };
+        return map[tool] || '🔧';
+      }
+
+      async function fetchJson(path) {
+        const res = await fetch(path);
+        if (!res.ok) throw new Error(`HTTP ${res.status} for ${path}`);
+        return res.json();
+      }
+
+      async function loadCase() {
+        const caseId = document.getElementById('caseInput').value.trim() || defaultCase;
+        const base = `../../find-evil-runs/${encodeURIComponent(caseId)}/`;
+        const timeline = document.getElementById('timeline');
+        const summary = document.getElementById('caseSummary');
+        const errorArea = document.getElementById('errorArea');
+        const progress = document.getElementById('progressBar');
+        errorArea.innerHTML = '';
+        timeline.innerHTML = '';
+        progress.style.display = 'block';
+        progress.firstElementChild.style.width = '10%';
+
+        try {
+          reasoningData = await fetchJson(base + 'reasoning-trace.json');
+          progress.firstElementChild.style.width = '50%';
+          [selfCheckData, gateData] = await Promise.all([
+            fetchJson(base + 'self-check.json').catch(() => null),
+            fetchJson(base + 'completion-gate.json').catch(() => null)
+          ]);
+          progress.firstElementChild.style.width = '100%';
+          setTimeout(() => progress.style.display = 'none', 400);
+          render(caseId);
+        } catch (e) {
+          progress.style.display = 'none';
+          errorArea.innerHTML = `<div class="error-banner">Failed to load case: ${e.message}</div>`;
+          summary.innerHTML = `<div class="summary-item"><div class="value">—</div><div class="label">Case ID</div></div>`;
+        }
+      }
+
+      function render(caseId) {
+        const traces = (reasoningData.toolTraces || []);
+        const summaryEl = document.getElementById('caseSummary');
+        const total = traces.length;
+        let success = 0, failure = 0, warning = 0;
+        traces.forEach(t => {
+          const s = determineStatus(t, gateData, selfCheckData);
+          if (s === 'success') success++;
+          else if (s === 'danger') failure++;
+          else warning++;
+        });
+        const confidence = selfCheckData ? (selfCheckData.overallConfidence !== undefined ? selfCheckData.overallConfidence : (selfCheckData.overallValid ? 1 : 0)) : '—';
+        const gateValid = gateData ? gateData.valid : null;
+
+        summaryEl.innerHTML = `
+          <div class="summary-item"><div class="value">${caseId}</div><div class="label">Case ID</div></div>
+          <div class="summary-item"><div class="value">${total}</div><div class="label">Artifacts</div></div>
+          <div class="summary-item"><div class="value" style="color:var(--success)">${success}</div><div class="label">Success</div></div>
+          <div class="summary-item"><div class="value" style="color:var(--danger)">${failure}</div><div class="label">Failure</div></div>
+          <div class="summary-item"><div class="value" style="color:var(--warning)">${warning}</div><div class="label">Warning</div></div>
+          <div class="summary-item">
+            <div class="value">${typeof confidence === 'number' ? (confidence * 100).toFixed(0) + '%' : confidence}</div>
+            <div class="label">Self-Check Confidence</div>
+            ${gateValid !== null ? `<span class="badge ${gateValid ? 'badge-success' : 'badge-danger'}">${gateValid ? 'Gate Passed' : 'Gate Failed'}</span>` : ''}
+          </div>
+        `;
+
+        const timeline = document.getElementById('timeline');
+        timeline.innerHTML = '';
+        cards = [];
+        traces.forEach((trace, i) => {
+          const status = determineStatus(trace, gateData, selfCheckData);
+          const hash = extractHash(trace.steps.map(s => s.observation).join(' '));
+          const item = document.createElement('div');
+          item.className = 'timeline-item';
+          item.style.animationDelay = (i * 0.08) + 's';
+          item.innerHTML = `
+            <div class="timeline-dot ${status}" data-idx="${i}"></div>
+            <div class="timeline-card ${status}" data-idx="${i}">
+              <div class="card-header" onclick="toggleCard(${i})">
+                <div class="card-header-left">
+                  <div class="tool-icon ${status}">${toolIcon(trace.tool)}</div>
+                  <div>
+                    <div class="tool-name">${trace.tool}</div>
+                    <div class="tool-time">${fmtTime(trace.timestamp)}</div>
+                  </div>
+                </div>
+                <span class="status-badge status-${status}">${statusLabel(status)}</span>
+              </div>
+              <div class="card-body" id="card-body-${i}">
+                ${(trace.steps && trace.steps.length) ? trace.steps.map((s, j) => `
+                  <div class="reasoning-step">
+                    <div class="step-action"><span class="step-order">${s.order || j + 1}</span>${s.action}</div>
+                    <div class="step-observation">${s.observation}</div>
+                    <div class="step-inference">${s.inference}</div>
+                  </div>
+                `).join('') : '<div class="empty-steps">No detailed reasoning steps recorded.</div>'}
+                ${hash ? `<div class="hash-row">SHA-256: ${hash}</div>` : ''}
+              </div>
+            </div>
+          `;
+          timeline.appendChild(item);
+          cards.push({ item, card: item.querySelector('.timeline-card'), dot: item.querySelector('.timeline-dot') });
+        });
+      }
+
+      window.toggleCard = function(idx) {
+        const body = document.getElementById('card-body-' + idx);
+        if (!body) return;
+        body.classList.toggle('open');
+      };
+
+      window.togglePlay = function() {
+        const btn = document.getElementById('playBtn');
+        if (isPlaying) {
+          clearInterval(playInterval);
+          isPlaying = false;
+          btn.textContent = '▶ Play';
+          return;
+        }
+        if (!cards.length) return;
+        isPlaying = true;
+        btn.textContent = '⏸ Pause';
+        currentStep = -1;
+        cards.forEach(c => { c.card.classList.remove('active-card'); c.dot.classList.remove('active'); });
+        playInterval = setInterval(() => {
+          if (currentStep >= 0 && currentStep < cards.length) {
+            cards[currentStep].card.classList.remove('active-card');
+            cards[currentStep].dot.classList.remove('active');
+          }
+          currentStep++;
+          if (currentStep >= cards.length) {
+            if (!judgeMode) {
+              clearInterval(playInterval);
+              isPlaying = false;
+              btn.textContent = '▶ Play';
+              return;
+            }
+            currentStep = 0;
+          }
+          const c = cards[currentStep];
+          c.card.classList.add('active-card');
+          c.dot.classList.add('active');
+          c.card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const body = document.getElementById('card-body-' + currentStep);
+          if (body && judgeMode) body.classList.add('open');
+        }, judgeMode ? 2000 : 1200);
+      };
+
+      window.toggleJudgeMode = function() {
+        judgeMode = !judgeMode;
+        const btn = document.getElementById('judgeToggle');
+        btn.classList.toggle('active', judgeMode);
+        btn.textContent = judgeMode ? 'On' : 'Off';
+      };
+
+      window.loadCase = loadCase;
+
+      loadCase();
+    })();
+  </script>
+</body>
+</html>
