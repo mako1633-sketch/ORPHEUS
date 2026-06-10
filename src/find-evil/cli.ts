@@ -1,6 +1,7 @@
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+import { join, dirname } from "node:path";
 import { callFindEvilTool, createFindEvilContext, resolveFindEvilConfig } from "./core";
 import type { FindEvilToolResult } from "./types";
 
@@ -63,18 +64,95 @@ function _printWarning(text: string) {
 	console.log(`   ⚠️  ${text}`);
 }
 
+// ── Interactive Timeline Viewer ──────────────────────────────────────
+// Starts a local HTTP server so the timeline can fetch JSON via XHR
+// instead of being blocked on file:// protocol.
+
 async function openTimelineViewer(runDir: string) {
-	const timelinePath = `${runDir}/../../docs/find-evil/timeline-viewer.html`;
+	const caseId = runDir.split("/").pop() || "unknown";
+	const projectRoot = dirname(dirname(runDir));
+	const viewerPath = join(projectRoot, "docs", "find-evil", "timeline-viewer.html");
+
+	// Collect artifact files from the run directory
+	const artifactFiles = [
+		"reasoning-trace.json",
+		"self-check.json",
+		"completion-gate.json",
+		"trend-comparison.json",
+		"execution-log.ndjson",
+		"evidence-hash.json",
+		"findings-summary.md",
+		"partitions.txt",
+		"file-list.txt",
+		"indicator-search.json",
+		"timeline.body",
+	];
+
+	const artifacts: Record<string, string> = {};
+	for (const file of artifactFiles) {
+		try {
+			artifacts[file] = await readFile(join(runDir, file), "utf-8");
+		} catch {
+			// File may not exist for this run; skip gracefully
+		}
+	}
+
+	const port = 9876;
+
+	// Start Bun HTTP server
+	const server = Bun.serve({
+		port,
+		async fetch(req) {
+			const url = new URL(req.url);
+			const pathname = url.pathname;
+
+			// CORS headers so the browser can fetch from file:// origins too
+			const corsHeaders = {
+				"Access-Control-Allow-Origin": "*",
+				"Access-Control-Allow-Methods": "GET, OPTIONS",
+				"Access-Control-Allow-Headers": "Content-Type",
+			};
+
+			if (req.method === "OPTIONS") {
+				return new Response(null, { status: 204, headers: corsHeaders });
+			}
+
+			if (pathname === "/case-data") {
+				return new Response(JSON.stringify({ caseId, artifacts }), {
+					headers: { ...corsHeaders, "Content-Type": "application/json" },
+				});
+			}
+
+			if (pathname === "/") {
+				const html = await readFile(viewerPath, "utf-8");
+				return new Response(html, {
+					headers: { ...corsHeaders, "Content-Type": "text/html" },
+				});
+			}
+
+			return new Response("Not found", { status: 404, headers: corsHeaders });
+		},
+	});
+
+	const viewerUrl = `http://localhost:${port}/?case=${encodeURIComponent(caseId)}`;
+
 	try {
 		if (process.platform === "darwin") {
-			await execAsync(`open "${timelinePath}"`);
+			await execAsync(`open "${viewerUrl}"`);
 		} else if (process.platform === "linux") {
-			await execAsync(`xdg-open "${timelinePath}"`);
+			await execAsync(`xdg-open "${viewerUrl}"`);
 		} else if (process.platform === "win32") {
-			await execAsync(`start "" "${timelinePath}"`);
+			await execAsync(`start "" "${viewerUrl}"`);
 		}
+		console.log(`   📎 Timeline viewer: ${viewerUrl}`);
+		console.log("   (Server will auto-shutdown in 60 seconds)");
+		// Auto-shutdown server after 60 seconds
+		setTimeout(() => {
+			server.stop();
+		}, 60000);
 	} catch {
-		// Silently fail if browser open doesn't work
+		console.log(`   📎 Open this URL manually: ${viewerUrl}`);
+		console.log("   (Server will auto-shutdown when you Ctrl+C)");
 	}
 }
 
@@ -266,9 +344,8 @@ async function demo(args: string[]) {
 
 		// Auto-open timeline viewer if reasoning enabled
 		if (ctx.enableReasoning) {
-			console.log("🌐 Opening interactive timeline viewer...");
+			console.log("🌐 Starting interactive timeline viewer...");
 			await openTimelineViewer(ctx.runDir);
-			console.log("   (If browser didn't open, open docs/find-evil/timeline-viewer.html manually)");
 		}
 	}
 }

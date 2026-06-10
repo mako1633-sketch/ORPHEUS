@@ -300,6 +300,17 @@
       border-radius: var(--radius);
       border-left: 4px solid var(--danger);
     }
+    .error-banner code {
+      background: rgba(0,0,0,0.05);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 0.85em;
+    }
+    .error-banner strong {
+      display: block;
+      margin-bottom: 8px;
+    }
 
     .progress-bar {
       max-width: 900px;
@@ -455,15 +466,26 @@
         return map[tool] || '🔧';
       }
 
-      async function fetchJson(path) {
-        const res = await fetch(path);
-        if (!res.ok) throw new Error(`HTTP ${res.status} for ${path}`);
-        return res.json();
+      // ── Protocol detection ───────────────────────────────────────────
+      if (location.protocol === 'file:') {
+        document.getElementById('caseSummary').innerHTML = `
+          <div class="error-banner" style="grid-column: 1 / -1;">
+            <strong>⚠️ Cannot load from file:// protocol</strong>
+            Browsers block AJAX requests when opened as a local file.<br><br>
+            <strong>To use the timeline viewer:</strong><br>
+            1. Run: <code>bun run src/find-evil/cli.ts demo -- --enable-reasoning --judge-mode</code><br>
+               (This auto-starts a local server and opens the viewer)<br><br>
+            2. Or start a local server manually:<br>
+               <code>python3 -m http.server 8000</code> (in the project root)<br>
+               then open <code>http://localhost:8000/docs/find-evil/timeline-viewer.html?case=demo-reasoning-001</code>
+          </div>
+        `;
+        document.getElementById('progressBar').style.display = 'none';
+        throw new Error('Stopped: file:// protocol not supported');
       }
 
       async function loadCase() {
         const caseId = document.getElementById('caseInput').value.trim() || defaultCase;
-        const base = `../../find-evil-runs/${encodeURIComponent(caseId)}/`;
         const timeline = document.getElementById('timeline');
         const summary = document.getElementById('caseSummary');
         const errorArea = document.getElementById('errorArea');
@@ -473,21 +495,42 @@
         progress.style.display = 'block';
         progress.firstElementChild.style.width = '10%';
 
-        try {
-          reasoningData = await fetchJson(base + 'reasoning-trace.json');
-          progress.firstElementChild.style.width = '50%';
-          [selfCheckData, gateData] = await Promise.all([
-            fetchJson(base + 'self-check.json').catch(() => null),
-            fetchJson(base + 'completion-gate.json').catch(() => null)
-          ]);
-          progress.firstElementChild.style.width = '100%';
-          setTimeout(() => progress.style.display = 'none', 400);
-          render(caseId);
-        } catch (e) {
-          progress.style.display = 'none';
-          errorArea.innerHTML = `<div class="error-banner">Failed to load case: ${e.message}</div>`;
-          summary.innerHTML = `<div class="summary-item"><div class="value">—</div><div class="label">Case ID</div></div>`;
+        async function tryFetch(path) {
+          const res = await fetch(path);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
         }
+
+        try {
+          // Attempt 1: Local server mode (Bun.serve on port 9876 from --judge-mode)
+          const serverData = await tryFetch('/case-data');
+          progress.firstElementChild.style.width = '50%';
+          reasoningData = JSON.parse(serverData.artifacts['reasoning-trace.json'] || '{}');
+          selfCheckData = serverData.artifacts['self-check.json'] ? JSON.parse(serverData.artifacts['self-check.json']) : null;
+          gateData = serverData.artifacts['completion-gate.json'] ? JSON.parse(serverData.artifacts['completion-gate.json']) : null;
+        } catch {
+          // Attempt 2: Static file server mode (python -m http.server, nginx, etc.)
+          const base = `../../find-evil-runs/${encodeURIComponent(caseId)}/`;
+          try {
+            reasoningData = await tryFetch(base + 'reasoning-trace.json');
+            progress.firstElementChild.style.width = '50%';
+            [selfCheckData, gateData] = await Promise.all([
+              tryFetch(base + 'self-check.json').catch(() => null),
+              tryFetch(base + 'completion-gate.json').catch(() => null)
+            ]);
+          } catch (e2) {
+            throw new Error(`Cannot find case data for "${caseId}".<br><br>
+              <strong>Troubleshooting:</strong><br>
+              • Run the demo first: <code>bun run find-evil:demo -- --enable-reasoning --judge-mode</code><br>
+              • Or serve the repo via HTTP: <code>python3 -m http.server 8000</code><br>
+              • Then open: <code>http://localhost:8000/docs/find-evil/timeline-viewer.html?case=${encodeURIComponent(caseId)}</code><br><br>
+              Original error: ${e2.message}`);
+          }
+        }
+
+        progress.firstElementChild.style.width = '100%';
+        setTimeout(() => progress.style.display = 'none', 400);
+        render(caseId);
       }
 
       function render(caseId) {
@@ -540,25 +583,37 @@
                 <span class="status-badge status-${status}">${statusLabel(status)}</span>
               </div>
               <div class="card-body" id="card-body-${i}">
-                ${(trace.steps && trace.steps.length) ? trace.steps.map((s, j) => `
+                ${trace.steps && trace.steps.length > 0 ? trace.steps.map((step, j) => `
                   <div class="reasoning-step">
-                    <div class="step-action"><span class="step-order">${s.order || j + 1}</span>${s.action}</div>
-                    <div class="step-observation">${s.observation}</div>
-                    <div class="step-inference">${s.inference}</div>
+                    <div class="step-action"><span class="step-order">${j + 1}</span>${step.action}</div>
+                    <div class="step-observation">${step.observation}</div>
+                    ${step.inference ? `<div class="step-inference">${step.inference}</div>` : ''}
                   </div>
-                `).join('') : '<div class="empty-steps">No detailed reasoning steps recorded.</div>'}
+                `).join('') : '<div class="empty-steps">No reasoning steps recorded for this tool.</div>'}
                 ${hash ? `<div class="hash-row">SHA-256: ${hash}</div>` : ''}
               </div>
             </div>
           `;
           timeline.appendChild(item);
-          cards.push({ item, card: item.querySelector('.timeline-card'), dot: item.querySelector('.timeline-dot') });
+          cards.push({ card: item.querySelector('.timeline-card'), dot: item.querySelector('.timeline-dot') });
         });
+
+        // Animate summary stats
+        setTimeout(() => {
+          document.querySelectorAll('.summary-item .value').forEach((el, i) => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(10px)';
+            setTimeout(() => {
+              el.style.transition = 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)';
+              el.style.opacity = '1';
+              el.style.transform = 'translateY(0)';
+            }, i * 80);
+          });
+        }, 100);
       }
 
       window.toggleCard = function(idx) {
         const body = document.getElementById('card-body-' + idx);
-        if (!body) return;
         body.classList.toggle('open');
       };
 
@@ -570,11 +625,13 @@
           btn.textContent = '▶ Play';
           return;
         }
-        if (!cards.length) return;
         isPlaying = true;
         btn.textContent = '⏸ Pause';
         currentStep = -1;
-        cards.forEach(c => { c.card.classList.remove('active-card'); c.dot.classList.remove('active'); });
+        cards.forEach(c => {
+          c.card.classList.remove('active-card');
+          c.dot.classList.remove('active');
+        });
         playInterval = setInterval(() => {
           if (currentStep >= 0 && currentStep < cards.length) {
             cards[currentStep].card.classList.remove('active-card');
