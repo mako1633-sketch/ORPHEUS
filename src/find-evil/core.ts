@@ -300,6 +300,13 @@ async function readAutoPartitionOffset(ctx: FindEvilContext): Promise<number | u
 	const content = await readFile(partitionsPath, "utf8").catch(() => null);
 	if (!content) return undefined;
 
+	// Volume images have a marker injected by inspect_partitions when fsstat succeeds.
+	const volumeMatch = content.match(/# ORPHEUS_VOLUME_IMAGE:\s*offset=(\d+)/);
+	if (volumeMatch && volumeMatch[1]) {
+		const offset = parseInt(volumeMatch[1], 10);
+		if (!Number.isNaN(offset)) return offset;
+	}
+
 	// mmls data-partition lines look like:
 	// 01:  00:00   0000002048   0000974847   0000972800   Linux (0x83)
 	// We skip metadata lines (slot has "-----") and capture the Start column.
@@ -355,28 +362,89 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 			"Partition layout required for subsequent offset-dependent tools"
 		);
 
-		const command = "mmls";
-		const args = [ctx.imagePath];
-		const commandResult = await ctx.commandRunner(command, args);
+		const mmlsResult = await ctx.commandRunner("mmls", [ctx.imagePath]);
 
 		ctx.tracer?.logStep(
 			"inspect_partitions",
 			"Capture mmls output",
-			`exitCode=${commandResult.exitCode}, stdout.length=${commandResult.stdout.length}`,
-			commandResult.success
+			`exitCode=${mmlsResult.exitCode}, stdout.length=${mmlsResult.stdout.length}`,
+			mmlsResult.success
 				? "Partition table readable"
-				: "mmls failed — may need sleuthkit install"
+				: "mmls failed — checking for volume image with fsstat fallback"
 		);
 
-		const artifact = await commandArtifact(ctx, "partitions.txt", command, args, commandResult);
+		// If mmls succeeds, use it directly.
+		if (mmlsResult.success) {
+			const artifact = await commandArtifact(
+				ctx,
+				"partitions.txt",
+				"mmls",
+				[ctx.imagePath],
+				mmlsResult
+			);
+			return finalizeToolResult(ctx, "inspect_partitions", startedAt, input, {
+				success: true,
+				artifacts: [artifact],
+				summary: "Inspected disk image partition layout with mmls.",
+				warnings: mmlsResult.stderr ? [mmlsResult.stderr] : [],
+			});
+		}
+
+		// Fallback: run fsstat to detect a volume image (single filesystem, no partition table).
+		const fsstatResult = await ctx.commandRunner("fsstat", [ctx.imagePath]);
+
+		ctx.tracer?.logStep(
+			"inspect_partitions",
+			"Capture fsstat output",
+			`exitCode=${fsstatResult.exitCode}, stdout.length=${fsstatResult.stdout.length}`,
+			fsstatResult.success
+				? "fsstat succeeded — image is a single volume, use offset 0"
+				: "fsstat also failed — image may be corrupted or unsupported"
+		);
+
+		const artifactContent = [
+			"# mmls result (partition table not found)",
+			`$ mmls ${JSON.stringify(ctx.imagePath)}`,
+			`exitCode: ${mmlsResult.exitCode}`,
+			mmlsResult.error ? `error: ${mmlsResult.error}` : "",
+			"",
+			"## stdout",
+			mmlsResult.stdout,
+			"",
+			"## stderr",
+			mmlsResult.stderr,
+			"",
+			"# fsstat result (volume image fallback)",
+			`$ fsstat ${JSON.stringify(ctx.imagePath)}`,
+			`exitCode: ${fsstatResult.exitCode}`,
+			fsstatResult.error ? `error: ${fsstatResult.error}` : "",
+			"",
+			"## stdout",
+			fsstatResult.stdout,
+			"",
+			"## stderr",
+			fsstatResult.stderr,
+			"",
+			fsstatResult.success
+				? "# ORPHEUS_VOLUME_IMAGE: offset=0"
+				: "# ORPHEUS: Both mmls and fsstat failed — image may be corrupted or unsupported.",
+		].join("\n");
+		const artifact = await writeArtifact(ctx, "partitions.txt", artifactContent);
+
+		const success = fsstatResult.success;
+		const summary = success
+			? "No partition table found (mmls failed). fsstat detected a single volume image — use offset 0 for subsequent tools."
+			: "Partition inspection failed; both mmls and fsstat failed. Verify the image format and sleuthkit tools installation.";
+
 		return finalizeToolResult(ctx, "inspect_partitions", startedAt, input, {
-			success: commandResult.success,
+			success,
 			artifacts: [artifact],
-			summary: commandResult.success
-				? "Inspected disk image partition layout with mmls."
-				: "Partition inspection failed; verify SIFT sleuthkit tools are installed.",
-			warnings: commandResult.stderr ? [commandResult.stderr] : [],
-			error: commandResult.error,
+			summary,
+			warnings: [
+				...(mmlsResult.stderr ? [`mmls: ${mmlsResult.stderr}`] : []),
+				...(fsstatResult.stderr ? [`fsstat: ${fsstatResult.stderr}`] : []),
+			],
+			error: fsstatResult.error ?? mmlsResult.error,
 		});
 	},
 
@@ -400,7 +468,9 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 					"list_files",
 					"Auto-extracted offset",
 					`offset=${autoOffset}`,
-					"Using first data partition found in partitions.txt"
+					autoOffset === 0
+						? "Volume image detected — no partition table needed"
+						: "Using first data partition found in partitions.txt"
 				);
 				await pushDfirTask(ctx.caseId, "partition_auto_extracted", "done", `offset=${autoOffset}`);
 			} else {
@@ -508,7 +578,9 @@ export const findEvilToolHandlers: Record<FindEvilToolName, ToolHandler> = {
 					"build_timeline",
 					"Auto-extracted offset",
 					`offset=${autoOffset}`,
-					"Reusing partition offset from prior inspect_partitions"
+					autoOffset === 0
+						? "Volume image detected — no partition table needed"
+						: "Reusing partition offset from prior inspect_partitions"
 				);
 			}
 		}

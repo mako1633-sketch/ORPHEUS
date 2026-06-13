@@ -36,6 +36,85 @@ function mockRunner(calls: Array<{ command: string; args: string[] }>): CommandR
 				stderr: "",
 			};
 		}
+		if (command === "fsstat") {
+			return {
+				success: true,
+				exitCode: 0,
+				command,
+				args,
+				stdout: "FILE SYSTEM INFORMATION\nFile System Type: NTFS",
+				stderr: "",
+			};
+		}
+		if (command === "fls") {
+			return {
+				success: true,
+				exitCode: 0,
+				command,
+				args,
+				stdout: "r/r 5-128-1: Windows/System32/cmd.exe",
+				stderr: "",
+			};
+		}
+		if (command === "istat") {
+			return {
+				success: true,
+				exitCode: 0,
+				command,
+				args,
+				stdout: "inode: 5\nAllocated",
+				stderr: "",
+			};
+		}
+		if (command === "mactime") {
+			return {
+				success: true,
+				exitCode: 0,
+				command,
+				args,
+				stdout: "Date,Size,Type,Mode,UID,GID,Meta,File Name",
+				stderr: "",
+			};
+		}
+		if (command === "strings") {
+			return {
+				success: true,
+				exitCode: 0,
+				command,
+				args,
+				stdout: "powershell -nop\nrundll32 suspicious.dll",
+				stderr: "",
+			};
+		}
+		return { success: false, exitCode: 1, command, args, stdout: "", stderr: "missing" };
+	};
+}
+
+function mockRunnerWithFailingMmls(
+	calls: Array<{ command: string; args: string[] }>
+): CommandRunner {
+	return async (command, args): Promise<CommandResult> => {
+		calls.push({ command, args });
+		if (command === "mmls") {
+			return {
+				success: false,
+				exitCode: 1,
+				command,
+				args,
+				stdout: "",
+				stderr: "Cannot determine partition type",
+			};
+		}
+		if (command === "fsstat") {
+			return {
+				success: true,
+				exitCode: 0,
+				command,
+				args,
+				stdout: "FILE SYSTEM INFORMATION\nFile System Type: NTFS",
+				stderr: "",
+			};
+		}
 		if (command === "fls") {
 			return {
 				success: true,
@@ -275,6 +354,86 @@ describe("FIND EVIL SIFT MCP readiness", () => {
 		const flsCall = calls.find((c) => c.command === "fls");
 		expect(flsCall).toBeDefined();
 		expect(flsCall?.args).not.toContain("-o");
+	});
+
+	it("falls back to fsstat when mmls fails for volume images", async () => {
+		const tmp = await mkdtemp(path.join(os.tmpdir(), "orpheus-find-evil-"));
+		const imagePath = await makeReadOnlyImage(tmp);
+		const calls: Array<{ command: string; args: string[] }> = [];
+		const ctx = await createFindEvilContext(
+			{ imagePath, caseId: "volume-image", outputDir: path.join(tmp, "runs") },
+			{ commandRunner: mockRunnerWithFailingMmls(calls) }
+		);
+
+		const result = await callFindEvilTool(ctx, "inspect_partitions", {});
+		expect(result.success).toBe(true);
+		expect(result.summary).toContain("fsstat detected a single volume image");
+		expect(result.summary).toContain("offset 0");
+
+		// Verify both mmls and fsstat were called
+		expect(calls.map((c) => c.command)).toEqual(["mmls", "fsstat"]);
+
+		// Verify partitions.txt was written with the volume image marker
+		const partitionsContent = await readFile(path.join(ctx.runDir, "partitions.txt"), "utf8");
+		expect(partitionsContent).toContain("# ORPHEUS_VOLUME_IMAGE: offset=0");
+	});
+
+	it("auto-extracts offset=0 for downstream tools when volume image is detected", async () => {
+		const tmp = await mkdtemp(path.join(os.tmpdir(), "orpheus-find-evil-"));
+		const imagePath = await makeReadOnlyImage(tmp);
+		const calls: Array<{ command: string; args: string[] }> = [];
+		const ctx = await createFindEvilContext(
+			{ imagePath, caseId: "volume-auto", outputDir: path.join(tmp, "runs") },
+			{ commandRunner: mockRunnerWithFailingMmls(calls) }
+		);
+
+		// Run inspect_partitions first (mmls fails, fsstat succeeds)
+		await callFindEvilTool(ctx, "inspect_partitions", {});
+
+		// Now list_files should auto-extract offset=0
+		const result = await callFindEvilTool(ctx, "list_files", {});
+		expect(result.success).toBe(true);
+		expect(result.warnings?.some((w) => w.includes("Auto-extracted partition offset 0"))).toBe(
+			true
+		);
+		expect(result.summary).toContain("auto-extracted partition offset 0");
+
+		// Verify fls was called with -o 0
+		const flsCall = calls.find((c) => c.command === "fls");
+		expect(flsCall).toBeDefined();
+		expect(flsCall?.args).toContain("-o");
+		expect(flsCall?.args).toContain("0");
+	});
+
+	it("reports hard failure when both mmls and fsstat fail", async () => {
+		const tmp = await mkdtemp(path.join(os.tmpdir(), "orpheus-find-evil-"));
+		const imagePath = await makeReadOnlyImage(tmp);
+		const calls: Array<{ command: string; args: string[] }> = [];
+
+		const runner: CommandRunner = async (command, args) => {
+			calls.push({ command, args });
+			if (command === "mmls" || command === "fsstat") {
+				return {
+					success: false,
+					exitCode: 1,
+					command,
+					args,
+					stdout: "",
+					stderr: `${command} failed`,
+				};
+			}
+			return { success: false, exitCode: 1, command, args, stdout: "", stderr: "missing" };
+		};
+
+		const ctx = await createFindEvilContext(
+			{ imagePath, caseId: "both-fail", outputDir: path.join(tmp, "runs") },
+			{ commandRunner: runner }
+		);
+
+		const result = await callFindEvilTool(ctx, "inspect_partitions", {});
+		expect(result.success).toBe(false);
+		expect(result.summary).toContain("both mmls and fsstat failed");
+		expect(calls.map((c) => c.command)).toEqual(["mmls", "fsstat"]);
 	});
 });
 
