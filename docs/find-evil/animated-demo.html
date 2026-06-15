@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ORPHEUS DFIR Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+            overflow: hidden;
+        }
+        .terminal {
+            width: 900px;
+            background: #1a1b26;
+            border-radius: 12px;
+            box-shadow: 0 0 60px rgba(124, 158, 255, 0.15), 0 25px 80px rgba(0,0,0,0.5);
+            overflow: hidden;
+            position: relative;
+        }
+        .terminal-header {
+            background: #16161e;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #2a2b36;
+        }
+        .dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot.red { background: #f7768e; }
+        .dot.yellow { background: #e0af68; }
+        .dot.green { background: #73daca; }
+        .terminal-title {
+            margin-left: 10px;
+            color: #a9b1d6;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .terminal-body {
+            padding: 20px 24px;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #c0caf5;
+            min-height: 500px;
+        }
+        .line {
+            opacity: 0;
+            transform: translateY(4px);
+            animation: fadeIn 0.3s ease forwards;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .green { color: #73daca; }
+        .red { color: #f7768e; }
+        .yellow { color: #e0af68; }
+        .cyan { color: #7dcfff; }
+        .magenta { color: #bb9af7; }
+        .dim { color: #565f89; }
+        .box {
+            border: 1px solid #2a2b36;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin: 12px 0;
+            background: rgba(22, 22, 30, 0.6);
+        }
+        .box-header {
+            color: #bb9af7;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background: #7dcfff;
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        .command {
+            color: #7dcfff;
+            background: rgba(125, 207, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .success { color: #73daca; }
+        .failure { color: #f7768e; }
+        .inference { color: #e0af68; }
+        .summary-box {
+            border: 1px solid #73daca;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 16px 0;
+            background: rgba(115, 218, 202, 0.05);
+        }
+        .summary-title {
+            color: #73daca;
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            font-size: 12px;
+        }
+        .summary-label { color: #a9b1d6; }
+        .summary-value { color: #c0caf5; font-weight: 600; }
+        .caption {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(10px);
+            padding: 8px 24px;
+            border-radius: 20px;
+            color: #c0caf5;
+            font-size: 14px;
+            opacity: 0;
+            animation: captionIn 0.5s ease forwards;
+            pointer-events: none;
+        }
+        @keyframes captionIn {
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal" id="terminal">
+        <div class="terminal-header">
+            <div class="dot red"></div>
+            <div class="dot yellow"></div>
+            <div class="dot green"></div>
+            <div class="terminal-title">ORPHEUS DFIR — Autonomous Investigation</div>
+        </div>
+        <div class="terminal-body" id="terminal-body">
+            <!-- Lines will be injected by JS -->
+        </div>
+    </div>
+
+    <script>
+        const lines = [
+            { text: '', delay: 500, type: 'header' },
+            { text: '╔══════════════════════════════════════════════════════════════╗', color: 'magenta', delay: 0 },
+            { text: '║  🔍 ORPHEUS DFIR INVESTIGATION — Judge Mode                  ║', color: 'magenta', delay: 0 },
+            { text: '╠══════════════════════════════════════════════════════════════╣', color: 'magenta', delay: 0 },
+            { text: '║  Case ID:        demo-reasoning-001                          ║', color: 'cyan', delay: 0 },
+            { text: '║  Evidence:       /tmp/test-evidence.raw                      ║', color: 'cyan', delay: 0 },
+            { text: '║  Reasoning:      enabled                                     ║', color: 'cyan', delay: 0 },
+            { text: '╚══════════════════════════════════════════════════════════════╝', color: 'magenta', delay: 0 },
+            { text: '', delay: 500 },
+            { text: '🔍 Phase 1: Evidence Acquisition', color: 'cyan', delay: 0 },
+            { text: '   ──────────────────────────────────────────────────', color: 'dim', delay: 0 },
+            { text: '   ✅ SHA-256 computed: ce3c778c58efa429357bd5a114226d1d...', color: 'green', delay: 800 },
+            { text: '   💡 Integrity baseline before any tool execution', color: 'yellow', delay: 600 },
+            { text: '', delay: 400 },
+            { text: '🔍 Phase 2: Partition Analysis', color: 'cyan', delay: 0 },
+            { text: '   ──────────────────────────────────────────────────', color: 'dim', delay: 0 },
+            { text: '   ❌ mmls failed: Executable not found in $PATH', color: 'red', delay: 1000 },
+            { text: '   💡 sleuthkit may not be installed', color: 'yellow', delay: 800 },
+            { text: '   💡 Partition tools need SIFT environment', color: 'yellow', delay: 600 },
+            { text: '', delay: 500 },
+            { text: '🔍 Phase 3: Filesystem Enumeration', color: 'cyan', delay: 0 },
+            { text: '   ──────────────────────────────────────────────────', color: 'dim', delay: 0 },
+            { text: '   ❌ fls failed: Executable not found in $PATH', color: 'red', delay: 1000 },
+            { text: '   💡 Will retry with explicit offset on next run', color: 'yellow', delay: 800 },
+            { text: '', delay: 400 },
+            { text: '🔍 Phase 5: Indicator Search', color: 'cyan', delay: 0 },
+            { text: '   ──────────────────────────────────────────────────', color: 'dim', delay: 0 },
+            { text: '   ✅ Searched printable strings for indicators', color: 'green', delay: 800 },
+            { text: '   ✅ Matches found: 3 (capped at 25 per indicator)', color: 'green', delay: 600 },
+            { text: '   💡 Artifact: indicator-search.json', color: 'yellow', delay: 500 },
+            { text: '   💡 SHA-256: a1b2c3d4e5f6... (hash-linked)', color: 'yellow', delay: 600 },
+            { text: '', delay: 400 },
+            { text: '🔍 Phase 6: Evidence-Linked Report', color: 'cyan', delay: 0 },
+            { text: '   ──────────────────────────────────────────────────', color: 'dim', delay: 0 },
+            { text: '   ✅ Findings report generated', color: 'green', delay: 600 },
+            { text: '   ✅ Every claim backed by SHA-256 hash', color: 'green', delay: 500 },
+            { text: '   ✅ Zero hallucination detected', color: 'green', delay: 500 },
+            { text: '', delay: 500 },
+            { text: '╔══════════════════════════════════════════════════════════════╗', color: 'green', delay: 0 },
+            { text: '║  📋 ORPHEUS INVESTIGATION SUMMARY                            ║', color: 'green', delay: 0 },
+            { text: '╠══════════════════════════════════════════════════════════════╣', color: 'green', delay: 0 },
+            { text: '║  Case ID:        demo-reasoning-001                          ║', color: 'cyan', delay: 0 },
+            { text: '║  Tools executed: 6 / 7                                       ║', color: 'cyan', delay: 0 },
+            { text: '║  Successful:     3                                           ║', color: 'green', delay: 0 },
+            { text: '║  Failed:         3 (diagnosed, not hidden)                   ║', color: 'yellow', delay: 0 },
+            { text: '║  Hallucinations: 0                                           ║', color: 'green', delay: 0 },
+            { text: '║  Spoliation:     0                                           ║', color: 'green', delay: 0 },
+            { text: '║  Self-check:     confidence = 1.0                            ║', color: 'green', delay: 0 },
+            { text: '╚══════════════════════════════════════════════════════════════╝', color: 'green', delay: 0 },
+            { text: '', delay: 1000 },
+            { text: '🌐 Starting interactive timeline viewer...', color: 'cyan', delay: 800 },
+            { text: '   📎 http://localhost:9876/?case=demo-reasoning-001', color: 'magenta', delay: 600 },
+            { text: '   (Auto-shutdown in 60s)', color: 'dim', delay: 400 },
+        ];
+
+        const container = document.getElementById('terminal-body');
+        let accumulatedDelay = 0;
+
+        lines.forEach((line, index) => {
+            accumulatedDelay += line.delay || 0;
+            
+            setTimeout(() => {
+                const div = document.createElement('div');
+                div.className = `line ${line.color || ''}`;
+                div.style.animationDelay = '0s';
+                div.textContent = line.text;
+                container.appendChild(div);
+                
+                // Auto-scroll
+                container.scrollTop = container.scrollHeight;
+            }, accumulatedDelay);
+        });
+    </script>
+</body>
+</html>
